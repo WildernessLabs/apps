@@ -56,7 +56,7 @@
 #     include <nuttx/fs/loop.h>
 #   endif
 #   ifdef CONFIG_FS_FAT
-#     include <nuttx/fs/mkfatfs.h>
+#     include <nuttx/fs/fat.h>
 #   endif
 #   ifdef CONFIG_FS_SMARTFS
 #     include "fsutils/mksmartfs.h"

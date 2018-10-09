@@ -175,6 +175,7 @@ static const struct cmdmap_s g_cmdmap[] =
 #else
   { "df",       cmd_df,       1, 1, NULL },
 #endif
+#else
 #endif
 
 #if CONFIG_NFILE_DESCRIPTORS > 0 && defined(CONFIG_RAMLOG_SYSLOG) && \

@@ -228,6 +228,8 @@
  * See also CONFIG_SYSTEM_ZMODEM_DUMPBUFFER.
  */
 
+//#define CONFIG_DEBUG_ZMODEM
+
 #ifdef CONFIG_DEBUG_ZMODEM
 #  define zmprintf(format, ...) fprintf(stderr, format, ##__VA_ARGS__)
 #  define zmdbg(format, ...)    fprintf(stderr, EXTRA_FMT format EXTRA_ARG, ##__VA_ARGS__)
