@@ -39,6 +39,7 @@
 
 #include <nuttx/config.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
@@ -141,7 +142,6 @@ int nuttx_mono_main(int argc, char *argv[])
 
   int ret;
   const int mono_argc = 4;
-  const char *mono_argv[] = {"mono", "--trace", "--interp", "/tmp/app.exe"};
   /*
   {
     int block_fd = open("/dev/mtdblock0", O_RDWR);
@@ -155,6 +155,7 @@ int nuttx_mono_main(int argc, char *argv[])
       nread = write(block_fd, buffer, nread);
       printf ("write: %d\n", nread);
     } while ((nread > 0) || (nread == -1 && errno == EINTR));
+  char *mono_argv[] = {"mono", "--trace", "--interp", "/tmp/app.exe"};
 
   }
   */
