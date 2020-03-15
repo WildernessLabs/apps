@@ -166,6 +166,8 @@ bool esp32spicommstest_assert_print_value(FAR const char *func,
                                     long int test_value,
                                     long int should_be);
 
-int esp32spicomms_task_start(FAR const struct esp32spicomms_task_conf_s *);
+int esp32spicomms_task_start(void);
+int esp32spicomms_task_stop(void);
+bool is_esp32spicomms_task_running(void);
 
 #endif /* __EXAMPLES_ESP32SPICOMMSTEST_DEFINES_H */

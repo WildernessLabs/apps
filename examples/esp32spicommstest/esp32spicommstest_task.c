@@ -135,41 +135,81 @@ TEST_SETUP(Esp32SpiCommsTask)
 
 TEST_TEAR_DOWN(Esp32SpiCommsTask)
 {
-  // int ret;
-  // if (sd >= 0)
-  //   {
-  //     ret = close(sd);
-  //     assert(ret >= 0);
-  //   }
-  // if (sd2 >= 0)
-  //   {
-  //     ret = close(sd2);
-  //     assert(ret >= 0);
-  //   }
-  // if (sd3 >= 0)
-  //   {
-  //     ret = close(sd3);
-  //     assert(ret >= 0);
-  //   }
-  // if (started)
-  //   {
-  //     ret = usrsocktest_daemon_stop();
-  //     assert(ret == OK);
-  //   }
-}
+  int result;
 
-TEST(Esp32SpiCommsTask, TaskSetup)
-{
-  TEST_ASSERT_EQUAL(0, esp32spicomms_task_start(NULL));
-  // usrsocktest_daemon_config = usrsocktest_daemon_defconf;
-  // NoActiveSockets(&usrsocktest_daemon_config);
+  result = esp32spicomms_task_stop();
+  assert(result == OK);
 }
 
 /****************************************************************************
- * Public Functions
+ * 
+ * Two instances of the task should result in a success for the first instance
+ * but a failure for the second instance.
+ * 
+ ****************************************************************************/
+TEST(Esp32SpiCommsTask, CheckIfTaskIsRunning)
+{
+  TEST_ASSERT_EQUAL(false, is_esp32spicomms_task_running());
+  TEST_ASSERT_EQUAL(OK, esp32spicomms_task_start());
+  TEST_ASSERT_EQUAL(true, is_esp32spicomms_task_running());
+  TEST_ASSERT_EQUAL(OK, esp32spicomms_task_stop());
+  TEST_ASSERT_EQUAL(false, is_esp32spicomms_task_running());
+}
+
+/****************************************************************************
+ * 
+ * Make sure that we can start a single instance of the ESP32 SPI task
+ * 
+ ****************************************************************************/
+TEST(Esp32SpiCommsTask, TaskSetup)
+{
+  TEST_ASSERT_EQUAL(OK, esp32spicomms_task_start());
+}
+
+/****************************************************************************
+ * 
+ * Stopping a non-existant task should just return OK.
+ * 
+ ****************************************************************************/
+TEST(Esp32SpiCommsTask, StopTaskWhenNoTasksRunning)
+{
+  TEST_ASSERT_EQUAL(OK, esp32spicomms_task_stop());
+}
+
+/****************************************************************************
+ * 
+ * Check that we can stop a running task.
+ * 
+ ****************************************************************************/
+TEST(Esp32SpiCommsTask, StopRunningTask)
+{
+  TEST_ASSERT_EQUAL(OK, esp32spicomms_task_start());
+  TEST_ASSERT_EQUAL(OK, esp32spicomms_task_stop());
+}
+
+/****************************************************************************
+ * 
+ * Two instances of the task should result in a success for the first instance
+ * but a failure for the second instance.
+ * 
+ ****************************************************************************/
+TEST(Esp32SpiCommsTask, CreateMoreThanOneTask)
+{
+  TEST_ASSERT_EQUAL(OK, esp32spicomms_task_start());
+  TEST_ASSERT_EQUAL(-EALREADY, esp32spicomms_task_start());
+}
+
+/****************************************************************************
+ *
+ * Run the test cases.
+ * 
  ****************************************************************************/
 
 TEST_GROUP(Esp32SpiCommsTask)
 {
+  RUN_TEST_CASE(Esp32SpiCommsTask, CheckIfTaskIsRunning);
+  RUN_TEST_CASE(Esp32SpiCommsTask, StopTaskWhenNoTasksRunning);
   RUN_TEST_CASE(Esp32SpiCommsTask, TaskSetup);
+  RUN_TEST_CASE(Esp32SpiCommsTask, CreateMoreThanOneTask);
+  RUN_TEST_CASE(Esp32SpiCommsTask, StopRunningTask);
 }
