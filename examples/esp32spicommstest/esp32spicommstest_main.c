@@ -261,7 +261,7 @@ int esp32spicommstest_main(int argc, char *argv[])
   print_mallinfo(&mem_before, "HEAP BEFORE TESTS");
   print_mallinfo(&mem_after, "HEAP AFTER TESTS");
 
-  printf("\n\nStarting ESP32 SPI Comms Unit Tests Complete.\n");
+  printf("\n\nESP32 SPI Comms Unit Tests Complete.\n");
 
   fflush(stdout);
   fflush(stderr);
