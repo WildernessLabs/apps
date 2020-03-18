@@ -108,7 +108,7 @@
  *
  ****************************************************************************/
 
-TEST_SETUP(Esp32SpiCommsTask)
+TEST_SETUP(Esp32SpiCommsthread)
 {
   // sd = -1;
   // sd2 = -1;
@@ -133,70 +133,70 @@ TEST_SETUP(Esp32SpiCommsTask)
  *
  ****************************************************************************/
 
-TEST_TEAR_DOWN(Esp32SpiCommsTask)
+TEST_TEAR_DOWN(Esp32SpiCommsthread)
 {
   int result;
 
-  result = esp32spicomms_task_stop();
+  result = esp32spicomms_thread_stop();
   assert(result == OK);
 }
 
 /****************************************************************************
  * 
- * Two instances of the task should result in a success for the first instance
+ * Two instances of the thread should result in a success for the first instance
  * but a failure for the second instance.
  * 
  ****************************************************************************/
-TEST(Esp32SpiCommsTask, CheckIfTaskIsRunning)
+TEST(Esp32SpiCommsthread, CheckIfThreadIsRunning)
 {
-  TEST_ASSERT_EQUAL(false, is_esp32spicomms_task_running());
-  TEST_ASSERT_EQUAL(OK, esp32spicomms_task_start());
-  TEST_ASSERT_EQUAL(true, is_esp32spicomms_task_running());
-  TEST_ASSERT_EQUAL(OK, esp32spicomms_task_stop());
-  TEST_ASSERT_EQUAL(false, is_esp32spicomms_task_running());
+  TEST_ASSERT_EQUAL(false, is_esp32spicomms_thread_running());
+  TEST_ASSERT_EQUAL(OK, esp32spicomms_thread_start());
+  TEST_ASSERT_EQUAL(true, is_esp32spicomms_thread_running());
+  TEST_ASSERT_EQUAL(OK, esp32spicomms_thread_stop());
+  TEST_ASSERT_EQUAL(false, is_esp32spicomms_thread_running());
 }
 
 /****************************************************************************
  * 
- * Make sure that we can start a single instance of the ESP32 SPI task
+ * Make sure that we can start a single instance of the ESP32 SPI thread
  * 
  ****************************************************************************/
-TEST(Esp32SpiCommsTask, TaskSetup)
+TEST(Esp32SpiCommsthread, ThreadSetup)
 {
-  TEST_ASSERT_EQUAL(OK, esp32spicomms_task_start());
+  TEST_ASSERT_EQUAL(OK, esp32spicomms_thread_start());
 }
 
 /****************************************************************************
  * 
- * Stopping a non-existant task should just return OK.
+ * Stopping a non-existant thread should just return OK.
  * 
  ****************************************************************************/
-TEST(Esp32SpiCommsTask, StopTaskWhenNoTasksRunning)
+TEST(Esp32SpiCommsthread, StopThreadWhenNoThreadsRunning)
 {
-  TEST_ASSERT_EQUAL(OK, esp32spicomms_task_stop());
+  TEST_ASSERT_EQUAL(OK, esp32spicomms_thread_stop());
 }
 
 /****************************************************************************
  * 
- * Check that we can stop a running task.
+ * Check that we can stop a running thread.
  * 
  ****************************************************************************/
-TEST(Esp32SpiCommsTask, StopRunningTask)
+TEST(Esp32SpiCommsthread, StopRunningThread)
 {
-  TEST_ASSERT_EQUAL(OK, esp32spicomms_task_start());
-  TEST_ASSERT_EQUAL(OK, esp32spicomms_task_stop());
+  TEST_ASSERT_EQUAL(OK, esp32spicomms_thread_start());
+  TEST_ASSERT_EQUAL(OK, esp32spicomms_thread_stop());
 }
 
 /****************************************************************************
  * 
- * Two instances of the task should result in a success for the first instance
+ * Two instances of the thread should result in a success for the first instance
  * but a failure for the second instance.
  * 
  ****************************************************************************/
-TEST(Esp32SpiCommsTask, CreateMoreThanOneTask)
+TEST(Esp32SpiCommsthread, CreateMoreThanOneThread)
 {
-  TEST_ASSERT_EQUAL(OK, esp32spicomms_task_start());
-  TEST_ASSERT_EQUAL(-EALREADY, esp32spicomms_task_start());
+  TEST_ASSERT_EQUAL(OK, esp32spicomms_thread_start());
+  TEST_ASSERT_EQUAL(EALREADY, esp32spicomms_thread_start());
 }
 
 /****************************************************************************
@@ -205,11 +205,11 @@ TEST(Esp32SpiCommsTask, CreateMoreThanOneTask)
  * 
  ****************************************************************************/
 
-TEST_GROUP(Esp32SpiCommsTask)
+TEST_GROUP(Esp32SpiCommsThread)
 {
-  RUN_TEST_CASE(Esp32SpiCommsTask, CheckIfTaskIsRunning);
-  RUN_TEST_CASE(Esp32SpiCommsTask, StopTaskWhenNoTasksRunning);
-  RUN_TEST_CASE(Esp32SpiCommsTask, TaskSetup);
-  RUN_TEST_CASE(Esp32SpiCommsTask, CreateMoreThanOneTask);
-  RUN_TEST_CASE(Esp32SpiCommsTask, StopRunningTask);
+  RUN_TEST_CASE(Esp32SpiCommsthread, CheckIfThreadIsRunning);
+  RUN_TEST_CASE(Esp32SpiCommsthread, StopThreadWhenNoThreadsRunning);
+  RUN_TEST_CASE(Esp32SpiCommsthread, ThreadSetup);
+  RUN_TEST_CASE(Esp32SpiCommsthread, CreateMoreThanOneThread);
+  RUN_TEST_CASE(Esp32SpiCommsthread, StopRunningThread);
 }

@@ -165,7 +165,7 @@ static void run_tests(FAR const char *name, void (CODE *test_fn)(void))
 
 static void runAllTests(void)
 {
-  RUN_TEST_GROUP(Esp32SpiCommsTask);
+  RUN_TEST_GROUP(Esp32SpiCommsThread);
 }
 
 /****************************************************************************
