@@ -2,7 +2,7 @@
  * examples/esp32spicommstest/esp32spicommstest_main.c
  *
  *   Copyright (C) 2020 Wilderness Labs
- *    Author: Mark Stevens
+ *   Author: Mark Stevens
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -165,7 +165,8 @@ static void run_tests(FAR const char *name, void (CODE *test_fn)(void))
 
 static void runAllTests(void)
 {
-  RUN_TEST_GROUP(Esp32SpiCommsThread);
+  // RUN_TEST_GROUP(Esp32SpiCommsThread);
+  RUN_TEST_GROUP(Esp32SpiCommsQueue);
 }
 
 /****************************************************************************

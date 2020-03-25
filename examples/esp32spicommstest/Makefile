@@ -47,7 +47,7 @@ STACKSIZE = $(CONFIG_EXAMPLES_ESP32SPICOMMSTEST_STACKSIZE)
 # NuttX ESP32SPICOMMS Test
 
 ASRCS =
-CSRCS = esp32spicommstest_thread.c
+CSRCS = esp32spicommstest_thread.c esp32spicommstest_queue.c
 
 MAINSRC = esp32spicommstest_main.c
 

@@ -1,8 +1,8 @@
 /****************************************************************************
- * examples/usrsocktest/usrsocktest_daemon.c
+ * examples/esp32spicommstest/esp32spicommstest_thread.c
  *
- *   Copyright (C) 2015, 2017 Haltian Ltd. All rights reserved.
- *    Author: Jussi Kivilinna <jussi.kivilinna@haltian.com>
+ *   Copyright (C) 2020 Wilderness Labs
+ *   Author: Mark Stevens
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -83,6 +83,8 @@
  * Private Data
  ****************************************************************************/
 
+struct esp32_spi_comms_configuration_s _configuration;
+
 /****************************************************************************
  * Public Data
  ****************************************************************************/
@@ -92,7 +94,7 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: BasicDaemon test group setup
+ * Name: ESP32 SPI Communications thread test group setup
  *
  * Description:
  *   Setup function executed before each testcase in this test group
@@ -108,16 +110,13 @@
  *
  ****************************************************************************/
 
-TEST_SETUP(Esp32SpiCommsthread)
+TEST_SETUP(Esp32SpiCommsThread)
 {
-  // sd = -1;
-  // sd2 = -1;
-  // sd3 = -1;
-  // started = false;
+  memset(&_configuration, 0, sizeof(_configuration));
 }
 
 /****************************************************************************
- * Name: BasicDaemon test group teardown
+ * Name: ESP32 SPI Communications thread test group teardown
  *
  * Description:
  *   Setup function executed after each testcase in this test group
@@ -133,11 +132,11 @@ TEST_SETUP(Esp32SpiCommsthread)
  *
  ****************************************************************************/
 
-TEST_TEAR_DOWN(Esp32SpiCommsthread)
+TEST_TEAR_DOWN(Esp32SpiCommsThread)
 {
   int result;
 
-  result = esp32spicomms_thread_stop();
+  result = esp32spicomms_thread_stop(&_configuration);
   assert(result == OK);
 }
 
@@ -146,34 +145,43 @@ TEST_TEAR_DOWN(Esp32SpiCommsthread)
  * Two instances of the thread should result in a success for the first instance
  * but a failure for the second instance.
  * 
+ * Pre-requisite:
+ *  _configuration is setup in TEST_SETUP
+ * 
  ****************************************************************************/
-TEST(Esp32SpiCommsthread, CheckIfThreadIsRunning)
+TEST(Esp32SpiCommsThread, CheckIfThreadIsRunning)
 {
-  TEST_ASSERT_EQUAL(false, is_esp32spicomms_thread_running());
-  TEST_ASSERT_EQUAL(OK, esp32spicomms_thread_start());
-  TEST_ASSERT_EQUAL(true, is_esp32spicomms_thread_running());
-  TEST_ASSERT_EQUAL(OK, esp32spicomms_thread_stop());
-  TEST_ASSERT_EQUAL(false, is_esp32spicomms_thread_running());
+  TEST_ASSERT_EQUAL(false, is_esp32spicomms_thread_running(&_configuration));
+  TEST_ASSERT_EQUAL(OK, esp32spicomms_thread_start(&_configuration));
+  TEST_ASSERT_EQUAL(true, is_esp32spicomms_thread_running(&_configuration));
+  TEST_ASSERT_EQUAL(OK, esp32spicomms_thread_stop(&_configuration));
+  TEST_ASSERT_EQUAL(false, is_esp32spicomms_thread_running(&_configuration));
 }
 
 /****************************************************************************
  * 
  * Make sure that we can start a single instance of the ESP32 SPI thread
  * 
+ * Pre-requisite:
+ *  _configuration is setup in TEST_SETUP
+ * 
  ****************************************************************************/
-TEST(Esp32SpiCommsthread, ThreadSetup)
+TEST(Esp32SpiCommsThread, ThreadSetup)
 {
-  TEST_ASSERT_EQUAL(OK, esp32spicomms_thread_start());
+  TEST_ASSERT_EQUAL(OK, esp32spicomms_thread_start(&_configuration));
 }
 
 /****************************************************************************
  * 
  * Stopping a non-existant thread should just return OK.
  * 
+ * Pre-requisite:
+ *  _configuration is setup in TEST_SETUP
+ * 
  ****************************************************************************/
-TEST(Esp32SpiCommsthread, StopThreadWhenNoThreadsRunning)
+TEST(Esp32SpiCommsThread, StopThreadWhenNoThreadsRunning)
 {
-  TEST_ASSERT_EQUAL(OK, esp32spicomms_thread_stop());
+  TEST_ASSERT_EQUAL(OK, esp32spicomms_thread_stop(&_configuration));
 }
 
 /****************************************************************************
@@ -181,10 +189,10 @@ TEST(Esp32SpiCommsthread, StopThreadWhenNoThreadsRunning)
  * Check that we can stop a running thread.
  * 
  ****************************************************************************/
-TEST(Esp32SpiCommsthread, StopRunningThread)
+TEST(Esp32SpiCommsThread, StopRunningThread)
 {
-  TEST_ASSERT_EQUAL(OK, esp32spicomms_thread_start());
-  TEST_ASSERT_EQUAL(OK, esp32spicomms_thread_stop());
+  TEST_ASSERT_EQUAL(OK, esp32spicomms_thread_start(&_configuration));
+  TEST_ASSERT_EQUAL(OK, esp32spicomms_thread_stop(&_configuration));
 }
 
 /****************************************************************************
@@ -192,11 +200,14 @@ TEST(Esp32SpiCommsthread, StopRunningThread)
  * Two instances of the thread should result in a success for the first instance
  * but a failure for the second instance.
  * 
+ * Pre-requisite:
+ *  _configuration is setup in TEST_SETUP
+ * 
  ****************************************************************************/
-TEST(Esp32SpiCommsthread, CreateMoreThanOneThread)
+TEST(Esp32SpiCommsThread, CreateMoreThanOneThread)
 {
-  TEST_ASSERT_EQUAL(OK, esp32spicomms_thread_start());
-  TEST_ASSERT_EQUAL(EALREADY, esp32spicomms_thread_start());
+  TEST_ASSERT_EQUAL(OK, esp32spicomms_thread_start(&_configuration));
+  TEST_ASSERT_EQUAL(EALREADY, esp32spicomms_thread_start(&_configuration));
 }
 
 /****************************************************************************
@@ -207,9 +218,9 @@ TEST(Esp32SpiCommsthread, CreateMoreThanOneThread)
 
 TEST_GROUP(Esp32SpiCommsThread)
 {
-  RUN_TEST_CASE(Esp32SpiCommsthread, CheckIfThreadIsRunning);
-  RUN_TEST_CASE(Esp32SpiCommsthread, StopThreadWhenNoThreadsRunning);
-  RUN_TEST_CASE(Esp32SpiCommsthread, ThreadSetup);
-  RUN_TEST_CASE(Esp32SpiCommsthread, CreateMoreThanOneThread);
-  RUN_TEST_CASE(Esp32SpiCommsthread, StopRunningThread);
+  RUN_TEST_CASE(Esp32SpiCommsThread, CheckIfThreadIsRunning);
+  RUN_TEST_CASE(Esp32SpiCommsThread, StopThreadWhenNoThreadsRunning);
+  RUN_TEST_CASE(Esp32SpiCommsThread, ThreadSetup);
+  RUN_TEST_CASE(Esp32SpiCommsThread, CreateMoreThanOneThread);
+  RUN_TEST_CASE(Esp32SpiCommsThread, StopRunningThread);
 }

@@ -49,6 +49,8 @@
 #include <fcntl.h>
 #include <pthread.h>
 #include <assert.h>
+#include <semaphore.h>
+#include <mqueue.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -77,6 +79,20 @@
     type tmp_utest_test_value = (type)(test_value); \
     type tmp_utest_should_value = (type)(should_be_value); \
     if (!esp32spicommstest_assert_print_value(__func__, __LINE__, \
+                                        "(" #type ")(" #test_value ") == " \
+                                        "(" #type ")(" #should_be_value ")", \
+                                        tmp_utest_test_value, \
+                                        tmp_utest_should_value)) \
+      { \
+        esp32spicommstest_test_failed = true; \
+        return; \
+      } \
+  } while(false)
+
+#define utest_no_match(type, should_be_value, test_value) do { \
+    type tmp_utest_test_value = (type)(test_value); \
+    type tmp_utest_should_value = (type)(should_be_value); \
+    if (esp32spicommstest_assert_print_value(__func__, __LINE__, \
                                         "(" #type ")(" #test_value ") == " \
                                         "(" #type ")(" #should_be_value ")", \
                                         tmp_utest_test_value, \
@@ -130,15 +146,29 @@
 #define TEST_ASSERT_TRUE(v)    utest_match(bool, true, (v))
 #define TEST_ASSERT_FALSE(v)   utest_match(bool, false, (v))
 #define TEST_ASSERT_EQUAL(e,v) utest_match(ssize_t, (e), (v))
+#define TEST_ASSERT_NOT_EQUAL(e,v) utest_no_match(ssize_t, (e), (v))
 #define TEST_ASSERT_EQUAL_UINT8_ARRAY(e,v,s) utest_match_buf((e), (v), (s))
 
 /****************************************************************************
  * Public Types
  ****************************************************************************/
 
-struct esp32spicomms_thread_conf_s
+struct esp32_spi_comms_configuration_s
 {
-  int test;
+  bool thread_running;
+  pthread_t thread;
+  mqd_t outbound_message_queue;
+};
+
+struct message_s
+{
+  unsigned int Id;
+};
+
+struct message_and_semaphore_s
+{
+  sem_t semaphore;
+  struct message_s *message;
 };
 
 /****************************************************************************
@@ -166,8 +196,21 @@ bool esp32spicommstest_assert_print_value(FAR const char *func,
                                     long int test_value,
                                     long int should_be);
 
-int esp32spicomms_thread_start(void);
-int esp32spicomms_thread_stop(void);
-bool is_esp32spicomms_thread_running(void);
+
+
+/*
+ *    Thread prototypes.
+ */
+int esp32spicomms_thread_start(struct esp32_spi_comms_configuration_s *);
+int esp32spicomms_thread_stop(struct esp32_spi_comms_configuration_s *);
+bool is_esp32spicomms_thread_running(struct esp32_spi_comms_configuration_s *);
+
+/*
+ *    Queue prototypes.
+ */
+int esp32spicomms_create_message_queue(struct esp32_spi_comms_configuration_s *);
+int esp32spicomms_delete_message_queue(void);
+int esp32spicomms_add_message_to_queue(mqd_t, struct message_and_semaphore_s *);
+struct message_and_semaphone *esp32spicomms_get_message_from_queue(mqd_t);
 
 #endif /* __EXAMPLES_ESP32SPICOMMSTEST_DEFINES_H */
