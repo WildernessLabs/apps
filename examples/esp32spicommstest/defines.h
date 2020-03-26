@@ -202,7 +202,6 @@ bool esp32spicommstest_assert_print_value(FAR const char *func,
  *    Thread prototypes.
  */
 int esp32spicomms_thread_start(struct esp32_spi_comms_configuration_s *);
-int esp32spicomms_thread_stop(struct esp32_spi_comms_configuration_s *);
 bool is_esp32spicomms_thread_running(struct esp32_spi_comms_configuration_s *);
 
 /*
