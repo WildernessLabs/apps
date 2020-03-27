@@ -207,12 +207,12 @@ TEST(Esp32SpiCommsThread, SendMessagesToThread)
   {
     struct message_s *message = malloc(sizeof(struct message_s));
     message->Id = index + 1;
-    printf("Adding message %d to queue\n", message->Id);
+    printf("Adding message %u to queue\n", message->Id);
     struct message_and_semaphore_s *message_and_semaphore = malloc(sizeof(struct message_and_semaphore_s));
     message_and_semaphore->message = message;
     esp32spicomms_add_message_to_queue(_configuration.outbound_message_queue, message_and_semaphore);
   }
-  TEST_ASSERT_EQUAL(OK, esp32spicomms_thread_start(&_configuration));
+
 }
 
 /****************************************************************************
@@ -223,10 +223,11 @@ TEST(Esp32SpiCommsThread, SendMessagesToThread)
 TEST_GROUP(Esp32SpiCommsThread)
 {
   memset(&_configuration, 0, sizeof(_configuration));
-
+  
+  TEST_ASSERT_EQUAL(OK, esp32spicomms_create_message_queue(&_configuration));
   RUN_TEST_CASE(Esp32SpiCommsThread, CheckIfThreadRunningWhenNoThreadIsRunning);
   RUN_TEST_CASE(Esp32SpiCommsThread, ThreadSetup);
   RUN_TEST_CASE(Esp32SpiCommsThread, CheckIfThreadRunningAfterThreadStartup);
   RUN_TEST_CASE(Esp32SpiCommsThread, CreateMoreThanOneThread);
-  // RUN_TEST_CASE(Esp32SpiCommsThread, SendMessagesToThread);
+  RUN_TEST_CASE(Esp32SpiCommsThread, SendMessagesToThread);
 }

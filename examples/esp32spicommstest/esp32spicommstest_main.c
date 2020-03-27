@@ -61,93 +61,20 @@
  * Definitions
  ****************************************************************************/
 
-#ifndef dbg
-  #define dbg _warn
-#endif
-
-#define esp32spicommstest_dbg(...) ((void)0)
-
-#ifndef ARRAY_SIZE
-  #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
-#endif
-
 /****************************************************************************
  * Private Data
  ****************************************************************************/
-
-static struct
-{
-  unsigned int ok;
-  unsigned int failed;
-
-  unsigned int nchecks;
-} overall;
 
 /****************************************************************************
  * Public Data
  ****************************************************************************/
 
-int esp32spicommstest_endp_malloc_cnt = 0;
-int esp32spicommstest_dcmd_malloc_cnt = 0;
-bool esp32spicommstest_test_failed = false;
-
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
 
-static void get_mallinfo(struct mallinfo *mem)
-{
-#ifdef CONFIG_CAN_PASS_STRUCTS
-  *mem = mallinfo();
-#else
-  (void)mallinfo(mem);
-#endif
-}
-
-static void print_mallinfo(const struct mallinfo *mem, const char *title)
-{
-  if (title)
-  {
-    printf("%s:\n", title);
-  }
-  printf("       %11s%11s%11s%11s\n", "total", "used", "free", "largest");
-  printf("Mem:   %11d%11d%11d%11d\n",
-         mem->arena, mem->uordblks, mem->fordblks, mem->mxordblk);
-}
-
-static void utest_assert_print_head(FAR const char *func, const int line,
-                                    FAR const char *check_str)
-{
-  printf("\t[TEST ASSERT FAILED!]\n"
-         "\t\tIn function \"%s\":\n"
-         "\t\tline %d: Assertion `%s' failed.\n", func, line, check_str);
-}
-
-static void run_tests(FAR const char *name, void (CODE *test_fn)(void))
-{
-  printf("Testing group \"%s\" =>\n", name);
-  fflush(stdout);
-  fflush(stderr);
-
-  esp32spicommstest_test_failed = false;
-  test_fn();
-  if (!esp32spicommstest_test_failed)
-    {
-      printf("\tGroup \"%s\": [OK]\n", name);
-      overall.ok++;
-    }
-  else
-    {
-      printf("\tGroup \"%s\": [FAILED]\n", name);
-      overall.failed++;
-    }
-
-  fflush(stdout);
-  fflush(stderr);
-}
-
 /****************************************************************************
- * Name: runAllTests
+ * Name: run_tests
  *
  * Description:
  *   Sequentially runs all included test groups
@@ -162,72 +89,48 @@ static void run_tests(FAR const char *name, void (CODE *test_fn)(void))
  *   None
  *
  ****************************************************************************/
-
-static void runAllTests(void)
+static void run_tests(void)
 {
-  // RUN_TEST_GROUP(Esp32SpiCommsQueue);
-  RUN_TEST_GROUP(Esp32SpiCommsThread);
+  struct esp32_spi_comms_configuration_s configuration;
+
+  memset(&configuration, 0, sizeof(configuration));
+
+  if (esp32spicomms_create_message_queue(&configuration) != OK)
+  {
+    printf("ERROR: Failed to create message queue.\n");
+    return;
+  }
+  else
+  {
+    printf("Message queue created OK.\n");
+  }
+  
+
+  if (esp32spicomms_thread_start(&configuration) != OK)
+  {
+    printf("ERROR: Failed to start ESP32 SPI Comms thread.\n");
+    return;
+  }
+  else
+  {
+    printf("ESP32 SPI Comms thread started OK.\n");
+  }
+  
+  printf("Adding five messages to the message queue for thread processing.\n");
+  for (int index = 0; index < 5; index++)
+  {
+    struct message_s *message = malloc(sizeof(struct message_s));
+    message->Id = index + 1;
+    printf("Adding message %u to queue\n", message->Id);
+    struct message_and_semaphore_s *message_and_semaphore = malloc(sizeof(struct message_and_semaphore_s));
+    message_and_semaphore->message = message;
+    esp32spicomms_add_message_to_queue(configuration.outbound_message_queue, message_and_semaphore);
+  }
 }
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
-
-bool esp32spicommstest_assert_print_value(FAR const char *func,
-                                    const int line,
-                                    FAR const char *check_str,
-                                    long int test_value,
-                                    long int should_be)
-{
-  ++overall.nchecks;
-
-  if (test_value == should_be)
-    {
-      int keep_errno = errno;
-
-      esp32spicommstest_dbg("%d => OK.\n", line);
-
-      errno = keep_errno;
-      return true;
-    }
-
-  utest_assert_print_head(func, line, check_str);
-
-  printf("\t\t\tgot value: %ld\n", test_value);
-  printf("\t\t\tshould be: %ld\n", should_be);
-
-  fflush(stdout);
-  fflush(stderr);
-
-  return false;
-}
-
-bool esp32spicommstest_assert_print_buf(FAR const char *func,
-                                  const int line,
-                                  FAR const char *check_str,
-                                  FAR const void *test_buf,
-                                  FAR const void *expect_buf,
-                                  size_t buflen)
-{
-  ++overall.nchecks;
-
-  if (memcmp(test_buf, expect_buf, buflen) == 0)
-    {
-      int keep_errno = errno;
-
-      esp32spicommstest_dbg("%d => OK.\n", line);
-
-      errno = keep_errno;
-      return true;
-    }
-
-  utest_assert_print_head(func, line, check_str);
-
-  fflush(stdout);
-  fflush(stderr);
-
-  return false;
-}
 
 /****************************************************************************
  * esp32spicommstest_main
@@ -239,33 +142,17 @@ int main(int argc, FAR char *argv[])
 int esp32spicommstest_main(int argc, char *argv[])
 #endif
 {
-  struct mallinfo mem_before, mem_after;
-
-  memset(&overall, 0, sizeof(overall));
-
-  printf("\n\nStarting ESP32 SPI Comms Unit Tests...\n");
+  printf("ESP32SPI Comms test.\n");
   fflush(stdout);
   fflush(stderr);
 
-  get_mallinfo(&mem_before);
+  run_tests();
 
-  runAllTests();
-
-  printf("Unit-test groups done... OK:%u, FAILED:%u, TOTAL:%u\n",
-         overall.ok, overall.failed, overall.ok + overall.failed);
-  printf(" -- number of checks made: %u\n", overall.nchecks);
+  printf("\n\nESP32 SPI Comms main program complete, thread should pick up the messages.\n");
   fflush(stdout);
   fflush(stderr);
 
-  get_mallinfo(&mem_after);
 
-  print_mallinfo(&mem_before, "HEAP BEFORE TESTS");
-  print_mallinfo(&mem_after, "HEAP AFTER TESTS");
-
-  printf("\n\nESP32 SPI Comms Unit Tests Complete.\n");
-
-  fflush(stdout);
-  fflush(stderr);
   exit(0);
 
   return 0;
