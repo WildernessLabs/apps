@@ -160,17 +160,51 @@ struct esp32_spi_comms_configuration_s
   mqd_t outbound_message_queue;
 };
 
-struct message_s
+struct esp32spicomms_message_s
 {
-  unsigned int Id;
+    /*
+     *  Type of message.
+     */
+    uint8_t message_type;
+
+    /*
+     *  Interface that this message is destined for.
+     */
+    uint8_t interface;
+
+    /*
+     *  Function (on the interface) to be executed.
+     */
+    uint32_t function;
+
+    /*
+     *  Status code (for returning messages) from the function.
+     */
+    uint32_t status_code;
+
+    /*
+     *  Unique ID of this message.
+     */
+    uint32_t message_id;
+
+    /*
+     *  Pointer to the payload data to be processed (or returned from) the function.
+     */
+    uint8_t *payload;
+
+    /*
+     *  Number of bytes in the payload.
+     */
+    uint32_t payload_length;
 };
+
+typedef struct esp32spicomms_message_s esp32spicomms_message_t;
 
 struct message_and_semaphore_s
 {
   sem_t semaphore;
-  struct message_s *message;
+  esp32spicomms_message_t *message;
 };
-
 /****************************************************************************
  * Public Data
  ****************************************************************************/

@@ -119,9 +119,9 @@ static void run_tests(void)
   printf("Adding five messages to the message queue for thread processing.\n");
   for (int index = 0; index < 5; index++)
   {
-    struct message_s *message = malloc(sizeof(struct message_s));
-    message->Id = index + 1;
-    printf("Adding message %u to queue\n", message->Id);
+    esp32spicomms_message_t *message = malloc(sizeof(esp32spicomms_message_t));
+    message->message_id = index + 1;
+    printf("Adding message %u to queue\n", message->message_id);
     struct message_and_semaphore_s *message_and_semaphore = malloc(sizeof(struct message_and_semaphore_s));
     message_and_semaphore->message = message;
     esp32spicomms_add_message_to_queue(configuration.outbound_message_queue, message_and_semaphore);
