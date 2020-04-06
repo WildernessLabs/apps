@@ -122,7 +122,7 @@ static void run_tests(void)
     espcp_message_t *message = malloc(sizeof(espcp_message_t));
     message->message_id = index + 1;
     printf("Adding message %u to queue\n", message->message_id);
-    struct message_and_semaphore_s *message_and_semaphore = malloc(sizeof(struct message_and_semaphore_s));
+    espcp_message_and_semaphore_t *message_and_semaphore = malloc(sizeof(espcp_message_and_semaphore_t));
     message_and_semaphore->message = message;
     espcp_add_message_to_queue(configuration.outbound_message_queue, message_and_semaphore);
   }

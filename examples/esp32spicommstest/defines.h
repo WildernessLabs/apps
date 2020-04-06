@@ -35,8 +35,8 @@
  *
  ****************************************************************************/
 
-#ifndef __EXAMPLES_espcpTEST_DEFINES_H
-#define __EXAMPLES_espcpTEST_DEFINES_H
+#ifndef __EXAMPLES_ESPCPTEST_DEFINES_H
+#define __EXAMPLES_ESPCPTEST_DEFINES_H
 
 /****************************************************************************
  * Included Files
@@ -197,14 +197,15 @@ struct espcp_message_s
      */
     uint32_t payload_length;
 };
-
 typedef struct espcp_message_s espcp_message_t;
 
-struct message_and_semaphore_s
+struct espcp_message_and_semaphore_s
 {
   sem_t semaphore;
   espcp_message_t *message;
 };
+typedef struct espcp_message_and_semaphore_s espcp_message_and_semaphore_t;
+
 /****************************************************************************
  * Public Data
  ****************************************************************************/
@@ -244,7 +245,7 @@ bool espcp_is_thead_running(struct esp32_spi_comms_configuration_s *);
  */
 int espcp_create_message_queue(struct esp32_spi_comms_configuration_s *);
 int espcp_delete_message_queue(void);
-int espcp_add_message_to_queue(mqd_t, struct message_and_semaphore_s *);
-struct message_and_semaphone *espcp_get_message_from_queue(mqd_t);
+int espcp_add_message_to_queue(mqd_t, espcp_message_and_semaphore_t *);
+struct espcp_message_and_semaphone *esp32spicomms_get_message_from_queue(mqd_t);
 
-#endif /* __EXAMPLES_espcpTEST_DEFINES_H */
+#endif /* __EXAMPLES_ESPCPTEST_DEFINES_H */
