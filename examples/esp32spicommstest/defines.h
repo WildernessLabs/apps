@@ -1,6 +1,6 @@
 /****************************************************************************
- * examples/esp32spicommstest/defines.h
- * Common defines for all esp32spicomms testcases
+ * examples/espcptest/defines.h
+ * Common defines for all espcp testcases
  *
  *   Copyright (C) 2015, 2017 Haltian Ltd. All rights reserved.
  *   Author: Roman Saveljev <roman.saveljev@haltian.com>
@@ -35,8 +35,8 @@
  *
  ****************************************************************************/
 
-#ifndef __EXAMPLES_ESP32SPICOMMSTEST_DEFINES_H
-#define __EXAMPLES_ESP32SPICOMMSTEST_DEFINES_H
+#ifndef __EXAMPLES_espcpTEST_DEFINES_H
+#define __EXAMPLES_espcpTEST_DEFINES_H
 
 /****************************************************************************
  * Included Files
@@ -56,9 +56,9 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define ESP32SPICOMMS_NODE "/dev/esp32spicomms"
+#define espcp_NODE "/dev/espcp"
 
-#define ESP32SPICOMMSTEST_DAEMON_CONF_DEFAULTS \
+#define espcpTEST_DAEMON_CONF_DEFAULTS \
   { \
     .max_sockets = UINT_MAX, \
     .supported_domain = AF_INET, \
@@ -78,13 +78,13 @@
 #define utest_match(type, should_be_value, test_value) do { \
     type tmp_utest_test_value = (type)(test_value); \
     type tmp_utest_should_value = (type)(should_be_value); \
-    if (!esp32spicommstest_assert_print_value(__func__, __LINE__, \
+    if (!espcptest_assert_print_value(__func__, __LINE__, \
                                         "(" #type ")(" #test_value ") == " \
                                         "(" #type ")(" #should_be_value ")", \
                                         tmp_utest_test_value, \
                                         tmp_utest_should_value)) \
       { \
-        esp32spicommstest_test_failed = true; \
+        espcptest_test_failed = true; \
         return; \
       } \
   } while(false)
@@ -92,19 +92,19 @@
 #define utest_no_match(type, should_be_value, test_value) do { \
     type tmp_utest_test_value = (type)(test_value); \
     type tmp_utest_should_value = (type)(should_be_value); \
-    if (esp32spicommstest_assert_print_value(__func__, __LINE__, \
+    if (espcptest_assert_print_value(__func__, __LINE__, \
                                         "(" #type ")(" #test_value ") == " \
                                         "(" #type ")(" #should_be_value ")", \
                                         tmp_utest_test_value, \
                                         tmp_utest_should_value)) \
       { \
-        esp32spicommstest_test_failed = true; \
+        espcptest_test_failed = true; \
         return; \
       } \
   } while(false)
 
 #define utest_match_buf(should_be_valuebuf, test_valuebuf, test_valuebuflen) do { \
-    if (!esp32spicommstest_assert_print_buf(__func__, __LINE__, \
+    if (!espcptest_assert_print_buf(__func__, __LINE__, \
                                       "memcmp(" #should_be_valuebuf ", " \
                                                 #test_valuebuf ", " \
                                                 #test_valuebuflen ") == 0", \
@@ -112,36 +112,36 @@
                                       test_valuebuf, \
                                       test_valuebuflen)) \
       { \
-        esp32spicommstest_test_failed = true; \
+        espcptest_test_failed = true; \
         return; \
       } \
   } while(false)
 
 #define RUN_TEST_CASE(g,t) do { \
-    if (esp32spicommstest_test_failed) \
+    if (espcptest_test_failed) \
       { \
         return; \
       } \
-    esp32spicommstest_group_##g##_setup(); \
-    esp32spicommstest_test_##g##_##t(); \
-    esp32spicommstest_group_##g##_teardown(); \
-    if (esp32spicommstest_test_failed) \
+    espcptest_group_##g##_setup(); \
+    espcptest_test_##g##_##t(); \
+    espcptest_group_##g##_teardown(); \
+    if (espcptest_test_failed) \
       { \
         return; \
       } \
   } while (false)
 
 #define RUN_TEST_GROUP(g) do { \
-    extern const char *esp32spicommstest_group_##g; \
-    void esp32spicommstest_group_##g##_run(void); \
-    run_tests(esp32spicommstest_group_##g, esp32spicommstest_group_##g##_run); \
+    extern const char *espcptest_group_##g; \
+    void espcptest_group_##g##_run(void); \
+    run_tests(espcptest_group_##g, espcptest_group_##g##_run); \
   } while (false)
 
-#define TEST_GROUP(g)        const char *esp32spicommstest_group_##g = #g; \
-                             void esp32spicommstest_group_##g##_run(void)
-#define TEST_SETUP(g)        static void esp32spicommstest_group_##g##_setup(void)
-#define TEST_TEAR_DOWN(g)    static void esp32spicommstest_group_##g##_teardown(void)
-#define TEST(g,t)            static void esp32spicommstest_test_##g##_##t(void)
+#define TEST_GROUP(g)        const char *espcptest_group_##g = #g; \
+                             void espcptest_group_##g##_run(void)
+#define TEST_SETUP(g)        static void espcptest_group_##g##_setup(void)
+#define TEST_TEAR_DOWN(g)    static void espcptest_group_##g##_teardown(void)
+#define TEST(g,t)            static void espcptest_test_##g##_##t(void)
 
 #define TEST_ASSERT_TRUE(v)    utest_match(bool, true, (v))
 #define TEST_ASSERT_FALSE(v)   utest_match(bool, false, (v))
@@ -160,7 +160,7 @@ struct esp32_spi_comms_configuration_s
   mqd_t outbound_message_queue;
 };
 
-struct esp32spicomms_message_s
+struct espcp_message_s
 {
     /*
      *  Type of message.
@@ -198,23 +198,23 @@ struct esp32spicomms_message_s
     uint32_t payload_length;
 };
 
-typedef struct esp32spicomms_message_s esp32spicomms_message_t;
+typedef struct espcp_message_s espcp_message_t;
 
 struct message_and_semaphore_s
 {
   sem_t semaphore;
-  esp32spicomms_message_t *message;
+  espcp_message_t *message;
 };
 /****************************************************************************
  * Public Data
  ****************************************************************************/
 
-extern int esp32spicommstest_endp_malloc_cnt;
-extern int esp32spicommstest_dcmd_malloc_cnt;
-// extern const struct esp32spicommstest_daemon_conf_s esp32spicommstest_daemon_defconf;
-// extern struct esp32spicommstest_daemon_conf_s esp32spicommstest_daemon_config;
+extern int espcptest_endp_malloc_cnt;
+extern int espcptest_dcmd_malloc_cnt;
+// extern const struct espcptest_daemon_conf_s espcptest_daemon_defconf;
+// extern struct espcptest_daemon_conf_s espcptest_daemon_config;
 
-extern bool esp32spicommstest_test_failed;
+extern bool espcptest_test_failed;
 
 /****************************************************************************
  * Inline Functions
@@ -224,7 +224,7 @@ extern bool esp32spicommstest_test_failed;
  * Public Function Prototypes
  ****************************************************************************/
 
-bool esp32spicommstest_assert_print_value(FAR const char *func,
+bool espcptest_assert_print_value(FAR const char *func,
                                     const int line,
                                     FAR const char *check_str,
                                     long int test_value,
@@ -235,16 +235,16 @@ bool esp32spicommstest_assert_print_value(FAR const char *func,
 /*
  *    Thread prototypes.
  */
-int esp32spicomms_init(void);
-int esp32spicomms_thread_start(struct esp32_spi_comms_configuration_s *);
-bool esp32spicomms_is_thead_running(struct esp32_spi_comms_configuration_s *);
+int espcp_init(void);
+int espcp_thread_start(struct esp32_spi_comms_configuration_s *);
+bool espcp_is_thead_running(struct esp32_spi_comms_configuration_s *);
 
 /*
  *    Queue prototypes.
  */
-int esp32spicomms_create_message_queue(struct esp32_spi_comms_configuration_s *);
-int esp32spicomms_delete_message_queue(void);
-int esp32spicomms_add_message_to_queue(mqd_t, struct message_and_semaphore_s *);
-struct message_and_semaphone *esp32spicomms_get_message_from_queue(mqd_t);
+int espcp_create_message_queue(struct esp32_spi_comms_configuration_s *);
+int espcp_delete_message_queue(void);
+int espcp_add_message_to_queue(mqd_t, struct message_and_semaphore_s *);
+struct message_and_semaphone *espcp_get_message_from_queue(mqd_t);
 
-#endif /* __EXAMPLES_ESP32SPICOMMSTEST_DEFINES_H */
+#endif /* __EXAMPLES_espcpTEST_DEFINES_H */

@@ -1,5 +1,5 @@
 /****************************************************************************
- * examples/esp32spicommstest/esp32spicommstest_thread.c
+ * examples/espcptest/espcptest_thread.c
  *
  *   Copyright (C) 2020 Wilderness Labs
  *   Author: Mark Stevens
@@ -109,7 +109,7 @@ struct esp32_spi_comms_configuration_s _configuration;
  *   None
  *
  ****************************************************************************/
-TEST_SETUP(Esp32SpiCommsThread)
+TEST_SETUP(espcpThread)
 {
 }
 
@@ -129,7 +129,7 @@ TEST_SETUP(Esp32SpiCommsThread)
  *   None
  *
  ****************************************************************************/
-TEST_TEAR_DOWN(Esp32SpiCommsThread)
+TEST_TEAR_DOWN(espcpThread)
 {
   int result = OK;
 
@@ -144,9 +144,9 @@ TEST_TEAR_DOWN(Esp32SpiCommsThread)
  *  _configuration is setup.
  * 
  ****************************************************************************/
-TEST(Esp32SpiCommsThread, CheckIfThreadRunningWhenNoThreadIsRunning)
+TEST(espcpThread, CheckIfThreadRunningWhenNoThreadIsRunning)
 {
-  TEST_ASSERT_EQUAL(false, is_esp32spicomms_thread_running(&_configuration));
+  TEST_ASSERT_EQUAL(false, is_espcp_thread_running(&_configuration));
 }
 
 /****************************************************************************
@@ -158,9 +158,9 @@ TEST(Esp32SpiCommsThread, CheckIfThreadRunningWhenNoThreadIsRunning)
  *  _configuration is setup.
  * 
  ****************************************************************************/
-TEST(Esp32SpiCommsThread, CheckIfThreadRunningAfterThreadStartup)
+TEST(espcpThread, CheckIfThreadRunningAfterThreadStartup)
 {
-  TEST_ASSERT_EQUAL(true, is_esp32spicomms_thread_running(&_configuration));
+  TEST_ASSERT_EQUAL(true, is_espcp_thread_running(&_configuration));
 }
 
 /****************************************************************************
@@ -171,9 +171,9 @@ TEST(Esp32SpiCommsThread, CheckIfThreadRunningAfterThreadStartup)
  *  _configuration is setup in TEST_SETUP
  * 
  ****************************************************************************/
-TEST(Esp32SpiCommsThread, ThreadSetup)
+TEST(espcpThread, ThreadSetup)
 {
-  TEST_ASSERT_EQUAL(OK, esp32spicomms_thread_start(&_configuration));
+  TEST_ASSERT_EQUAL(OK, espcp_thread_start(&_configuration));
 }
 
 /****************************************************************************
@@ -185,9 +185,9 @@ TEST(Esp32SpiCommsThread, ThreadSetup)
  *  _configuration is setup in TEST_SETUP
  * 
  ****************************************************************************/
-TEST(Esp32SpiCommsThread, CreateMoreThanOneThread)
+TEST(espcpThread, CreateMoreThanOneThread)
 {
-  TEST_ASSERT_EQUAL(EALREADY, esp32spicomms_thread_start(&_configuration));
+  TEST_ASSERT_EQUAL(EALREADY, espcp_thread_start(&_configuration));
 }
 
 /****************************************************************************
@@ -200,9 +200,9 @@ TEST(Esp32SpiCommsThread, CreateMoreThanOneThread)
  *  Message queue test should be run first to ensure the queueing works.
  * 
  ****************************************************************************/
-TEST(Esp32SpiCommsThread, SendMessagesToThread)
+TEST(espcpThread, SendMessagesToThread)
 {
-  TEST_ASSERT_EQUAL(OK, esp32spicomms_create_message_queue(&_configuration));
+  TEST_ASSERT_EQUAL(OK, espcp_create_message_queue(&_configuration));
   for (int index = 0; index < 5; index++)
   {
     struct message_s *message = malloc(sizeof(struct message_s));
@@ -210,7 +210,7 @@ TEST(Esp32SpiCommsThread, SendMessagesToThread)
     printf("Adding message %u to queue\n", message->Id);
     struct message_and_semaphore_s *message_and_semaphore = malloc(sizeof(struct message_and_semaphore_s));
     message_and_semaphore->message = message;
-    esp32spicomms_add_message_to_queue(_configuration.outbound_message_queue, message_and_semaphore);
+    espcp_add_message_to_queue(_configuration.outbound_message_queue, message_and_semaphore);
   }
 
 }
@@ -220,14 +220,14 @@ TEST(Esp32SpiCommsThread, SendMessagesToThread)
  * Run the test cases.
  * 
  ****************************************************************************/
-TEST_GROUP(Esp32SpiCommsThread)
+TEST_GROUP(espcpThread)
 {
   memset(&_configuration, 0, sizeof(_configuration));
   
-  TEST_ASSERT_EQUAL(OK, esp32spicomms_create_message_queue(&_configuration));
-  RUN_TEST_CASE(Esp32SpiCommsThread, CheckIfThreadRunningWhenNoThreadIsRunning);
-  RUN_TEST_CASE(Esp32SpiCommsThread, ThreadSetup);
-  RUN_TEST_CASE(Esp32SpiCommsThread, CheckIfThreadRunningAfterThreadStartup);
-  RUN_TEST_CASE(Esp32SpiCommsThread, CreateMoreThanOneThread);
-  RUN_TEST_CASE(Esp32SpiCommsThread, SendMessagesToThread);
+  TEST_ASSERT_EQUAL(OK, espcp_create_message_queue(&_configuration));
+  RUN_TEST_CASE(espcpThread, CheckIfThreadRunningWhenNoThreadIsRunning);
+  RUN_TEST_CASE(espcpThread, ThreadSetup);
+  RUN_TEST_CASE(espcpThread, CheckIfThreadRunningAfterThreadStartup);
+  RUN_TEST_CASE(espcpThread, CreateMoreThanOneThread);
+  RUN_TEST_CASE(espcpThread, SendMessagesToThread);
 }

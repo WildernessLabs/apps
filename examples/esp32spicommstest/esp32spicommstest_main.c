@@ -1,5 +1,5 @@
 /****************************************************************************
- * examples/esp32spicommstest/esp32spicommstest_main.c
+ * examples/espcptest/espcptest_main.c
  *
  *   Copyright (C) 2020 Wilderness Labs
  *   Author: Mark Stevens
@@ -95,7 +95,7 @@ static void run_tests(void)
 
   memset(&configuration, 0, sizeof(configuration));
 
-  if (esp32spicomms_create_message_queue(&configuration) != OK)
+  if (espcp_create_message_queue(&configuration) != OK)
   {
     printf("ERROR: Failed to create message queue.\n");
     return;
@@ -106,7 +106,7 @@ static void run_tests(void)
   }
   
 
-  if (esp32spicomms_thread_start(&configuration) != OK)
+  if (espcp_thread_start(&configuration) != OK)
   {
     printf("ERROR: Failed to start ESP32 SPI Comms thread.\n");
     return;
@@ -119,12 +119,12 @@ static void run_tests(void)
   printf("Adding five messages to the message queue for thread processing.\n");
   for (int index = 0; index < 5; index++)
   {
-    esp32spicomms_message_t *message = malloc(sizeof(esp32spicomms_message_t));
+    espcp_message_t *message = malloc(sizeof(espcp_message_t));
     message->message_id = index + 1;
     printf("Adding message %u to queue\n", message->message_id);
     struct message_and_semaphore_s *message_and_semaphore = malloc(sizeof(struct message_and_semaphore_s));
     message_and_semaphore->message = message;
-    esp32spicomms_add_message_to_queue(configuration.outbound_message_queue, message_and_semaphore);
+    espcp_add_message_to_queue(configuration.outbound_message_queue, message_and_semaphore);
   }
 }
 
@@ -133,7 +133,7 @@ static void run_tests(void)
  ****************************************************************************/
 
 /****************************************************************************
- * esp32spicommstest_main
+ * espcptest_main
  ****************************************************************************/
 
 #ifdef BUILD_MODULE

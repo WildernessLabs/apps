@@ -1,5 +1,5 @@
 /****************************************************************************
- * examples/esp32spicommstest/esp32spicommstest_queue.c
+ * examples/espcptest/espcptest_queue.c
  *
  *   Copyright (C) 2020 Wilderness Labs
  *   Author: Mark Stevens
@@ -109,7 +109,7 @@ struct esp32_spi_comms_configuration_s _configuration;
  *   None
  *
  ****************************************************************************/
-TEST_SETUP(Esp32SpiCommsQueue)
+TEST_SETUP(espcpQueue)
 {
   memset(&_configuration, 0, sizeof(_configuration));
 }
@@ -130,7 +130,7 @@ TEST_SETUP(Esp32SpiCommsQueue)
  *   None
  *
  ****************************************************************************/
-TEST_TEAR_DOWN(Esp32SpiCommsQueue)
+TEST_TEAR_DOWN(espcpQueue)
 {
   int result = OK;
 
@@ -147,9 +147,9 @@ TEST_TEAR_DOWN(Esp32SpiCommsQueue)
  *  _configuration is setup in TEST_SETUP
  * 
  ****************************************************************************/
-TEST(Esp32SpiCommsQueue, QueueSetup)
+TEST(espcpQueue, QueueSetup)
 {
-  TEST_ASSERT_EQUAL(OK, esp32spicomms_create_message_queue(&_configuration));
+  TEST_ASSERT_EQUAL(OK, espcp_create_message_queue(&_configuration));
 }
 
 /****************************************************************************
@@ -160,9 +160,9 @@ TEST(Esp32SpiCommsQueue, QueueSetup)
  *  _configuration is setup in TEST_SETUP
  * 
  ****************************************************************************/
-TEST(Esp32SpiCommsQueue, AddAndRetrieveMessages)
+TEST(espcpQueue, AddAndRetrieveMessages)
 {
-  TEST_ASSERT_EQUAL(OK, esp32spicomms_create_message_queue(&_configuration));
+  TEST_ASSERT_EQUAL(OK, espcp_create_message_queue(&_configuration));
 
   /*
    *  There should be no messages in the queue when the queue has just been created.
@@ -180,7 +180,7 @@ TEST(Esp32SpiCommsQueue, AddAndRetrieveMessages)
   sem_t semaphore;
   message.message = &esp32Message;
   message.semaphore = semaphore;
-  TEST_ASSERT_EQUAL(OK, esp32spicomms_add_message_to_queue(_configuration.outbound_message_queue, &message));
+  TEST_ASSERT_EQUAL(OK, espcp_add_message_to_queue(_configuration.outbound_message_queue, &message));
 
   /*
    *  There should now be 1 message in the queue.
@@ -209,8 +209,8 @@ TEST(Esp32SpiCommsQueue, AddAndRetrieveMessages)
  * Run the test cases.
  * 
  ****************************************************************************/
-TEST_GROUP(Esp32SpiCommsQueue)
+TEST_GROUP(espcpQueue)
 {
-  RUN_TEST_CASE(Esp32SpiCommsQueue, QueueSetup);
-  RUN_TEST_CASE(Esp32SpiCommsQueue, AddAndRetrieveMessages);
+  RUN_TEST_CASE(espcpQueue, QueueSetup);
+  RUN_TEST_CASE(espcpQueue, AddAndRetrieveMessages);
 }
