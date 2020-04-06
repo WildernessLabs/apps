@@ -91,7 +91,7 @@
  ****************************************************************************/
 static void run_tests(void)
 {
-  struct esp32_spi_comms_configuration_s configuration;
+  espcp_configuration_t configuration;
 
   memset(&configuration, 0, sizeof(configuration));
 

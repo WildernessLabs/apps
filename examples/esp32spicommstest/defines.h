@@ -153,12 +153,13 @@
  * Public Types
  ****************************************************************************/
 
-struct esp32_spi_comms_configuration_s
+struct espcp_configuration_s
 {
   bool thread_running;
   pthread_t thread;
   mqd_t outbound_message_queue;
 };
+typedef struct espcp_configuration_s espcp_configuration_t;
 
 struct espcp_message_s
 {
@@ -237,15 +238,15 @@ bool espcptest_assert_print_value(FAR const char *func,
  *    Thread prototypes.
  */
 int espcp_init(void);
-int espcp_thread_start(struct esp32_spi_comms_configuration_s *);
-bool espcp_is_thead_running(struct esp32_spi_comms_configuration_s *);
+int espcp_thread_start(espcp_configuration_t *);
+bool espcp_is_thead_running(espcp_configuration_t *);
 
 /*
  *    Queue prototypes.
  */
-int espcp_create_message_queue(struct esp32_spi_comms_configuration_s *);
+int espcp_create_message_queue(espcp_configuration_t *);
 int espcp_delete_message_queue(void);
 int espcp_add_message_to_queue(mqd_t, espcp_message_and_semaphore_t *);
-struct espcp_message_and_semaphone *esp32spicomms_get_message_from_queue(mqd_t);
+struct espcp_message_and_semaphone *espcp_get_message_from_queue(mqd_t);
 
 #endif /* __EXAMPLES_ESPCPTEST_DEFINES_H */
