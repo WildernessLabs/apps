@@ -60,36 +60,86 @@
 /****************************************************************************
  * Definitions
  ****************************************************************************/
+#define usrsocktest_dbg(...) ((void)0)
 
 /****************************************************************************
  * Private Data
  ****************************************************************************/
+static struct
+{
+  unsigned int ok;
+  unsigned int failed;
 
+  unsigned int nchecks;
+} overall;
 /****************************************************************************
  * Public Data
  ****************************************************************************/
+int usrsocktest_endp_malloc_cnt = 0;
+int usrsocktest_dcmd_malloc_cnt = 0;
+bool usrsocktest_test_failed = false;
+bool espcptest_test_failed;
 
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
 
-/****************************************************************************
- * Name: run_tests
- *
- * Description:
- *   Sequentially runs all included test groups
- *
- * Input Parameters:
- *   None
- *
- * Returned Value:
- *   None
- *
- * Assumptions/Limitations:
- *   None
- *
- ****************************************************************************/
-static void run_tests(void)
+
+
+static void get_mallinfo(struct mallinfo *mem)
+{
+#ifdef CONFIG_CAN_PASS_STRUCTS
+  *mem = mallinfo();
+#else
+  (void)mallinfo(mem);
+#endif
+}
+
+static void print_mallinfo(const struct mallinfo *mem, const char *title)
+{
+  if (title)
+    printf("%s:\n", title);
+  printf("       %11s%11s%11s%11s\n", "total", "used", "free", "largest");
+  printf("Mem:   %11d%11d%11d%11d\n",
+         mem->arena, mem->uordblks, mem->fordblks, mem->mxordblk);
+}
+
+static void utest_assert_print_head(FAR const char *func, const int line,
+                                    FAR const char *check_str)
+{
+  printf("\t[TEST ASSERT FAILED!]\n"
+         "\t\tIn function \"%s\":\n"
+         "\t\tline %d: Assertion `%s' failed.\n", func, line, check_str);
+}
+
+
+static void run_tests(FAR const char *name, void (CODE *test_fn)(void))
+{
+  printf("Testing group \"%s\" =>\n", name);
+  fflush(stdout);
+  fflush(stderr);
+
+  usrsocktest_test_failed = false;
+  test_fn();
+  if (!usrsocktest_test_failed)
+    {
+      printf("\tGroup \"%s\": [OK]\n", name);
+      overall.ok++;
+    }
+  else
+    {
+      printf("\tGroup \"%s\": [FAILED]\n", name);
+      overall.failed++;
+    }
+
+  fflush(stdout);
+  fflush(stderr);
+}
+
+
+
+
+void run_simple_thread_test(void)
 {
   espcp_configuration_t configuration;
 
@@ -129,8 +179,57 @@ static void run_tests(void)
 }
 
 /****************************************************************************
+ * Name: run_AllTests
+ *
+ * Description:
+ *   Sequentially runs all included test groups
+ *
+ * Input Parameters:
+ *   None
+ *
+ * Returned Value:
+ *   None
+ *
+ * Assumptions/Limitations:
+ *   None
+ *
+ ****************************************************************************/
+static void runAllTests(void)
+{
+  RUN_TEST_GROUP(GenericList);
+}
+
+/****************************************************************************
  * Public Functions
  ****************************************************************************/
+bool espcptest_assert_print_value(FAR const char *func,
+                                    const int line,
+                                    FAR const char *check_str,
+                                    long int test_value,
+                                    long int should_be)
+{
+  ++overall.nchecks;
+
+  if (test_value == should_be)
+    {
+      int keep_errno = errno;
+
+      usrsocktest_dbg("%d => OK.\n", line);
+
+      errno = keep_errno;
+      return true;
+    }
+
+  utest_assert_print_head(func, line, check_str);
+
+  printf("\t\t\tgot value: %ld\n", test_value);
+  printf("\t\t\tshould be: %ld\n", should_be);
+
+  fflush(stdout);
+  fflush(stderr);
+
+  return false;
+}
 
 /****************************************************************************
  * espcptest_main
@@ -142,17 +241,32 @@ int main(int argc, FAR char *argv[])
 int esp32spicommstest_main(int argc, char *argv[])
 #endif
 {
-  printf("ESP32SPI Comms test.\n");
+
+  struct mallinfo mem_before, mem_after;
+
+  memset(&overall, 0, sizeof(overall));
+
+  printf("Starting unit-tests...\n");
   fflush(stdout);
   fflush(stderr);
 
-  run_tests();
+  get_mallinfo(&mem_before);
 
-  printf("\n\nESP32 SPI Comms main program complete, thread should pick up the messages.\n");
+  runAllTests();
+
+  printf("Unit-test groups done... OK:%d, FAILED:%d, TOTAL:%d\n",
+         overall.ok, overall.failed, overall.ok + overall.failed);
+  printf(" -- number of checks made: %d\n", overall.nchecks);
   fflush(stdout);
   fflush(stderr);
 
+  get_mallinfo(&mem_after);
 
+  print_mallinfo(&mem_before, "HEAP BEFORE TESTS");
+  print_mallinfo(&mem_after, "HEAP AFTER TESTS");
+
+  fflush(stdout);
+  fflush(stderr);
   exit(0);
 
   return 0;

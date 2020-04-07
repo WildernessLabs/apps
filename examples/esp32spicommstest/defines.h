@@ -207,6 +207,48 @@ struct espcp_message_and_semaphore_s
 };
 typedef struct espcp_message_and_semaphore_s espcp_message_and_semaphore_t;
 
+/*
+ *  Linked list data item object.
+ * 
+ *  data - this is a pointer to the data to be held in the list.  It is a
+ *         void * object and it it the responsibility of the application
+ *         code to cast the data back to the correct type.
+ * 
+ *  parent - pointer to the previous item in the list.
+ *  child - pointer to the next item in the list.
+ */
+struct gl_linked_list_item_s
+{
+    struct gl_linked_list_item_s *parent;
+    struct gl_linked_list_item_s *child;
+    void *data;
+};
+typedef struct gl_linked_list_item_s gl_linked_list_item_t;
+
+/*
+ *  Linked list object.
+ * 
+ *  head - Pointer to the linked list data item at the head of the list.
+ *  tail - Pointer to the linked list data item at the tail (end)  of the list.
+ */
+struct gl_linked_list_s
+{
+    gl_linked_list_item_t *head;
+    gl_linked_list_item_t *tail;
+};
+typedef struct gl_linked_list_s gl_linked_list_t;
+
+/*
+ *  Function that can be used to find a data item in the linked list
+ *  with the matching uint32_t key.
+ * 
+ *  uint32_t - key to find.
+ *  void * - data item that should be checked.
+ * 
+ *  returns - true if the oject has the matching key, false otherwise.
+ */
+typedef bool (*comparison_function_t)(uint32_t, void *);
+
 /****************************************************************************
  * Public Data
  ****************************************************************************/
@@ -248,5 +290,15 @@ int espcp_create_message_queue(espcp_configuration_t *);
 int espcp_delete_message_queue(void);
 int espcp_add_message_to_queue(mqd_t, espcp_message_and_semaphore_t *);
 struct espcp_message_and_semaphone *espcp_get_message_from_queue(mqd_t);
+
+/*
+ *    Generic list prototypes.
+ */
+gl_linked_list_t *gl_create_empty_linked_list(void);
+bool gl_is_empty(gl_linked_list_t *);
+void *gl_remove_item(gl_linked_list_t *, uint32_t, comparison_function_t);
+void *gl_remove_item_at_head(gl_linked_list_t *);
+bool gl_add_item_to_head(gl_linked_list_t *, void *);
+bool gl_add_item_to_tail(gl_linked_list_t *, void *);
 
 #endif /* __EXAMPLES_ESPCPTEST_DEFINES_H */
