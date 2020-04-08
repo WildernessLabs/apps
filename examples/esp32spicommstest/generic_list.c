@@ -281,8 +281,8 @@ bool CompareInteger(uint32_t key, void *data)
 
 /****************************************************************************
  * 
- * Create a list and try to use retrieve
- * the list.
+ * Create a list and try to use retrieve to try and get an item from an
+ * empty list.  The function should return a NULL pointer.
  * 
  * Pre-requisite:
  *  None
@@ -296,7 +296,9 @@ TEST(GenericList, RetrieveFromEmptyList)
 /****************************************************************************
  * 
  * Create a list, add an item and then try to retrive it.
- * the list.
+ * 
+ * Also, check that searching for non-existant entries returns NULL for
+ * single item lists.
  * 
  * Pre-requisite:
  *  None
@@ -325,7 +327,9 @@ TEST(GenericList, RetrieveFromListWithSingleItem)
  * 
  * Create a list, add two items and then try to retrieve the one from the
  * tail of the list.
- * the list.
+ * 
+ * Also, check that searching for a non-existant item in the list should
+ * return a NULL pointer.
  * 
  * Pre-requisite:
  *  None
@@ -356,9 +360,8 @@ TEST(GenericList, RetrieveFromTailOfList)
 
 /****************************************************************************
  * 
- * Create a list, add two items and then try to retrieve the one from the
- * tail of the list.
- * the list.
+ * Create a list, add three items and then try to retrieve the one from the
+ * middle of the list.
  * 
  * Pre-requisite:
  *  None
