@@ -146,6 +146,12 @@ TEST(EspcpQueue, QueueSetup)
 {
   mqd_t queue_id = espcp_create_message_queue(ESPCP_MESSAGE_QUEUE_NAME);
   TEST_ASSERT_EQUAL(true, ((int) queue_id) != -1);
+
+  /*
+   *  Close and delete the message queue.
+   */
+  TEST_ASSERT_EQUAL(OK, mq_close(queue_id));
+  TEST_ASSERT_EQUAL(OK, mq_unlink(ESPCP_MESSAGE_QUEUE_NAME));
 }
 
 /****************************************************************************
@@ -200,6 +206,12 @@ TEST(EspcpQueue, AddMessage)
    */
   TEST_ASSERT_EQUAL(OK, mq_getattr(queue_id, &mqStatus));
   TEST_ASSERT_EQUAL(0, mqStatus.mq_curmsgs);
+
+  /*
+   *  Close and delete the message queue.
+   */
+  TEST_ASSERT_EQUAL(OK, mq_close(queue_id));
+  TEST_ASSERT_EQUAL(OK, mq_unlink(ESPCP_MESSAGE_QUEUE_NAME));
 }
 
 /****************************************************************************
@@ -252,6 +264,12 @@ TEST(EspcpQueue, AddAndRetrieveMessages)
    */
   TEST_ASSERT_EQUAL(OK, mq_getattr(queue_id, &mqStatus));
   TEST_ASSERT_EQUAL(0, mqStatus.mq_curmsgs);
+
+  /*
+   *  Close and delete the message queue.
+   */
+  TEST_ASSERT_EQUAL(OK, mq_close(queue_id));
+  TEST_ASSERT_EQUAL(OK, mq_unlink(ESPCP_MESSAGE_QUEUE_NAME));
 }
 
 /****************************************************************************
