@@ -197,6 +197,7 @@ void run_simple_thread_test(void)
 static void runAllTests(void)
 {
   RUN_TEST_GROUP(GenericList);
+  RUN_TEST_GROUP(EspcpQueue);
 }
 
 /****************************************************************************

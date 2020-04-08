@@ -56,6 +56,10 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
+#define ESPCP_MESSAGE_QUEUE_NAME   "Esp32MessageOutboundQueue"
+
+
+
 #define espcp_NODE "/dev/espcp"
 
 #define espcpTEST_DAEMON_CONF_DEFAULTS \
@@ -202,7 +206,7 @@ typedef struct espcp_message_s espcp_message_t;
 
 struct espcp_message_and_semaphore_s
 {
-  sem_t semaphore;
+  sem_t *semaphore;
   espcp_message_t *message;
 };
 typedef struct espcp_message_and_semaphore_s espcp_message_and_semaphore_t;
@@ -286,7 +290,7 @@ bool espcp_is_thead_running(espcp_configuration_t *);
 /*
  *    Queue prototypes.
  */
-int espcp_create_message_queue(espcp_configuration_t *);
+mqd_t espcp_create_message_queue(char *name);
 int espcp_delete_message_queue(void);
 int espcp_add_message_to_queue(mqd_t, espcp_message_and_semaphore_t *);
 struct espcp_message_and_semaphone *espcp_get_message_from_queue(mqd_t);
@@ -300,5 +304,13 @@ void *gl_remove_item(gl_linked_list_t *, uint32_t, comparison_function_t);
 void *gl_remove_item_at_head(gl_linked_list_t *);
 bool gl_add_item_to_head(gl_linked_list_t *, void *);
 bool gl_add_item_to_tail(gl_linked_list_t *, void *);
+
+/*
+ *    Message dispatcher methods.
+ */
+int espcp_setup_message_dispatcher(void);
+void espcp_queue_send_request_message(void);
+void espcp_queue_kill_nuttx_thread_message(void);
+uint32_t espcp_get_next_message_id(void);
 
 #endif /* __EXAMPLES_ESPCPTEST_DEFINES_H */

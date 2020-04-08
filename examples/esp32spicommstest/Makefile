@@ -47,9 +47,9 @@ STACKSIZE = $(CONFIG_EXAMPLES_ESPCP_STACKSIZE)
 # NuttX ESP32SPICOMMS Test
 
 ASRCS =
-CSRCS = generic_list.c
+CSRCS = generic_list.c espcptest_queue.c
 
-MAINSRC = esp32spicommstest_main.c
+MAINSRC = espcptest_main.c
 
 CONFIG_EXAMPLES_ESP32SPICOMMSTEST_PROGNAME ?= esp32spicommstest$(EXEEXT)
 PROGNAME = $(CONFIG_EXAMPLES_ESP32SPICOMMSTEST_PROGNAME)
