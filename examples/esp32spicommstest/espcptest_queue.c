@@ -156,6 +156,60 @@ TEST(EspcpQueue, QueueSetup)
  *  _configuration is setup in TEST_SETUP
  * 
  ****************************************************************************/
+TEST(EspcpQueue, AddMessage)
+{
+  mqd_t queue_id = espcp_create_message_queue(ESPCP_MESSAGE_QUEUE_NAME);
+  TEST_ASSERT_EQUAL(true, ((int) queue_id) != -1);
+
+  /*
+   *  There should be no messages in the queue when the queue has just been created.
+   */
+  struct mq_attr mqStatus;
+  TEST_ASSERT_EQUAL(OK, mq_getattr(queue_id, &mqStatus));
+  TEST_ASSERT_EQUAL(0, mqStatus.mq_curmsgs);
+
+  /*
+   *  Add a message to the queue.
+   */
+  espcp_message_t esp32_message;
+  esp32_message.message_id = 1;
+  espcp_message_and_semaphore_t message;
+  sem_t semaphore;
+  message.message = &esp32_message;
+  message.semaphore = &semaphore;
+  TEST_ASSERT_EQUAL(OK, espcp_add_message_to_queue(queue_id, &message));
+
+  /*
+   *  There should now be 1 message in the queue.
+   */
+  TEST_ASSERT_EQUAL(OK, mq_getattr(queue_id, &mqStatus));
+  TEST_ASSERT_EQUAL(1, mqStatus.mq_curmsgs);
+
+  /*
+   *  Now get the "message" from the queue and see if we get a pointer to
+   *  the original message.
+   */
+  espcp_message_and_semaphore_t *retrieved_message;
+  int number_of_bytes = mq_receive(queue_id, (void *) &retrieved_message, sizeof(retrieved_message), NULL);
+  TEST_ASSERT_EQUAL(sizeof(espcp_message_and_semaphore_t *), number_of_bytes);
+  TEST_ASSERT_EQUAL(&message, retrieved_message);
+  TEST_ASSERT_EQUAL(1, retrieved_message->message->message_id);
+
+  /*
+   *  There should now be no messages in the queue.
+   */
+  TEST_ASSERT_EQUAL(OK, mq_getattr(queue_id, &mqStatus));
+  TEST_ASSERT_EQUAL(0, mqStatus.mq_curmsgs);
+}
+
+/****************************************************************************
+ * 
+ * Add a message to the outbound message queue.
+ * 
+ * Pre-requisite:
+ *  _configuration is setup in TEST_SETUP
+ * 
+ ****************************************************************************/
 TEST(EspcpQueue, AddAndRetrieveMessages)
 {
   mqd_t queue_id = espcp_create_message_queue(ESPCP_MESSAGE_QUEUE_NAME);
@@ -169,13 +223,13 @@ TEST(EspcpQueue, AddAndRetrieveMessages)
   TEST_ASSERT_EQUAL(0, mqStatus.mq_curmsgs);
 
   /*
-   *  Add a message to the queue.  At this point in time we do not care about
-   *  the message contents, just that the message gets added.
+   *  Add a message to the queue.
    */
-  espcp_message_t esp32Message;
+  espcp_message_t esp32_message;
+  esp32_message.message_id = 23;
   espcp_message_and_semaphore_t message;
   sem_t semaphore;
-  message.message = &esp32Message;
+  message.message = &esp32_message;
   message.semaphore = &semaphore;
   TEST_ASSERT_EQUAL(OK, espcp_add_message_to_queue(queue_id, &message));
 
@@ -186,13 +240,12 @@ TEST(EspcpQueue, AddAndRetrieveMessages)
   TEST_ASSERT_EQUAL(1, mqStatus.mq_curmsgs);
 
   /*
-   *  Now get the "message" from the queue and see if we get a pointer to 
+   *  Now get the "message" from the queue and see if we get a pointer to
    *  the original message.
    */
-  espcp_message_and_semaphore_t *retrieved_message;
-  int number_of_bytes = mq_receive(queue_id, (void *) &retrieved_message, sizeof(retrieved_message), NULL);
-  TEST_ASSERT_EQUAL(sizeof(espcp_message_and_semaphore_t *), number_of_bytes);
+  espcp_message_and_semaphore_t *retrieved_message = (espcp_message_and_semaphore_t *) espcp_get_message_from_queue(queue_id);
   TEST_ASSERT_EQUAL(&message, retrieved_message);
+  TEST_ASSERT_EQUAL(23, retrieved_message->message->message_id);
 
   /*
    *  There should now be no messages in the queue.
@@ -209,5 +262,6 @@ TEST(EspcpQueue, AddAndRetrieveMessages)
 TEST_GROUP(EspcpQueue)
 {
   RUN_TEST_CASE(EspcpQueue, QueueSetup);
+  RUN_TEST_CASE(EspcpQueue, AddMessage);
   RUN_TEST_CASE(EspcpQueue, AddAndRetrieveMessages);
 }

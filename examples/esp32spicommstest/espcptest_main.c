@@ -145,7 +145,7 @@ void run_simple_thread_test(void)
 
   memset(&configuration, 0, sizeof(configuration));
 
-  if (espcp_create_message_queue(&configuration) != OK)
+  if (espcp_create_message_queue(ESPCP_MESSAGE_QUEUE_NAME) != OK)
   {
     printf("ERROR: Failed to create message queue.\n");
     return;
