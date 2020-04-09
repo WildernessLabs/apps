@@ -179,7 +179,7 @@ void run_simple_thread_test(void)
 }
 
 /****************************************************************************
- * Name: run_AllTests
+ * Name: runAllTests
  *
  * Description:
  *   Sequentially runs all included test groups
@@ -198,6 +198,7 @@ static void runAllTests(void)
 {
   RUN_TEST_GROUP(GenericList);
   RUN_TEST_GROUP(EspcpQueue);
+  RUN_TEST_GROUP(EspcpMessageDispatcher);
   RUN_TEST_GROUP(EspcpThread);
 }
 
