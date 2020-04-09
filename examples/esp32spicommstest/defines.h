@@ -281,9 +281,13 @@ bool espcptest_assert_print_value(FAR const char *func,
 
 
 /*
- *    Thread prototypes.
+ *    Coprocessor prototypes.
  */
 int espcp_init(void);
+
+/*
+ *    Thread prototypes.
+ */
 int espcp_thread_start(espcp_configuration_t *);
 bool espcp_is_thead_running(espcp_configuration_t *);
 

@@ -83,7 +83,7 @@
  * Private Data
  ****************************************************************************/
 
-struct esp32_spi_comms_configuration_s _configuration;
+espcp_configuration_t _configuration;
 
 /****************************************************************************
  * Public Data
@@ -109,7 +109,7 @@ struct esp32_spi_comms_configuration_s _configuration;
  *   None
  *
  ****************************************************************************/
-TEST_SETUP(espcpThread)
+TEST_SETUP(EspcpThread)
 {
 }
 
@@ -129,7 +129,7 @@ TEST_SETUP(espcpThread)
  *   None
  *
  ****************************************************************************/
-TEST_TEAR_DOWN(espcpThread)
+TEST_TEAR_DOWN(EspcpThread)
 {
   int result = OK;
 
@@ -146,7 +146,7 @@ TEST_TEAR_DOWN(espcpThread)
  ****************************************************************************/
 TEST(EspcpThread, CheckIfThreadRunningWhenNoThreadIsRunning)
 {
-  TEST_ASSERT_EQUAL(false, espcp_is_thread_running(&_configuration));
+  TEST_ASSERT_EQUAL(false, espcp_is_thead_running(&_configuration));
 }
 
 /****************************************************************************
@@ -174,8 +174,9 @@ TEST(EspcpThread, CheckIfThreadRunningAfterThreadStartup)
  *  _configuration is setup in TEST_SETUP
  * 
  ****************************************************************************/
-TEST(espcpThread, ThreadSetup)
+TEST(EspcpThread, ThreadSetup)
 {
+  mqd_t queue_id = espcp_create_message_queue(ESPCP_MESSAGE_QUEUE_NAME);
   TEST_ASSERT_EQUAL(OK, espcp_thread_start(&_configuration));
 }
 
@@ -188,7 +189,7 @@ TEST(espcpThread, ThreadSetup)
  *  _configuration is setup in TEST_SETUP
  * 
  ****************************************************************************/
-TEST(espcpThread, CreateMoreThanOneThread)
+TEST(EspcpThread, CreateMoreThanOneThread)
 {
   TEST_ASSERT_EQUAL(EALREADY, espcp_thread_start(&_configuration));
 }
@@ -203,19 +204,19 @@ TEST(espcpThread, CreateMoreThanOneThread)
  *  Message queue test should be run first to ensure the queueing works.
  * 
  ****************************************************************************/
-TEST(espcpThread, SendMessagesToThread)
+TEST(EspcpThread, SendMessagesToThread)
 {
-  TEST_ASSERT_EQUAL(OK, espcp_create_message_queue(&_configuration));
+  mqd_t queue_id = espcp_create_message_queue(ESPCP_MESSAGE_QUEUE_NAME);
+  TEST_ASSERT_EQUAL(true, queue_id > 0);
   for (int index = 0; index < 5; index++)
   {
-    struct message_s *message = malloc(sizeof(struct message_s));
-    message->Id = index + 1;
-    printf("Adding message %u to queue\n", message->Id);
-    struct message_and_semaphore_s *message_and_semaphore = malloc(sizeof(struct message_and_semaphore_s));
+    espcp_message_t *message = malloc(sizeof(espcp_message_t));
+    message->message_id = index + 1;
+    printf("Adding message %u to queue\n", message->message_id);
+    espcp_message_and_semaphore_t *message_and_semaphore = malloc(sizeof(espcp_message_and_semaphore_t));
     message_and_semaphore->message = message;
     espcp_add_message_to_queue(_configuration.outbound_message_queue, message_and_semaphore);
   }
-
 }
 
 /****************************************************************************
@@ -227,10 +228,10 @@ TEST_GROUP(EspcpThread)
 {
   memset(&_configuration, 0, sizeof(_configuration));
   
-  TEST_ASSERT_EQUAL(OK, espcp_create_message_queue(&_configuration));
-  RUN_TEST_CASE(EspcpThread, CheckIfThreadRunningWhenNoThreadIsRunning);
-  RUN_TEST_CASE(espcpThread, CheckIfThreadRunningAfterThreadStartup);
-  // RUN_TEST_CASE(EspcpThread, ThreadSetup);
-  // RUN_TEST_CASE(espcpThread, CreateMoreThanOneThread);
-  // RUN_TEST_CASE(espcpThread, SendMessagesToThread);
+  // TEST_ASSERT_EQUAL(OK, espcp_create_message_queue(&_configuration));
+  // RUN_TEST_CASE(EspcpThread, CheckIfThreadRunningWhenNoThreadIsRunning);
+  // RUN_TEST_CASE(EspcpThread, CheckIfThreadRunningAfterThreadStartup);
+  RUN_TEST_CASE(EspcpThread, ThreadSetup);
+  // RUN_TEST_CASE(EspcpThread, CreateMoreThanOneThread);
+  // RUN_TEST_CASE(EspcpThread, SendMessagesToThread);
 }
