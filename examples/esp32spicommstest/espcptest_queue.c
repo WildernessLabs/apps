@@ -83,6 +83,11 @@
  * Private Data
  ****************************************************************************/
 
+/*
+ *  ID of the queue being tested.
+ */
+static mqd_t g_queue_id = 0;
+
 /****************************************************************************
  * Public Data
  ****************************************************************************/
@@ -92,10 +97,11 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: ESP32 SPI Communications queue test group setup
+ * Name: TEST_SETUP(EspcpQueue)
  *
  * Description:
- *   Setup function executed before each testcase in this test group
+ *  Setup the named message queue and assign the queue ID to a global
+ *  variable.
  *
  * Input Parameters:
  *   None
@@ -109,13 +115,17 @@
  ****************************************************************************/
 TEST_SETUP(EspcpQueue)
 {
+  g_queue_id = espcp_create_message_queue(ESPCP_MESSAGE_QUEUE_NAME);
+  TEST_ASSERT_EQUAL(true, ((int) g_queue_id) != -1);
 }
 
 /****************************************************************************
- * Name: ESP32 SPI Communications queue test group teardown
+ * Name: TEST_TEAR_DOWN(EspcpQueue)
  *
  * Description:
- *   Setup function executed after each testcase in this test group
+ *  Close the message queue and then unlink it.
+ * 
+ *  At the end of this the queue should no longer exist.
  *
  * Input Parameters:
  *   None
@@ -129,49 +139,27 @@ TEST_SETUP(EspcpQueue)
  ****************************************************************************/
 TEST_TEAR_DOWN(EspcpQueue)
 {
-  int result = OK;
-
-  assert(result == OK);
-}
-
-/****************************************************************************
- * 
- * Setup the message queue.
- * 
- * Pre-requisite:
- *  _configuration is setup in TEST_SETUP
- * 
- ****************************************************************************/
-TEST(EspcpQueue, QueueSetup)
-{
-  mqd_t queue_id = espcp_create_message_queue(ESPCP_MESSAGE_QUEUE_NAME);
-  TEST_ASSERT_EQUAL(true, ((int) queue_id) != -1);
-
-  /*
-   *  Close and delete the message queue.
-   */
-  TEST_ASSERT_EQUAL(OK, mq_close(queue_id));
+  TEST_ASSERT_EQUAL(OK, mq_close(g_queue_id));
   TEST_ASSERT_EQUAL(OK, mq_unlink(ESPCP_MESSAGE_QUEUE_NAME));
+  g_queue_id = 0;
 }
 
 /****************************************************************************
  * 
- * Add a message to the outbound message queue.
+ * Verify that espcp_add_message_to_queue can add a message to the message
+ * queue.
  * 
  * Pre-requisite:
- *  _configuration is setup in TEST_SETUP
+ *  g_queue_id holds the descriptor to a valid message queue.
  * 
  ****************************************************************************/
 TEST(EspcpQueue, AddMessage)
 {
-  mqd_t queue_id = espcp_create_message_queue(ESPCP_MESSAGE_QUEUE_NAME);
-  TEST_ASSERT_EQUAL(true, ((int) queue_id) != -1);
-
   /*
    *  There should be no messages in the queue when the queue has just been created.
    */
   struct mq_attr mqStatus;
-  TEST_ASSERT_EQUAL(OK, mq_getattr(queue_id, &mqStatus));
+  TEST_ASSERT_EQUAL(OK, mq_getattr(g_queue_id, &mqStatus));
   TEST_ASSERT_EQUAL(0, mqStatus.mq_curmsgs);
 
   /*
@@ -183,12 +171,12 @@ TEST(EspcpQueue, AddMessage)
   sem_t semaphore;
   message.message = &esp32_message;
   message.semaphore = &semaphore;
-  TEST_ASSERT_EQUAL(OK, espcp_add_message_to_queue(queue_id, &message));
+  TEST_ASSERT_EQUAL(OK, espcp_add_message_to_queue(g_queue_id, &message));
 
   /*
    *  There should now be 1 message in the queue.
    */
-  TEST_ASSERT_EQUAL(OK, mq_getattr(queue_id, &mqStatus));
+  TEST_ASSERT_EQUAL(OK, mq_getattr(g_queue_id, &mqStatus));
   TEST_ASSERT_EQUAL(1, mqStatus.mq_curmsgs);
 
   /*
@@ -196,7 +184,7 @@ TEST(EspcpQueue, AddMessage)
    *  the original message.
    */
   espcp_message_and_semaphore_t *retrieved_message;
-  int number_of_bytes = mq_receive(queue_id, (void *) &retrieved_message, sizeof(retrieved_message), NULL);
+  int number_of_bytes = mq_receive(g_queue_id, (void *) &retrieved_message, sizeof(retrieved_message), NULL);
   TEST_ASSERT_EQUAL(sizeof(espcp_message_and_semaphore_t *), number_of_bytes);
   TEST_ASSERT_EQUAL(&message, retrieved_message);
   TEST_ASSERT_EQUAL(1, retrieved_message->message->message_id);
@@ -204,34 +192,27 @@ TEST(EspcpQueue, AddMessage)
   /*
    *  There should now be no messages in the queue.
    */
-  TEST_ASSERT_EQUAL(OK, mq_getattr(queue_id, &mqStatus));
+  TEST_ASSERT_EQUAL(OK, mq_getattr(g_queue_id, &mqStatus));
   TEST_ASSERT_EQUAL(0, mqStatus.mq_curmsgs);
-
-  /*
-   *  Close and delete the message queue.
-   */
-  TEST_ASSERT_EQUAL(OK, mq_close(queue_id));
-  TEST_ASSERT_EQUAL(OK, mq_unlink(ESPCP_MESSAGE_QUEUE_NAME));
 }
 
 /****************************************************************************
  * 
- * Add a message to the outbound message queue.
+ * Verify that espcp_get_message_from_queue can retrieve a message from
+ * the message queue.
  * 
  * Pre-requisite:
- *  _configuration is setup in TEST_SETUP
+ *  g_queue_id holds the descriptor to a valid message queue.
+ *  espcp_add_message_to_queue has been tested and verified as working.
  * 
  ****************************************************************************/
 TEST(EspcpQueue, AddAndRetrieveMessages)
 {
-  mqd_t queue_id = espcp_create_message_queue(ESPCP_MESSAGE_QUEUE_NAME);
-  TEST_ASSERT_EQUAL(true, ((int) queue_id) != -1);
-
   /*
    *  There should be no messages in the queue when the queue has just been created.
    */
   struct mq_attr mqStatus;
-  TEST_ASSERT_EQUAL(OK, mq_getattr(queue_id, &mqStatus));
+  TEST_ASSERT_EQUAL(OK, mq_getattr(g_queue_id, &mqStatus));
   TEST_ASSERT_EQUAL(0, mqStatus.mq_curmsgs);
 
   /*
@@ -243,33 +224,27 @@ TEST(EspcpQueue, AddAndRetrieveMessages)
   sem_t semaphore;
   message.message = &esp32_message;
   message.semaphore = &semaphore;
-  TEST_ASSERT_EQUAL(OK, espcp_add_message_to_queue(queue_id, &message));
+  TEST_ASSERT_EQUAL(OK, espcp_add_message_to_queue(g_queue_id, &message));
 
   /*
    *  There should now be 1 message in the queue.
    */
-  TEST_ASSERT_EQUAL(OK, mq_getattr(queue_id, &mqStatus));
+  TEST_ASSERT_EQUAL(OK, mq_getattr(g_queue_id, &mqStatus));
   TEST_ASSERT_EQUAL(1, mqStatus.mq_curmsgs);
 
   /*
    *  Now get the "message" from the queue and see if we get a pointer to
    *  the original message.
    */
-  espcp_message_and_semaphore_t *retrieved_message = (espcp_message_and_semaphore_t *) espcp_get_message_from_queue(queue_id);
+  espcp_message_and_semaphore_t *retrieved_message = (espcp_message_and_semaphore_t *) espcp_get_message_from_queue(g_queue_id);
   TEST_ASSERT_EQUAL(&message, retrieved_message);
   TEST_ASSERT_EQUAL(23, retrieved_message->message->message_id);
 
   /*
    *  There should now be no messages in the queue.
    */
-  TEST_ASSERT_EQUAL(OK, mq_getattr(queue_id, &mqStatus));
+  TEST_ASSERT_EQUAL(OK, mq_getattr(g_queue_id, &mqStatus));
   TEST_ASSERT_EQUAL(0, mqStatus.mq_curmsgs);
-
-  /*
-   *  Close and delete the message queue.
-   */
-  TEST_ASSERT_EQUAL(OK, mq_close(queue_id));
-  TEST_ASSERT_EQUAL(OK, mq_unlink(ESPCP_MESSAGE_QUEUE_NAME));
 }
 
 /****************************************************************************
@@ -279,7 +254,6 @@ TEST(EspcpQueue, AddAndRetrieveMessages)
  ****************************************************************************/
 TEST_GROUP(EspcpQueue)
 {
-  RUN_TEST_CASE(EspcpQueue, QueueSetup);
   RUN_TEST_CASE(EspcpQueue, AddMessage);
   RUN_TEST_CASE(EspcpQueue, AddAndRetrieveMessages);
 }
