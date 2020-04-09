@@ -160,8 +160,8 @@ TEST(EspcpMessageDispatcher, GetNextMessageID)
 
 /****************************************************************************
  * 
- * Verify that espcp_get_next_message_id can get an incrementing message ID.
- * queue.
+ * Verify that espcp_queue_send_response_message will queue the
+ * "Send Response" message.
  * 
  * Pre-requisite:
  *  g_queue_id holds the descriptor to a valid message queue.
@@ -187,6 +187,34 @@ TEST(EspcpMessageDispatcher, QueueSendResponseMessage)
 }
 
 /****************************************************************************
+ * 
+ * Verify that espcp_queue_kill_nuttx_thread_message will queue the
+ * "Kill Nuttx Thread" message.
+ * 
+ * Pre-requisite:
+ *  g_queue_id holds the descriptor to a valid message queue.
+ * 
+ ****************************************************************************/
+TEST(EspcpMessageDispatcher, QueueKillNuttxThreadMessage)
+{
+  struct mq_attr mqStatus; 
+  TEST_ASSERT_EQUAL(OK, mq_getattr(g_queue_id, &mqStatus));
+  TEST_ASSERT_EQUAL(0, mqStatus.mq_curmsgs);
+
+  espcp_queue_kill_nuttx_thread_message();
+
+  TEST_ASSERT_EQUAL(OK, mq_getattr(g_queue_id, &mqStatus));
+  TEST_ASSERT_EQUAL(1, mqStatus.mq_curmsgs);
+
+  espcp_message_and_semaphore_t *retrieved_message;
+  int number_of_bytes = mq_receive(g_queue_id, (void *) &retrieved_message, sizeof(retrieved_message), NULL);
+  TEST_ASSERT_EQUAL(sizeof(espcp_message_and_semaphore_t *), number_of_bytes);
+  TEST_ASSERT_EQUAL(0x20, retrieved_message->message->message_type);
+  TEST_ASSERT_EQUAL(5, retrieved_message->message->interface);
+  TEST_ASSERT_EQUAL(2, retrieved_message->message->function);
+}
+
+/****************************************************************************
  *
  * Run the test cases.
  * 
@@ -195,4 +223,5 @@ TEST_GROUP(EspcpMessageDispatcher)
 {
     RUN_TEST_CASE(EspcpMessageDispatcher, GetNextMessageID);
     RUN_TEST_CASE(EspcpMessageDispatcher, QueueSendResponseMessage);
+    RUN_TEST_CASE(EspcpMessageDispatcher, QueueKillNuttxThreadMessage);
 }
