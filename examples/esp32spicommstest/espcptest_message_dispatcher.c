@@ -81,7 +81,7 @@
 /*
  *  ID of the queue being tested.
  */
-// static mqd_t g_queue_id = 0;
+static mqd_t g_queue_id = 0;
 
 /****************************************************************************
  * Public Data
@@ -92,7 +92,7 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: TEST_SETUP(EspcpQueue)
+ * Name: TEST_SETUP(EspcpMessageDispatcher)
  *
  * Description:
  *  Setup the named message queue and assign the queue ID to a global
@@ -110,10 +110,17 @@
  ****************************************************************************/
 TEST_SETUP(EspcpMessageDispatcher)
 {
+  /*
+   *    The message dispatcher needs an existing message queue.
+   */
+  g_queue_id = espcp_create_message_queue(ESPCP_MESSAGE_QUEUE_NAME);
+  TEST_ASSERT_EQUAL(true, ((int) g_queue_id) != -1);
+
+  TEST_ASSERT_EQUAL(0, espcp_setup_message_dispatcher());
 }
 
 /****************************************************************************
- * Name: TEST_TEAR_DOWN(EspcpQueue)
+ * Name: TEST_TEAR_DOWN(EspcpMessageDispatcher)
  *
  * Description:
  *  Close the message queue and then unlink it.
@@ -132,11 +139,13 @@ TEST_SETUP(EspcpMessageDispatcher)
  ****************************************************************************/
 TEST_TEAR_DOWN(EspcpMessageDispatcher)
 {
+  TEST_ASSERT_EQUAL(0, espcp_delete_message_queue(g_queue_id));
+  g_queue_id = 0;
 }
 
 /****************************************************************************
  * 
- * Verify that espcp_add_message_to_queue can add a message to the message
+ * Verify that espcp_get_next_message_id can get an incrementing message ID.
  * queue.
  * 
  * Pre-requisite:
@@ -146,8 +155,8 @@ TEST_TEAR_DOWN(EspcpMessageDispatcher)
 TEST(EspcpMessageDispatcher, GetNextMessageID)
 {
     TEST_ASSERT_EQUAL(0x80000001, espcp_get_next_message_id());
+    TEST_ASSERT_EQUAL(0x80000002, espcp_get_next_message_id());
 }
-
 
 /****************************************************************************
  *
