@@ -154,8 +154,36 @@ TEST_TEAR_DOWN(EspcpMessageDispatcher)
  ****************************************************************************/
 TEST(EspcpMessageDispatcher, GetNextMessageID)
 {
-    TEST_ASSERT_EQUAL(0x80000001, espcp_get_next_message_id());
-    TEST_ASSERT_EQUAL(0x80000002, espcp_get_next_message_id());
+  TEST_ASSERT_EQUAL(0x80000001, espcp_get_next_message_id());
+  TEST_ASSERT_EQUAL(0x80000002, espcp_get_next_message_id());
+}
+
+/****************************************************************************
+ * 
+ * Verify that espcp_get_next_message_id can get an incrementing message ID.
+ * queue.
+ * 
+ * Pre-requisite:
+ *  g_queue_id holds the descriptor to a valid message queue.
+ * 
+ ****************************************************************************/
+TEST(EspcpMessageDispatcher, QueueSendResponseMessage)
+{
+  struct mq_attr mqStatus; 
+  TEST_ASSERT_EQUAL(OK, mq_getattr(g_queue_id, &mqStatus));
+  TEST_ASSERT_EQUAL(0, mqStatus.mq_curmsgs);
+
+  espcp_queue_send_response_message();
+
+  TEST_ASSERT_EQUAL(OK, mq_getattr(g_queue_id, &mqStatus));
+  TEST_ASSERT_EQUAL(1, mqStatus.mq_curmsgs);
+
+  espcp_message_and_semaphore_t *retrieved_message;
+  int number_of_bytes = mq_receive(g_queue_id, (void *) &retrieved_message, sizeof(retrieved_message), NULL);
+  TEST_ASSERT_EQUAL(sizeof(espcp_message_and_semaphore_t *), number_of_bytes);
+  TEST_ASSERT_EQUAL(0x20, retrieved_message->message->message_type);
+  TEST_ASSERT_EQUAL(5, retrieved_message->message->interface);
+  TEST_ASSERT_EQUAL(1, retrieved_message->message->function);
 }
 
 /****************************************************************************
@@ -166,4 +194,5 @@ TEST(EspcpMessageDispatcher, GetNextMessageID)
 TEST_GROUP(EspcpMessageDispatcher)
 {
     RUN_TEST_CASE(EspcpMessageDispatcher, GetNextMessageID);
+    RUN_TEST_CASE(EspcpMessageDispatcher, QueueSendResponseMessage);
 }

@@ -313,7 +313,7 @@ bool gl_add_item_to_tail(gl_linked_list_t *, void *);
  *    Message dispatcher methods.
  */
 int espcp_setup_message_dispatcher(void);
-void espcp_queue_send_request_message(void);
+void espcp_queue_send_response_message(void);
 void espcp_queue_kill_nuttx_thread_message(void);
 uint32_t espcp_get_next_message_id(void);
 
