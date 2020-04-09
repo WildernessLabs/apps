@@ -139,8 +139,7 @@ TEST_SETUP(EspcpQueue)
  ****************************************************************************/
 TEST_TEAR_DOWN(EspcpQueue)
 {
-  TEST_ASSERT_EQUAL(OK, mq_close(g_queue_id));
-  TEST_ASSERT_EQUAL(OK, mq_unlink(ESPCP_MESSAGE_QUEUE_NAME));
+  TEST_ASSERT_EQUAL(0, espcp_delete_message_queue(g_queue_id));
   g_queue_id = 0;
 }
 

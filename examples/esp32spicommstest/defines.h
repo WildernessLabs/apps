@@ -291,7 +291,7 @@ bool espcp_is_thead_running(espcp_configuration_t *);
  *    Queue prototypes.
  */
 mqd_t espcp_create_message_queue(char *name);
-int espcp_delete_message_queue(void);
+int espcp_delete_message_queue(mqd_t);
 int espcp_add_message_to_queue(mqd_t, espcp_message_and_semaphore_t *);
 void *espcp_get_message_from_queue(mqd_t);
 
