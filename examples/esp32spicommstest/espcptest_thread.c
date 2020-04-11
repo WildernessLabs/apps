@@ -127,6 +127,7 @@ TEST_TEAR_DOWN(EspcpThread)
 {
   TEST_ASSERT_EQUAL(0, espcp_thread_stop(&g_configuration));
   TEST_ASSERT_EQUAL(0, espcp_delete_message_queue(g_queue_id));
+  TEST_ASSERT_EQUAL(0, g_configuration.exit_code);
   g_queue_id = 0;
 }
 

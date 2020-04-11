@@ -157,11 +157,78 @@
  * Public Types
  ****************************************************************************/
 
+/*
+ *  Type definition for the function that will send data to the ESP32.
+ */
+typedef void (*espcp_send_data_function_t)(void *, void *, size_t); 
+
+/*
+ *  Linked list data item object.
+ * 
+ *  data - this is a pointer to the data to be held in the list.  It is a
+ *         void * object and it it the responsibility of the application
+ *         code to cast the data back to the correct type.
+ * 
+ *  parent - pointer to the previous item in the list.
+ *  child - pointer to the next item in the list.
+ */
+struct gl_linked_list_item_s
+{
+    struct gl_linked_list_item_s *parent;
+    struct gl_linked_list_item_s *child;
+    void *data;
+};
+typedef struct gl_linked_list_item_s gl_linked_list_item_t;
+
+/*
+ *  Linked list object.
+ * 
+ *  head - Pointer to the linked list data item at the head of the list.
+ *  tail - Pointer to the linked list data item at the tail (end)  of the list.
+ */
+struct gl_linked_list_s
+{
+    gl_linked_list_item_t *head;
+    gl_linked_list_item_t *tail;
+};
+typedef struct gl_linked_list_s gl_linked_list_t;
+
+/*
+ *  Configuration information for the ESP32 coprocessor.
+ */
 struct espcp_configuration_s
 {
+  /*
+   *  Indicates if the thread processing the messages for the ESP32
+   *  is running.
+   */
   bool thread_running;
+
+  /*
+   *  ID of the thread processing the messages for the ESP32.
+   */
   pthread_t thread;
-  mqd_t outbound_message_queue;
+
+  /*
+   *  ID of the queue of messages that are waiting to be sent to the ESP32.
+   */
+  mqd_t request_queue;
+
+  /*
+   *  List of messages that have been sent to the ESP where a response is
+   *  pending.
+   */
+  gl_linked_list_t messages_pending_response;
+
+  /*
+   *  Exit code for the thread processing the messages for the ESP32.
+   */
+  int exit_code;
+
+  /*
+   *  Method that will send / receive data to / from the ESP32.
+   */
+  espcp_send_data_function_t send_data_to_esp32;
 };
 typedef struct espcp_configuration_s espcp_configuration_t;
 
@@ -210,37 +277,6 @@ struct espcp_message_and_semaphore_s
   espcp_message_t *message;
 };
 typedef struct espcp_message_and_semaphore_s espcp_message_and_semaphore_t;
-
-/*
- *  Linked list data item object.
- * 
- *  data - this is a pointer to the data to be held in the list.  It is a
- *         void * object and it it the responsibility of the application
- *         code to cast the data back to the correct type.
- * 
- *  parent - pointer to the previous item in the list.
- *  child - pointer to the next item in the list.
- */
-struct gl_linked_list_item_s
-{
-    struct gl_linked_list_item_s *parent;
-    struct gl_linked_list_item_s *child;
-    void *data;
-};
-typedef struct gl_linked_list_item_s gl_linked_list_item_t;
-
-/*
- *  Linked list object.
- * 
- *  head - Pointer to the linked list data item at the head of the list.
- *  tail - Pointer to the linked list data item at the tail (end)  of the list.
- */
-struct gl_linked_list_s
-{
-    gl_linked_list_item_t *head;
-    gl_linked_list_item_t *tail;
-};
-typedef struct gl_linked_list_s gl_linked_list_t;
 
 /*
  *  Function that can be used to find a data item in the linked list
