@@ -155,6 +155,7 @@ static void run_tests(FAR const char *name, void (CODE *test_fn)(void))
 static void runAllTests(void)
 {
   RUN_TEST_GROUP(GenericList);
+  RUN_TEST_GROUP(EspcpCoprocessor);
   RUN_TEST_GROUP(EspcpQueue);
   RUN_TEST_GROUP(EspcpMessageDispatcher);
   RUN_TEST_GROUP(EspcpThread);
@@ -185,6 +186,33 @@ bool espcptest_assert_print_value(FAR const char *func,
 
   printf("\t\t\tgot value: %ld\n", test_value);
   printf("\t\t\tshould be: %ld\n", should_be);
+
+  fflush(stdout);
+  fflush(stderr);
+
+  return false;
+}
+
+bool espcptest_assert_print_buf(FAR const char *func,
+                                  const int line,
+                                  FAR const char *check_str,
+                                  FAR const void *test_buf,
+                                  FAR const void *expect_buf,
+                                  size_t buflen)
+{
+  ++overall.nchecks;
+
+  if (memcmp(test_buf, expect_buf, buflen) == 0)
+    {
+      int keep_errno = errno;
+
+      usrsocktest_dbg("%d => OK.\n", line);
+
+      errno = keep_errno;
+      return true;
+    }
+
+  utest_assert_print_head(func, line, check_str);
 
   fflush(stdout);
   fflush(stderr);

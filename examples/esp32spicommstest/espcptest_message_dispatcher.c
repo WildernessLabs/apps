@@ -83,6 +83,18 @@
  */
 static mqd_t g_queue_id = 0;
 
+/*
+ *  The g_expected_buffer variable holds a pointer to a byte array of data that
+ *  is expected as the result of a test.
+ * 
+ *  The test methods can use this to send expected results through to helper
+ *  methods.
+ */
+uint8_t *g_expected_buffer = NULL;
+
+static espcp_configuration_t g_configuration;
+
+
 /****************************************************************************
  * Public Data
  ****************************************************************************/
@@ -214,6 +226,50 @@ TEST(EspcpMessageDispatcher, QueueKillNuttxThreadMessage)
   TEST_ASSERT_EQUAL(2, retrieved_message->message->function);
 }
 
+void mdh_send_header_to_coprocessor(void *tx, void *rx, size_t length)
+{
+  TEST_ASSERT_EQUAL_UINT8_ARRAY(g_expected_buffer, tx, length);
+}
+
+/****************************************************************************
+ * 
+ * Verify that a header message can be encoded and presented to a method.
+ * 
+ * In real life the method will send the encoded message to the ESP32,
+ * here we will insert our own method that will compare the encoded message
+ * with what we expect to be produced.
+ * 
+ * Pre-requisite:
+ *  g_queue_id holds the descriptor to a valid message queue.
+ * 
+ ****************************************************************************/
+TEST(EspcpMessageDispatcher, SendHeaderToCoprocessor)
+{
+  espcp_message_t *message = malloc(sizeof(espcp_message_t));
+  memset(message, 0, sizeof(espcp_message_t));
+  message->message_type = 0x80;
+  message->interface = 1;
+  message->function = 2;
+  message->message_id = 3;
+
+  espcp_message_and_semaphore_t *message_and_semaphore = malloc(sizeof(espcp_message_and_semaphore_t));
+  message_and_semaphore->semaphore = NULL;
+  message_and_semaphore->message = message;
+
+  uint8_t array[] = 
+  { 
+    0x80, 0x01, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00,	0x03, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0xda, 0x8b, 0x31, 0x34, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00
+  };
+  g_expected_buffer = array;
+
+  // g_configuration.send_data_to_esp32 = mdh_send_header_to_coprocessor;
+  g_configuration.send_data_to_esp32 = NULL;
+  espcp_send_header_to_coprocessor(&g_configuration, message_and_semaphore);
+}
+
 /****************************************************************************
  *
  * Run the test cases.
@@ -224,4 +280,5 @@ TEST_GROUP(EspcpMessageDispatcher)
     RUN_TEST_CASE(EspcpMessageDispatcher, GetNextMessageID);
     RUN_TEST_CASE(EspcpMessageDispatcher, QueueSendResponseMessage);
     RUN_TEST_CASE(EspcpMessageDispatcher, QueueKillNuttxThreadMessage);
+    // RUN_TEST_CASE(EspcpMessageDispatcher, SendHeaderToCoprocessor);
 }

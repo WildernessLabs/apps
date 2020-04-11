@@ -174,7 +174,9 @@ TEST(EspcpThread, CreateMoreThanOneThread)
 /****************************************************************************
  * 
  * Added 5 messages to the queue and the thread should pick up messages
- * and display the IDs.
+ * and attempt to send the messages to the ESP32.  However, setting
+ * g_configuration.send_data_to_esp32 to NULL will effectively throw the
+ * messages away.
  * 
  * Pre-requisite:
  *  Thread has been setup as part of the TEST_SETUP procedure.
@@ -183,9 +185,12 @@ TEST(EspcpThread, CreateMoreThanOneThread)
  ****************************************************************************/
 TEST(EspcpThread, SendMessagesToThread)
 {
+  g_configuration.send_data_to_esp32 = NULL;
   for (int index = 0; index < 5; index++)
   {
     espcp_message_t *message = malloc(sizeof(espcp_message_t));
+    memset(message, 0, sizeof(espcp_message_t));
+    message->message_type = 0x80;
     message->interface = 1;
     message->function = 2;
     message->message_id = index + 1;

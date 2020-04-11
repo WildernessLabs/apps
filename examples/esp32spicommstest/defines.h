@@ -229,6 +229,18 @@ struct espcp_configuration_s
    *  Method that will send / receive data to / from the ESP32.
    */
   espcp_send_data_function_t send_data_to_esp32;
+
+  /*
+   *  Size of a buffer required to hold a headers worth of data.  This is a
+   *  frequently used value so we store it here rather than recalculate it
+   *  every time it is needed.
+   */
+  uint32_t header_only_buffer_size;
+
+  /*
+   *  Pointer to a buffer that can take a header (and only a header) worth of data.
+   */
+  uint8_t *header;
 };
 typedef struct espcp_configuration_s espcp_configuration_t;
 
@@ -314,12 +326,18 @@ bool espcptest_assert_print_value(FAR const char *func,
                                     long int test_value,
                                     long int should_be);
 
-
+bool espcptest_assert_print_buf(FAR const char *func,
+                                  const int line,
+                                  FAR const char *check_str,
+                                  FAR const void *test_buf,
+                                  FAR const void *expect_buf,
+                                  size_t buflen);
 
 /*
  *    Coprocessor prototypes.
  */
 int espcp_init(void);
+espcp_configuration_t *espcp_get_default_configuration(void);
 
 /*
  *    Thread prototypes.
@@ -353,5 +371,7 @@ int espcp_setup_message_dispatcher(void);
 void espcp_queue_send_response_message(void);
 void espcp_queue_kill_nuttx_thread_message(void);
 uint32_t espcp_get_next_message_id(void);
+int espcp_send_message_to_coprocessor(espcp_configuration_t *, espcp_message_and_semaphore_t *);
+int espcp_send_header_to_coprocessor(espcp_configuration_t *, espcp_message_and_semaphore_t *);
 
 #endif /* __EXAMPLES_ESPCPTEST_DEFINES_H */
