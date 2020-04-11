@@ -99,13 +99,7 @@ mqd_t g_queue_id = 0;
  * Name: ESP32 SPI Communications thread test group setup
  *
  * Description:
- *   Setup function executed before each testcase in this test group
- *
- * Input Parameters:
- *   None
- *
- * Returned Value:
- *   None
+ *  Setup function executed before each testcase in this test group
  *
  * Assumptions/Limitations:
  *   None
@@ -113,6 +107,7 @@ mqd_t g_queue_id = 0;
  ****************************************************************************/
 TEST_SETUP(EspcpThread)
 {
+  memset(&g_configuration, 0, sizeof(g_configuration));
   g_queue_id = espcp_create_message_queue(ESPCP_MESSAGE_QUEUE_NAME);
   TEST_ASSERT_EQUAL(0, espcp_thread_start(&g_configuration));
 }
@@ -121,13 +116,8 @@ TEST_SETUP(EspcpThread)
  * Name: ESP32 SPI Communications thread test group teardown
  *
  * Description:
- *   Setup function executed after each testcase in this test group
- *
- * Input Parameters:
- *   None
- *
- * Returned Value:
- *   None
+ *  Delete the message queues and stop any threads after a test has
+ *  completed.
  *
  * Assumptions/Limitations:
  *   None
@@ -142,37 +132,23 @@ TEST_TEAR_DOWN(EspcpThread)
 
 /****************************************************************************
  * 
- * Check to see if a thread is runing prior to thread startup.
- * 
- * Pre-requisite:
- *  _configuration is setup.
- * 
- ****************************************************************************/
-// TEST(EspcpThread, CheckIfThreadRunningWhenNoThreadIsRunning)
-// {
-//   TEST_ASSERT_EQUAL(false, espcp_is_thead_running(&g_configuration));
-// }
-
-/****************************************************************************
- * 
  * Check to see if a thread is runing after thread startup.
- * but a failure for the second instance.
  * 
  * Pre-requisite:
- *  _configuration is setup.
+ *  Thread has been setup as part of the TEST_SETUP procedure.
  * 
  ****************************************************************************/
-// TEST(EspcpThread, CheckIfThreadRunningAfterThreadStartup)
-// {
-//   TEST_ASSERT_EQUAL(false, espcp_is_thead_running(&g_configuration));
-// }
+TEST(EspcpThread, CheckThreadIsRunning)
+{
+  TEST_ASSERT_EQUAL(true, espcp_is_thead_running(&g_configuration));
+}
 
 /****************************************************************************
  * 
  * Make sure that we can start a single instance of the ESP32 SPI thread
  * 
  * Pre-requisite:
- *  _configuration is setup in TEST_SETUP
+ *  Thread has been setup as part of the TEST_SETUP procedure.
  * 
  ****************************************************************************/
 TEST(EspcpThread, ThreadSetup)
@@ -186,13 +162,13 @@ TEST(EspcpThread, ThreadSetup)
  * but a failure for the second instance.
  * 
  * Pre-requisite:
- *  _configuration is setup in TEST_SETUP
+ *  Thread has been setup as part of the TEST_SETUP procedure.
  * 
  ****************************************************************************/
-// TEST(EspcpThread, CreateMoreThanOneThread)
-// {
-//   TEST_ASSERT_EQUAL(EALREADY, espcp_thread_start(&g_configuration));
-// }
+TEST(EspcpThread, CreateMoreThanOneThread)
+{
+  TEST_ASSERT_EQUAL(EALREADY, espcp_thread_start(&g_configuration));
+}
 
 /****************************************************************************
  * 
@@ -200,24 +176,25 @@ TEST(EspcpThread, ThreadSetup)
  * and display the IDs.
  * 
  * Pre-requisite:
- *  _configuration is setup in TEST_SETUP
+ *  Thread has been setup as part of the TEST_SETUP procedure.
  *  Message queue test should be run first to ensure the queueing works.
  * 
  ****************************************************************************/
-// TEST(EspcpThread, SendMessagesToThread)
-// {
-//   mqd_t queue_id = espcp_create_message_queue(ESPCP_MESSAGE_QUEUE_NAME);
-//   TEST_ASSERT_EQUAL(true, queue_id > 0);
-//   for (int index = 0; index < 5; index++)
-//   {
-//     espcp_message_t *message = malloc(sizeof(espcp_message_t));
-//     message->message_id = index + 1;
-//     printf("Adding message %u to queue\n", message->message_id);
-//     espcp_message_and_semaphore_t *message_and_semaphore = malloc(sizeof(espcp_message_and_semaphore_t));
-//     message_and_semaphore->message = message;
-//     espcp_add_message_to_queue(_configuration.outbound_message_queue, message_and_semaphore);
-//   }
-// }
+TEST(EspcpThread, SendMessagesToThread)
+{
+  for (int index = 0; index < 5; index++)
+  {
+    espcp_message_t *message = malloc(sizeof(espcp_message_t));
+    message->interface = 1;
+    message->function = 2;
+    message->message_id = index + 1;
+
+    espcp_message_and_semaphore_t *message_and_semaphore = malloc(sizeof(espcp_message_and_semaphore_t));
+    message_and_semaphore->semaphore = NULL;
+    message_and_semaphore->message = message;
+    espcp_add_message_to_queue(g_queue_id, message_and_semaphore);
+  }
+}
 
 /****************************************************************************
  *
@@ -226,12 +203,8 @@ TEST(EspcpThread, ThreadSetup)
  ****************************************************************************/
 TEST_GROUP(EspcpThread)
 {
-  memset(&g_configuration, 0, sizeof(g_configuration));
-  
-  // TEST_ASSERT_EQUAL(OK, espcp_create_message_queue(&_configuration));
-  // RUN_TEST_CASE(EspcpThread, CheckIfThreadRunningWhenNoThreadIsRunning);
-  // RUN_TEST_CASE(EspcpThread, CheckIfThreadRunningAfterThreadStartup);
   RUN_TEST_CASE(EspcpThread, ThreadSetup);
-  // RUN_TEST_CASE(EspcpThread, CreateMoreThanOneThread);
-  // RUN_TEST_CASE(EspcpThread, SendMessagesToThread);
+  RUN_TEST_CASE(EspcpThread, CheckThreadIsRunning);
+  RUN_TEST_CASE(EspcpThread, CreateMoreThanOneThread);
+  RUN_TEST_CASE(EspcpThread, SendMessagesToThread);
 }
