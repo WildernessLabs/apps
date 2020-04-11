@@ -136,48 +136,6 @@ static void run_tests(FAR const char *name, void (CODE *test_fn)(void))
   fflush(stderr);
 }
 
-
-
-
-void run_simple_thread_test(void)
-{
-  espcp_configuration_t configuration;
-
-  memset(&configuration, 0, sizeof(configuration));
-
-  if (espcp_create_message_queue(ESPCP_MESSAGE_QUEUE_NAME) != OK)
-  {
-    printf("ERROR: Failed to create message queue.\n");
-    return;
-  }
-  else
-  {
-    printf("Message queue created OK.\n");
-  }
-  
-
-  if (espcp_thread_start(&configuration) != OK)
-  {
-    printf("ERROR: Failed to start ESP32 SPI Comms thread.\n");
-    return;
-  }
-  else
-  {
-    printf("ESP32 SPI Comms thread started OK.\n");
-  }
-  
-  printf("Adding five messages to the message queue for thread processing.\n");
-  for (int index = 0; index < 5; index++)
-  {
-    espcp_message_t *message = malloc(sizeof(espcp_message_t));
-    message->message_id = index + 1;
-    printf("Adding message %u to queue\n", message->message_id);
-    espcp_message_and_semaphore_t *message_and_semaphore = malloc(sizeof(espcp_message_and_semaphore_t));
-    message_and_semaphore->message = message;
-    espcp_add_message_to_queue(configuration.outbound_message_queue, message_and_semaphore);
-  }
-}
-
 /****************************************************************************
  * Name: runAllTests
  *
