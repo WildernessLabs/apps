@@ -290,6 +290,7 @@ int espcp_init(void);
  */
 int espcp_thread_start(espcp_configuration_t *);
 bool espcp_is_thead_running(espcp_configuration_t *);
+int espcp_thread_stop(espcp_configuration_t *);
 
 /*
  *    Queue prototypes.
