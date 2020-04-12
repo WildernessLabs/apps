@@ -90,12 +90,13 @@ static mqd_t g_queue_id = 0;
  *  The test methods can use this to send expected results through to helper
  *  methods.
  */
-uint8_t *g_expected_buffer = NULL;
+uint8_t *g_expected_rx_buffer = NULL;
+uint8_t *g_expected_tx_buffer = NULL;
 
 /*
  *  Pointer to the coprocessor configuration.
  */
-static espcp_configuration_t g_configuration = NULL;
+static espcp_configuration_t *g_configuration = NULL;
 
 /****************************************************************************
  * Public Data
@@ -118,6 +119,7 @@ static espcp_configuration_t g_configuration = NULL;
  ****************************************************************************/
 TEST_SETUP(EspcpMessageDispatcher)
 {
+  g_configuration = espcp_get_default_configuration();
   /*
    *    The message dispatcher needs an existing message queue.
    */
@@ -144,6 +146,9 @@ TEST_TEAR_DOWN(EspcpMessageDispatcher)
   TEST_ASSERT_EQUAL(0, espcp_teardown_message_dispatcher());
   TEST_ASSERT_EQUAL(0, espcp_delete_message_queue(g_queue_id));
   g_queue_id = 0;
+
+  free(g_configuration->header);
+  g_configuration = NULL;
 }
 
 /****************************************************************************
@@ -189,9 +194,35 @@ TEST(EspcpMessageDispatcher, QueueSendResponseMessage)
   TEST_ASSERT_EQUAL(1, retrieved_message->message->function);
 }
 
+/****************************************************************************
+ * Name: mdh_send_header_to_coprocessor
+ *
+ * Description:
+ *  Helper method to emulate the hardware interface interaction with the
+ *  ESP32.
+ *
+ * Input Parameters:
+ *  tx - Pointer to a buffer of data to be "sent" to the ESP32.
+ *  rx - Buffer that will be populated with data "received" from the ESP32.
+ * length - length of the buffer(s).
+ *
+ * Returned Value:
+ *  None.
+ *
+ * Assumptions/Limitations:
+ *  None
+ *
+ ****************************************************************************/
 void mdh_send_header_to_coprocessor(void *tx, void *rx, size_t length)
 {
-  TEST_ASSERT_EQUAL_UINT8_ARRAY(g_expected_buffer, tx, length);
+  if (tx != NULL)
+  {
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(g_expected_tx_buffer, tx, length);
+  }
+  if (rx != NULL)
+  {
+    memcpy(tx, g_expected_rx_buffer, length);
+  }
 }
 
 /****************************************************************************
@@ -219,18 +250,15 @@ TEST(EspcpMessageDispatcher, SendHeaderToCoprocessor)
   message_and_semaphore->semaphore = NULL;
   message_and_semaphore->message = message;
 
-  uint8_t array[] = 
+  uint8_t tx_buffer[] = 
   { 
-    0x80, 0x01, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00,	0x03, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0xda, 0x8b, 0x31, 0x34, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00
+    0x80, 0x01, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0xda, 0x8b, 0x31, 0x34, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
   };
-  g_expected_buffer = array;
-
-  // g_configuration.send_data_to_esp32 = mdh_send_header_to_coprocessor;
-  g_configuration.send_data_to_esp32 = NULL;
-  espcp_send_header_to_coprocessor(&g_configuration, message_and_semaphore);
+  g_expected_tx_buffer = tx_buffer;
+  g_expected_rx_buffer = NULL;
+  g_configuration->send_data_to_esp32 = mdh_send_header_to_coprocessor;
+  espcp_send_header_to_coprocessor(g_configuration, message_and_semaphore);
 }
 
 /****************************************************************************
@@ -242,5 +270,5 @@ TEST_GROUP(EspcpMessageDispatcher)
 {
     RUN_TEST_CASE(EspcpMessageDispatcher, GetNextMessageID);
     RUN_TEST_CASE(EspcpMessageDispatcher, QueueSendResponseMessage);
-    // RUN_TEST_CASE(EspcpMessageDispatcher, SendHeaderToCoprocessor);
+    RUN_TEST_CASE(EspcpMessageDispatcher, SendHeaderToCoprocessor);
 }
