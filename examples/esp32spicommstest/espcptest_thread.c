@@ -83,9 +83,15 @@
  * Private Data
  ****************************************************************************/
 
-static espcp_configuration_t *g_configuration;
+/*
+ *  Pointer to the coprocessor configuration.
+ */
+static espcp_configuration_t *g_configuration = NULL;
 
-static mqd_t g_message_queue_id = (mqd_t) -1;
+/*
+ *  ID of the message queue that will be used to test this module.
+ */
+static mqd_t g_message_queue_id = 0;
 
 /****************************************************************************
  * Public Data
@@ -130,7 +136,7 @@ TEST_TEAR_DOWN(EspcpThread)
   TEST_ASSERT_EQUAL(0, g_configuration->exit_code);
 
   TEST_ASSERT_EQUAL(0, espcp_delete_message_queue(g_message_queue_id));
-  g_message_queue_id = (mqd_t) -1;
+  g_message_queue_id = 0;
 
   free(g_configuration->header);
   free(g_configuration);

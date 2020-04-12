@@ -92,8 +92,10 @@ static mqd_t g_queue_id = 0;
  */
 uint8_t *g_expected_buffer = NULL;
 
-static espcp_configuration_t g_configuration;
-
+/*
+ *  Pointer to the coprocessor configuration.
+ */
+static espcp_configuration_t g_configuration = NULL;
 
 /****************************************************************************
  * Public Data
@@ -109,12 +111,6 @@ static espcp_configuration_t g_configuration;
  * Description:
  *  Setup the named message queue and assign the queue ID to a global
  *  variable.
- *
- * Input Parameters:
- *   None
- *
- * Returned Value:
- *   None
  *
  * Assumptions/Limitations:
  *   None
@@ -138,12 +134,6 @@ TEST_SETUP(EspcpMessageDispatcher)
  *  Close the message queue and then unlink it.
  * 
  *  At the end of this the queue should no longer exist.
- *
- * Input Parameters:
- *   None
- *
- * Returned Value:
- *   None
  *
  * Assumptions/Limitations:
  *   None

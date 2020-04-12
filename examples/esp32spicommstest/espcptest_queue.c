@@ -103,12 +103,6 @@ static mqd_t g_queue_id = 0;
  *  Setup the named message queue and assign the queue ID to a global
  *  variable.
  *
- * Input Parameters:
- *   None
- *
- * Returned Value:
- *   None
- *
  * Assumptions/Limitations:
  *   None
  *
@@ -126,12 +120,6 @@ TEST_SETUP(EspcpQueue)
  *  Close the message queue and then unlink it.
  * 
  *  At the end of this the queue should no longer exist.
- *
- * Input Parameters:
- *   None
- *
- * Returned Value:
- *   None
  *
  * Assumptions/Limitations:
  *   None
@@ -284,5 +272,4 @@ TEST_GROUP(EspcpQueue)
   RUN_TEST_CASE(EspcpQueue, AddMessage);
   RUN_TEST_CASE(EspcpQueue, AddAndRetrieveMessages);
   RUN_TEST_CASE(EspcpQueue, QueueKillNuttxThreadMessage);
-
 }

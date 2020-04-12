@@ -81,7 +81,7 @@
 /*
  *  Pointer to the coprocessor configuration object.
  */
-static espcp_configuration_t *g_configuration;
+static espcp_configuration_t *g_configuration = NULL;
 
 /****************************************************************************
  * Public Data
@@ -97,12 +97,6 @@ static espcp_configuration_t *g_configuration;
  * Description:
  *  Setup any objects etc. required by the coprocessor.
  *
- * Input Parameters:
- *   None
- *
- * Returned Value:
- *   None
- *
  * Assumptions/Limitations:
  *   None
  *
@@ -117,12 +111,6 @@ TEST_SETUP(EspcpCoprocessor)
  * Description:
  *  Clear down any objects etc. required by the coprocessor.
  * 
- * Input Parameters:
- *   None
- *
- * Returned Value:
- *   None
- *
  * Assumptions/Limitations:
  *   None
  *
