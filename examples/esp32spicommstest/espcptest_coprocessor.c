@@ -133,11 +133,7 @@ TEST_TEAR_DOWN(EspcpCoprocessor)
 
 /****************************************************************************
  * 
- * Verify that a header message can be encoded and presented to a method.
- * 
- * In real life the method will send the encoded message to the ESP32,
- * here we will insert our own method that will compare the encoded message
- * with what we expect to be produced.
+ *  Make sure we can get a pointer to a valid configuration object.
  * 
  * Pre-requisite:
  *  g_queue_id holds the descriptor to a valid message queue.

@@ -83,9 +83,9 @@
  * Private Data
  ****************************************************************************/
 
-espcp_configuration_t g_configuration;
+static espcp_configuration_t *g_configuration;
 
-mqd_t g_queue_id = 0;
+static mqd_t g_message_queue_id = (mqd_t) -1;
 
 /****************************************************************************
  * Public Data
@@ -107,9 +107,10 @@ mqd_t g_queue_id = 0;
  ****************************************************************************/
 TEST_SETUP(EspcpThread)
 {
-  memset(&g_configuration, 0, sizeof(g_configuration));
-  g_queue_id = espcp_create_message_queue(ESPCP_MESSAGE_QUEUE_NAME);
-  TEST_ASSERT_EQUAL(0, espcp_thread_start(&g_configuration));
+  g_configuration = espcp_get_default_configuration();
+  g_message_queue_id = espcp_create_message_queue(ESPCP_MESSAGE_QUEUE_NAME);
+  TEST_ASSERT_EQUAL(true, g_message_queue_id > 0);
+  TEST_ASSERT_EQUAL(0, espcp_thread_start(g_configuration));
 }
 
 /****************************************************************************
@@ -125,10 +126,16 @@ TEST_SETUP(EspcpThread)
  ****************************************************************************/
 TEST_TEAR_DOWN(EspcpThread)
 {
-  TEST_ASSERT_EQUAL(0, espcp_thread_stop(&g_configuration));
-  TEST_ASSERT_EQUAL(0, espcp_delete_message_queue(g_queue_id));
-  TEST_ASSERT_EQUAL(0, g_configuration.exit_code);
-  g_queue_id = 0;
+  TEST_ASSERT_EQUAL(0, espcp_thread_stop(g_configuration));
+  TEST_ASSERT_EQUAL(0, g_configuration->exit_code);
+
+  TEST_ASSERT_EQUAL(0, espcp_delete_message_queue(g_message_queue_id));
+  g_message_queue_id = (mqd_t) -1;
+
+  free(g_configuration->header);
+  free(g_configuration);
+  g_configuration = NULL;
+
 }
 
 /****************************************************************************
@@ -141,7 +148,7 @@ TEST_TEAR_DOWN(EspcpThread)
  ****************************************************************************/
 TEST(EspcpThread, CheckThreadIsRunning)
 {
-  TEST_ASSERT_EQUAL(true, espcp_is_thead_running(&g_configuration));
+  TEST_ASSERT_EQUAL(true, espcp_is_thead_running(g_configuration));
 }
 
 /****************************************************************************
@@ -154,7 +161,7 @@ TEST(EspcpThread, CheckThreadIsRunning)
  ****************************************************************************/
 TEST(EspcpThread, ThreadSetup)
 {
-  TEST_ASSERT_EQUAL(true, espcp_is_thead_running(&g_configuration));
+  TEST_ASSERT_EQUAL(true, espcp_is_thead_running(g_configuration));
 }
 
 /****************************************************************************
@@ -168,7 +175,7 @@ TEST(EspcpThread, ThreadSetup)
  ****************************************************************************/
 TEST(EspcpThread, CreateMoreThanOneThread)
 {
-  TEST_ASSERT_EQUAL(EALREADY, espcp_thread_start(&g_configuration));
+  TEST_ASSERT_EQUAL(EALREADY, espcp_thread_start(g_configuration));
 }
 
 /****************************************************************************
@@ -185,7 +192,7 @@ TEST(EspcpThread, CreateMoreThanOneThread)
  ****************************************************************************/
 TEST(EspcpThread, SendMessagesToThread)
 {
-  g_configuration.send_data_to_esp32 = NULL;
+  g_configuration->send_data_to_esp32 = NULL;
   for (int index = 0; index < 5; index++)
   {
     espcp_message_t *message = malloc(sizeof(espcp_message_t));
@@ -198,7 +205,7 @@ TEST(EspcpThread, SendMessagesToThread)
     espcp_message_and_semaphore_t *message_and_semaphore = malloc(sizeof(espcp_message_and_semaphore_t));
     message_and_semaphore->semaphore = NULL;
     message_and_semaphore->message = message;
-    espcp_add_message_to_queue(g_queue_id, message_and_semaphore);
+    espcp_add_message_to_queue(g_configuration->request_queue, message_and_semaphore);
   }
 }
 
