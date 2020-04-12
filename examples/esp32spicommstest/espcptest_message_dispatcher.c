@@ -127,6 +127,8 @@ TEST_SETUP(EspcpMessageDispatcher)
   TEST_ASSERT_EQUAL(true, ((int) g_queue_id) != -1);
 
   TEST_ASSERT_EQUAL(0, espcp_setup_message_dispatcher());
+  g_expected_tx_buffer = NULL;
+  g_expected_rx_buffer = NULL;
 }
 
 /****************************************************************************
@@ -148,6 +150,7 @@ TEST_TEAR_DOWN(EspcpMessageDispatcher)
   g_queue_id = 0;
 
   free(g_configuration->header);
+  free(g_configuration);
   g_configuration = NULL;
 }
 
@@ -221,7 +224,7 @@ void mdh_send_header_to_coprocessor(void *tx, void *rx, size_t length)
   }
   if (rx != NULL)
   {
-    memcpy(tx, g_expected_rx_buffer, length);
+    memcpy(rx, g_expected_rx_buffer, length);
   }
 }
 
@@ -246,10 +249,6 @@ TEST(EspcpMessageDispatcher, SendHeaderToCoprocessor)
   message->function = 2;
   message->message_id = 3;
 
-  espcp_message_and_semaphore_t *message_and_semaphore = malloc(sizeof(espcp_message_and_semaphore_t));
-  message_and_semaphore->semaphore = NULL;
-  message_and_semaphore->message = message;
-
   uint8_t tx_buffer[] = 
   { 
     0x80, 0x01, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -258,7 +257,123 @@ TEST(EspcpMessageDispatcher, SendHeaderToCoprocessor)
   g_expected_tx_buffer = tx_buffer;
   g_expected_rx_buffer = NULL;
   g_configuration->send_data_to_esp32 = mdh_send_header_to_coprocessor;
-  espcp_send_header_to_coprocessor(g_configuration, message_and_semaphore);
+  espcp_send_header_to_coprocessor(g_configuration, message);
+
+  g_configuration->send_data_to_esp32 = NULL;
+  free(message);
+}
+
+/****************************************************************************
+ * 
+ * Verify that a valid message acknowledgement can retrieved from the 
+ * hardware interface.
+ * 
+ * In real life the method will send the encoded message to the ESP32,
+ * here we will insert our own method that will return a response for
+ * the method under test.
+ * 
+ * Pre-requisite:
+ *  g_queue_id holds the descriptor to a valid message queue.
+ * 
+ ****************************************************************************/
+TEST(EspcpMessageDispatcher, GetValidHeaderAcknowledgement)
+{
+  espcp_message_t *sent = malloc(sizeof(espcp_message_t));
+  memset(sent, 0, sizeof(espcp_message_t));
+  sent->message_type = 0x80;
+  sent->interface = 1;
+  sent->function = 2;
+  sent->message_id = 3;
+  
+  espcp_message_t *received;
+
+
+  uint8_t rx_buffer[] = 
+  { 
+    0x00, 0x01, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x5a, 0x05, 0xcf, 0xee, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+  };
+
+  g_expected_rx_buffer = rx_buffer;
+  g_expected_tx_buffer = NULL;
+
+  g_configuration->send_data_to_esp32 = mdh_send_header_to_coprocessor;
+  TEST_ASSERT_EQUAL(0, espcp_get_message_header_acknowledgement(g_configuration, sent, &received));
+
+  g_configuration->send_data_to_esp32 = NULL;
+  free(sent);
+  free(received);
+}
+
+/****************************************************************************
+ * 
+ * Verify decoding an invalid message acknowledgement results in an error
+ * code being returned from espcp_get_message_header_acknowledgement.
+ * 
+ * Pre-requisite:
+ *  None.
+ * 
+ ****************************************************************************/
+TEST(EspcpMessageDispatcher, GetInvalidHeaderAcknowledgement)
+{
+  espcp_message_t *sent = malloc(sizeof(espcp_message_t));
+  memset(sent, 0, sizeof(espcp_message_t));
+  sent->message_type = 0x80;
+  sent->interface = 1;
+  sent->function = 2;
+  sent->message_id = 3;
+  
+  espcp_message_t *received = (espcp_message_t *) 0x80000000;   /* Should be changed by method call. */
+
+  uint8_t rx_buffer[] = 
+  { 
+    0x80, 0x01, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0xda, 0x8b, 0x31, 0x34, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+  };
+  g_expected_rx_buffer = rx_buffer;
+  g_expected_tx_buffer = NULL;
+
+  g_configuration->send_data_to_esp32 = mdh_send_header_to_coprocessor;
+  TEST_ASSERT_EQUAL(true, espcp_get_message_header_acknowledgement(g_configuration, sent, &received) != 0);
+  TEST_ASSERT_EQUAL(NULL, received);
+
+  g_configuration->send_data_to_esp32 = NULL;
+  free(sent);
+  free(received);
+}
+
+/****************************************************************************
+ * 
+ * Verify decoding an invalid message acknowledgement results in an error
+ * code being returned from espcp_get_message_header_acknowledgement.
+ * 
+ * Pre-requisite:
+ *  None.
+ * 
+ ****************************************************************************/
+TEST(EspcpMessageDispatcher, SendValidAcknowledgement)
+{
+  espcp_message_t *sent = malloc(sizeof(espcp_message_t));
+  memset(sent, 0, sizeof(espcp_message_t));
+  sent->message_type = 0x80;
+  sent->interface = 1;
+  sent->function = 2;
+  sent->message_id = 3;
+  
+  uint8_t tx_buffer[] = 
+  { 
+    0x00, 0x01, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x5a, 0x05, 0xcf, 0xee, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+  };
+  g_expected_tx_buffer = tx_buffer;
+  g_expected_rx_buffer = NULL;
+
+  g_configuration->send_data_to_esp32 = mdh_send_header_to_coprocessor;
+  espcp_send_acknowledgement_to_coprocessor(g_configuration, sent, 0);
+
+  g_configuration->send_data_to_esp32 = NULL;
+  g_expected_tx_buffer = NULL;
+  free(sent);
 }
 
 /****************************************************************************
@@ -271,4 +386,7 @@ TEST_GROUP(EspcpMessageDispatcher)
     RUN_TEST_CASE(EspcpMessageDispatcher, GetNextMessageID);
     RUN_TEST_CASE(EspcpMessageDispatcher, QueueSendResponseMessage);
     RUN_TEST_CASE(EspcpMessageDispatcher, SendHeaderToCoprocessor);
+    RUN_TEST_CASE(EspcpMessageDispatcher, GetInvalidHeaderAcknowledgement);
+    RUN_TEST_CASE(EspcpMessageDispatcher, GetValidHeaderAcknowledgement);
+    RUN_TEST_CASE(EspcpMessageDispatcher, SendValidAcknowledgement);
 }

@@ -373,7 +373,8 @@ int espcp_teardown_message_dispatcher(void);
 void espcp_queue_send_response_message(void);
 uint32_t espcp_get_next_message_id(void);
 int espcp_send_message_to_coprocessor(espcp_configuration_t *, espcp_message_and_semaphore_t *);
-int espcp_send_header_to_coprocessor(espcp_configuration_t *, espcp_message_and_semaphore_t *);
-int espcp_get_message_header_acknowledgement(espcp_configuration_t *, espcp_message_and_semaphore_t *, espcp_message_t **);
+int espcp_send_header_to_coprocessor(espcp_configuration_t *, espcp_message_t *);
+int espcp_get_message_header_acknowledgement(espcp_configuration_t *, espcp_message_t *, espcp_message_t **);
+void espcp_send_acknowledgement_to_coprocessor(espcp_configuration_t *, espcp_message_t *, int);
 
 #endif /* __EXAMPLES_ESPCPTEST_DEFINES_H */
