@@ -478,6 +478,288 @@ TEST(EspcpMessageDispatcher, SendValidMessageBody)
 }
 
 /****************************************************************************
+ * Name: mdh_get_valid_message_header_helper
+ *
+ * Description:
+ *  Helper method to emulate the hardware interface interaction with the
+ *  ESP32.
+ * 
+ *  This method supports TEST(EspcpMessageDispatcher, SendValidMessageHeader).
+  *
+ * Input Parameters:
+ *  tx - Pointer to a buffer of data to be "sent" to the ESP32.
+ *  rx - Buffer that will be populated with data "received" from the ESP32.
+ *  length - length of the buffer(s).
+ *
+ * Returned Value:
+ *  None.
+ *
+ * Assumptions/Limitations:
+ *  None
+ *
+ ****************************************************************************/
+void mdh_get_valid_message_header_helper(void *tx, void *rx, size_t length)
+{
+  /*
+   *  Stage 0 - The method will get a message body.
+   */
+  uint8_t message_header[] = 
+  { 
+    0x80, 0x01, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0xda, 0x8b, 0x31, 0x34, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+  };
+
+  /*
+   *  Stage 1 - the method will be expecting an ACK or NAK packet.  In this case we will
+   *  send an ACK.
+   */
+  uint8_t acknowledgement[] = 
+  {
+    0x00, 0x01, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x5a, 0x05, 0xcf, 0xee, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+  };
+
+  switch (g_mdh_test_stage)
+  {
+    case 0:
+      TEST_ASSERT_EQUAL(NULL, tx);
+      TEST_ASSERT_EQUAL(true, rx != NULL);
+      memcpy(rx, message_header, length);
+      break;
+    case 1:
+      TEST_ASSERT_EQUAL(NULL, rx);
+      TEST_ASSERT_EQUAL(true, tx != NULL);
+      TEST_ASSERT_EQUAL_UINT8_ARRAY(acknowledgement, tx, length);
+      break;
+    default:
+      TEST_ASSERT_EQUAL(false, true);   /* Force an error as we should never get here. */
+      break;
+  }
+  g_mdh_test_stage++;
+}
+
+/****************************************************************************
+ * 
+ * Test sending a valid message body to the ESP32.
+ * 
+ * Pre-requisite:
+ *  None.
+ * 
+ ****************************************************************************/
+TEST(EspcpMessageDispatcher, GetValidMessageHeader)
+{
+  g_mdh_test_stage = 0;
+  g_configuration->send_data_to_esp32 = mdh_get_valid_message_header_helper;
+  espcp_message_t *header = espcp_get_message_header(g_configuration);
+  TEST_ASSERT_EQUAL(true, header != NULL);
+  TEST_ASSERT_EQUAL(0x80, header->message_type);
+  TEST_ASSERT_EQUAL(1, header->interface);
+  TEST_ASSERT_EQUAL(2, header->function);
+  TEST_ASSERT_EQUAL(3, header->message_id);
+  TEST_ASSERT_EQUAL(0, header->status_code);
+  TEST_ASSERT_EQUAL(0, header->payload_length);
+  TEST_ASSERT_EQUAL(NULL, header->payload);
+  /*
+   *  Now tidy up.
+   */
+  g_configuration->send_data_to_esp32 = NULL;
+}
+
+/****************************************************************************
+ * Name: mdh_get_invalid_message_header_helper
+ *
+ * Description:
+ *  Helper method to emulate the hardware interface interaction with the
+ *  ESP32.
+ * 
+ *  This method supports TEST(EspcpMessageDispatcher, SendInvalidMessageHeader).
+ * 
+ *  This methid deliberately corrupts the header that is sent and so should
+ *  get a NAK message back from the method.
+ *
+ * Input Parameters:
+ *  tx - Pointer to a buffer of data to be "sent" to the ESP32.
+ *  rx - Buffer that will be populated with data "received" from the ESP32.
+ *  length - length of the buffer(s).
+ *
+ * Returned Value:
+ *  None.
+ *
+ * Assumptions/Limitations:
+ *  None
+ *
+ ****************************************************************************/
+void mdh_get_invalid_message_header_helper(void *tx, void *rx, size_t length)
+{
+  uint8_t message_header[] = 
+  { 
+    0x80, 0x03, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0xda, 0x8b, 0x31, 0x34, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+  };
+  TEST_ASSERT_EQUAL(NULL, tx);
+  TEST_ASSERT_EQUAL(true, rx != NULL);
+  memcpy(rx, message_header, length);
+}
+
+/****************************************************************************
+ * 
+ * Test getting an invalid message body from the ESP32
+ * 
+ * Pre-requisite:
+ *  None.
+ * 
+ ****************************************************************************/
+TEST(EspcpMessageDispatcher, GetInvalidMessageHeader)
+{
+  g_mdh_test_stage = 0;
+  g_configuration->send_data_to_esp32 = mdh_get_invalid_message_header_helper;
+  espcp_message_t *header = espcp_get_message_header(g_configuration);
+  TEST_ASSERT_EQUAL(NULL, header);
+  /*
+   *  Now tidy up.
+   */
+  g_configuration->send_data_to_esp32 = NULL;
+}
+
+/****************************************************************************
+ * Name: mdh_get_valid_message_body_helper
+ *
+ * Description:
+ *  Helper method to emulate the hardware interface interaction with the
+ *  ESP32.
+ * 
+ *  This method supports TEST(EspcpMessageDispatcher, GetValidMessageBody).
+  *
+ * Input Parameters:
+ *  tx - Pointer to a buffer of data to be "sent" to the ESP32.
+ *  rx - Buffer that will be populated with data "received" from the ESP32.
+ *  length - length of the buffer(s).
+ *
+ * Returned Value:
+ *  None.
+ *
+ * Assumptions/Limitations:
+ *  None
+ *
+ ****************************************************************************/
+void mdh_get_valid_message_body_helper(void *tx, void *rx, size_t length)
+{
+  /*
+   *  Stage 0 - The method will send a message body.
+   */
+  uint8_t message_body[] = 
+  {
+    0x80, 0x01, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x05, 0x00,
+    0x00, 0x00, 0xc9, 0x74, 0xbd, 0x58, 0x00, 0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00
+  };
+  /*
+   *  Stage 1 - the method will be expecting an ACK or NAK packet.  In this case we will
+   *  send an ACK.
+   */
+  uint8_t expected_acknowledgement[] = 
+  {
+    0x00, 0x01, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x5a, 0x05, 0xcf, 0xee, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+  };
+  /*
+   *  Stage 2 - This is a message & body with a CRC error.
+   */
+  uint8_t message_body_with_crc_error[] = 
+  {
+    0x80, 0x01, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x05, 0x00,
+    0x00, 0x00, 0xc9, 0x74, 0xbd, 0x58, 0x00, 0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00
+  };
+  /*
+   *  Stage 1 - the method will be expecting an ACK or NAK packet.  In this case we will
+   *  send an ACK.
+   */
+  uint8_t expected_crc_error_acknowledgement[] = 
+  {
+    0x01, 0x01, 0x02, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x87, 0x9c, 0x52, 0xf8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+  };
+
+  switch (g_mdh_test_stage)
+  {
+    case 0:
+      TEST_ASSERT_EQUAL(NULL, tx);
+      TEST_ASSERT_EQUAL(true, rx != NULL);
+      TEST_ASSERT_EQUAL(32, length);
+      memcpy(rx, message_body, length);
+      break;
+    case 1:
+      TEST_ASSERT_EQUAL(NULL, rx);
+      TEST_ASSERT_EQUAL(true, tx != NULL);
+      TEST_ASSERT_EQUAL(28, length);
+      TEST_ASSERT_EQUAL_UINT8_ARRAY(expected_acknowledgement, tx, length);
+      break;
+    case 2:
+      TEST_ASSERT_EQUAL(NULL, tx);
+      TEST_ASSERT_EQUAL(true, rx != NULL);
+      TEST_ASSERT_EQUAL(32, length);
+      memcpy(rx, message_body_with_crc_error, length);
+      break;
+    case 3:
+      TEST_ASSERT_EQUAL(NULL, rx);
+      TEST_ASSERT_EQUAL(true, tx != NULL);
+      TEST_ASSERT_EQUAL(28, length);
+      TEST_ASSERT_EQUAL_UINT8_ARRAY(expected_crc_error_acknowledgement, tx, length);
+      break;
+    default:
+      TEST_ASSERT_EQUAL(false, true);   /* Force an error as we should never get here. */
+      break;
+  }
+  g_mdh_test_stage++;
+}
+
+/****************************************************************************
+ * 
+ * Test sending a valid message body to the ESP32.
+ * 
+ * Pre-requisite:
+ *  None.
+ * 
+ ****************************************************************************/
+TEST(EspcpMessageDispatcher, GetValidMessageBody)
+{
+  espcp_message_t *header = malloc(sizeof(espcp_message_t));
+  memset(header, 0, sizeof(espcp_message_t));
+  header->message_type = 0x80;
+  header->interface = 1;
+  header->function = 2;
+  header->message_id = 3;
+  header->payload_length = 5;
+
+  g_mdh_test_stage = 0;
+  g_configuration->send_data_to_esp32 = mdh_get_valid_message_body_helper;
+  espcp_message_t *message = espcp_get_message_body(g_configuration, header);
+  TEST_ASSERT_EQUAL(false, message == NULL);
+  TEST_ASSERT_EQUAL(0x80, message->message_type);
+  TEST_ASSERT_EQUAL(1, message->interface);
+  TEST_ASSERT_EQUAL(2, message->function);
+  TEST_ASSERT_EQUAL(3, message->message_id);
+  TEST_ASSERT_EQUAL(0, message->status_code);
+  TEST_ASSERT_EQUAL(5, message->payload_length);
+  TEST_ASSERT_EQUAL(false, message->payload == NULL);
+  for (int index = 0; index < message->payload_length; index++)
+  {
+    TEST_ASSERT_EQUAL(index, message->payload[index]);
+  }
+  free(message);
+  free(message->payload);
+  /*
+   *  Next case should result ina CRC error.
+   */
+  message = espcp_get_message_body(g_configuration, header);
+  TEST_ASSERT_EQUAL(NULL, message);
+  /*
+   *  Now tidy up.
+   */
+  g_configuration->send_data_to_esp32 = NULL;
+  free(header);
+}
+
+/****************************************************************************
  *
  * Run the test cases.
  * 
@@ -491,4 +773,7 @@ TEST_GROUP(EspcpMessageDispatcher)
     RUN_TEST_CASE(EspcpMessageDispatcher, GetValidHeaderAcknowledgement);
     RUN_TEST_CASE(EspcpMessageDispatcher, SendValidAcknowledgement);
     RUN_TEST_CASE(EspcpMessageDispatcher, SendValidMessageBody);
+    RUN_TEST_CASE(EspcpMessageDispatcher, GetValidMessageHeader);
+    RUN_TEST_CASE(EspcpMessageDispatcher, GetInvalidMessageHeader);
+    RUN_TEST_CASE(EspcpMessageDispatcher, GetValidMessageBody);
 }
