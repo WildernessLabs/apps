@@ -94,6 +94,13 @@ uint8_t *g_expected_rx_buffer = NULL;
 uint8_t *g_expected_tx_buffer = NULL;
 
 /*
+ *  This variable is used to determine the action of the various test helper
+ *  methods.  It allows a helper to map the various stages of a method and
+ *  return the appropriate data for that test stage.
+ */
+uint32_t g_mdh_test_stage = 0;
+
+/*
  *  Pointer to the coprocessor configuration.
  */
 static espcp_configuration_t *g_configuration = NULL;
@@ -377,6 +384,99 @@ TEST(EspcpMessageDispatcher, SendValidAcknowledgement)
 }
 
 /****************************************************************************
+ * Name: mdh_send_valid_message_body_helper
+ *
+ * Description:
+ *  Helper method to emulate the hardware interface interaction with the
+ *  ESP32.
+ * 
+ *  This method supports TEST(EspcpMessageDispatcher, SendValidMessageBody).
+  *
+ * Input Parameters:
+ *  tx - Pointer to a buffer of data to be "sent" to the ESP32.
+ *  rx - Buffer that will be populated with data "received" from the ESP32.
+ *  length - length of the buffer(s).
+ *
+ * Returned Value:
+ *  None.
+ *
+ * Assumptions/Limitations:
+ *  None
+ *
+ ****************************************************************************/
+void mdh_send_valid_message_body_helper(void *tx, void *rx, size_t length)
+{
+  /*
+   *  Stage 0 - The method will send a message body.
+   */
+  uint8_t expected_message_body[] = 
+  {
+    0x80, 0x01, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x05, 0x00,
+    0x00, 0x00, 0xc9, 0x74, 0xbd, 0x58, 0x00, 0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00
+  };
+  /*
+   *  Stage 1 - the method will be expecting an ACK or NAK packet.  In this case we will
+   *  send an ACK.
+   */
+  uint8_t acknowledgement[] = 
+  {
+    0x00, 0x01, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x5a, 0x05, 0xcf, 0xee, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+  };
+
+  switch (g_mdh_test_stage)
+  {
+    case 0:
+      TEST_ASSERT_EQUAL_UINT8_ARRAY(expected_message_body, tx, length);
+      break;
+    case 1:
+      memcpy(rx, acknowledgement, length);
+      break;
+    default:
+      TEST_ASSERT_EQUAL(false, true);   /* Force an error as we should never get here. */
+      break;
+  }
+  g_mdh_test_stage++;
+}
+
+/****************************************************************************
+ * 
+ * Test sending a valid message body to the ESP32.
+ * 
+ * Pre-requisite:
+ *  None.
+ * 
+ ****************************************************************************/
+TEST(EspcpMessageDispatcher, SendValidMessageBody)
+{
+  espcp_message_t *sent = malloc(sizeof(espcp_message_t));
+  memset(sent, 0, sizeof(espcp_message_t));
+  sent->message_type = 0x80;
+  sent->interface = 1;
+  sent->function = 2;
+  sent->message_id = 3;
+  sent->payload_length = 5;
+  sent->payload = (uint8_t *) malloc(sent->payload_length);
+  for (int index = 0; index < sent->payload_length; index++)
+  {
+    sent->payload[index] = index;
+  }
+  
+  /*
+   *  Final step be fore running the test is to prepare the helper method.
+   */
+  g_mdh_test_stage = 0;
+  g_configuration->send_data_to_esp32 = mdh_send_valid_message_body_helper;
+  TEST_ASSERT_EQUAL(0, espcp_send_message_body(g_configuration, sent));
+
+  /*
+   *  Now tidy up.
+   */
+  g_configuration->send_data_to_esp32 = NULL;
+  free(sent);
+}
+
+/****************************************************************************
  *
  * Run the test cases.
  * 
@@ -389,4 +489,5 @@ TEST_GROUP(EspcpMessageDispatcher)
     RUN_TEST_CASE(EspcpMessageDispatcher, GetInvalidHeaderAcknowledgement);
     RUN_TEST_CASE(EspcpMessageDispatcher, GetValidHeaderAcknowledgement);
     RUN_TEST_CASE(EspcpMessageDispatcher, SendValidAcknowledgement);
+    RUN_TEST_CASE(EspcpMessageDispatcher, SendValidMessageBody);
 }
