@@ -720,7 +720,7 @@ void mdh_get_valid_message_body_helper(void *tx, void *rx, size_t length)
  *  None.
  * 
  ****************************************************************************/
-TEST(EspcpMessageDispatcher, GetValidMessageBody)
+TEST(EspcpMessageDispatcher, GetMessageBody)
 {
   espcp_message_t *header = malloc(sizeof(espcp_message_t));
   memset(header, 0, sizeof(espcp_message_t));
@@ -775,5 +775,5 @@ TEST_GROUP(EspcpMessageDispatcher)
     RUN_TEST_CASE(EspcpMessageDispatcher, SendValidMessageBody);
     RUN_TEST_CASE(EspcpMessageDispatcher, GetValidMessageHeader);
     RUN_TEST_CASE(EspcpMessageDispatcher, GetInvalidMessageHeader);
-    RUN_TEST_CASE(EspcpMessageDispatcher, GetValidMessageBody);
+    RUN_TEST_CASE(EspcpMessageDispatcher, GetMessageBody);
 }
