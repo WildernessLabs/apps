@@ -205,7 +205,7 @@ TEST(EspcpMessageDispatcher, QueueSendResponseMessage)
 }
 
 /****************************************************************************
- * Name: mdh_send_header_to_coprocessor
+ * Name: mdh_send_header
  *
  * Description:
  *  Helper method to emulate the hardware interface interaction with the
@@ -223,7 +223,7 @@ TEST(EspcpMessageDispatcher, QueueSendResponseMessage)
  *  None
  *
  ****************************************************************************/
-void mdh_send_header_to_coprocessor(void *tx, void *rx, size_t length)
+void mdh_send_header(void *tx, void *rx, size_t length)
 {
   if (tx != NULL)
   {
@@ -247,7 +247,7 @@ void mdh_send_header_to_coprocessor(void *tx, void *rx, size_t length)
  *  g_queue_id holds the descriptor to a valid message queue.
  * 
  ****************************************************************************/
-TEST(EspcpMessageDispatcher, SendHeaderToCoprocessor)
+TEST(EspcpMessageDispatcher, SendHeader)
 {
   espcp_message_t *message = malloc(sizeof(espcp_message_t));
   memset(message, 0, sizeof(espcp_message_t));
@@ -263,8 +263,8 @@ TEST(EspcpMessageDispatcher, SendHeaderToCoprocessor)
   };
   g_expected_tx_buffer = tx_buffer;
   g_expected_rx_buffer = NULL;
-  g_configuration->send_data_to_esp32 = mdh_send_header_to_coprocessor;
-  espcp_send_header_to_coprocessor(g_configuration, message);
+  g_configuration->send_data_to_esp32 = mdh_send_header;
+  TEST_ASSERT_EQUAL(0, espcp_send_header(g_configuration, message));
 
   g_configuration->send_data_to_esp32 = NULL;
   free(message);
@@ -304,7 +304,7 @@ TEST(EspcpMessageDispatcher, GetValidHeaderAcknowledgement)
   g_expected_rx_buffer = rx_buffer;
   g_expected_tx_buffer = NULL;
 
-  g_configuration->send_data_to_esp32 = mdh_send_header_to_coprocessor;
+  g_configuration->send_data_to_esp32 = mdh_send_header;
   TEST_ASSERT_EQUAL(0, espcp_get_message_header_acknowledgement(g_configuration, sent, &received));
   TEST_ASSERT_EQUAL(true, received != NULL);
 
@@ -341,7 +341,7 @@ TEST(EspcpMessageDispatcher, GetInvalidHeaderAcknowledgement)
   g_expected_rx_buffer = rx_buffer;
   g_expected_tx_buffer = NULL;
 
-  g_configuration->send_data_to_esp32 = mdh_send_header_to_coprocessor;
+  g_configuration->send_data_to_esp32 = mdh_send_header;
   TEST_ASSERT_EQUAL(true, espcp_get_message_header_acknowledgement(g_configuration, sent, &received) != 0);
   TEST_ASSERT_EQUAL(NULL, received);
 
@@ -376,8 +376,8 @@ TEST(EspcpMessageDispatcher, SendValidAcknowledgement)
   g_expected_tx_buffer = tx_buffer;
   g_expected_rx_buffer = NULL;
 
-  g_configuration->send_data_to_esp32 = mdh_send_header_to_coprocessor;
-  espcp_send_acknowledgement_to_coprocessor(g_configuration, sent, 0);
+  g_configuration->send_data_to_esp32 = mdh_send_header;
+  espcp_send_acknowledgement(g_configuration, sent, 0);
 
   g_configuration->send_data_to_esp32 = NULL;
   g_expected_tx_buffer = NULL;
@@ -486,7 +486,7 @@ TEST_GROUP(EspcpMessageDispatcher)
 {
     RUN_TEST_CASE(EspcpMessageDispatcher, GetNextMessageID);
     RUN_TEST_CASE(EspcpMessageDispatcher, QueueSendResponseMessage);
-    RUN_TEST_CASE(EspcpMessageDispatcher, SendHeaderToCoprocessor);
+    RUN_TEST_CASE(EspcpMessageDispatcher, SendHeader);
     RUN_TEST_CASE(EspcpMessageDispatcher, GetInvalidHeaderAcknowledgement);
     RUN_TEST_CASE(EspcpMessageDispatcher, GetValidHeaderAcknowledgement);
     RUN_TEST_CASE(EspcpMessageDispatcher, SendValidAcknowledgement);
