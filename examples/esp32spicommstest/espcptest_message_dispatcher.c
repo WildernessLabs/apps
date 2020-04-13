@@ -306,6 +306,7 @@ TEST(EspcpMessageDispatcher, GetValidHeaderAcknowledgement)
 
   g_configuration->send_data_to_esp32 = mdh_send_header_to_coprocessor;
   TEST_ASSERT_EQUAL(0, espcp_get_message_header_acknowledgement(g_configuration, sent, &received));
+  TEST_ASSERT_EQUAL(true, received != NULL);
 
   g_configuration->send_data_to_esp32 = NULL;
   free(sent);
