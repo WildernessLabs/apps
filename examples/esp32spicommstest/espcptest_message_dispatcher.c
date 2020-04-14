@@ -882,6 +882,36 @@ TEST(EspcpMessageDispatcher, GetResponseFromEsp32)
 }
 
 /****************************************************************************
+ * 
+ * Test getting processing transport messages.
+ * 
+ * Pre-requisite:
+ *  None.
+ * 
+ ****************************************************************************/
+TEST(EspcpMessageDispatcher, ProcessTransportMessage)
+{
+  /*
+   *  Passing NULL for the message should generate an error.
+   */
+  TEST_ASSERT_EQUAL(true, espcp_process_transport_message(g_configuration, NULL) != 0);
+
+  espcp_message_t *message = malloc(sizeof(espcp_message_t));
+  memset(message, 0, sizeof(espcp_message_t));
+  message->message_type = 0x80;
+  message->interface = 5;
+  message->function = 1;
+  message->message_id = 3;
+  message->status_code = 17;
+
+  TEST_ASSERT_EQUAL(0, espcp_process_transport_message(g_configuration, message));
+
+  message->status_code = 26;
+  TEST_ASSERT_EQUAL(26, espcp_process_transport_message(g_configuration, message));
+  free(message);
+}
+
+/****************************************************************************
  *
  * Run the test cases.
  * 
@@ -896,4 +926,5 @@ TEST_GROUP(EspcpMessageDispatcher)
     RUN_TEST_CASE(EspcpMessageDispatcher, GetInvalidMessageHeader);
     RUN_TEST_CASE(EspcpMessageDispatcher, GetMessageBody);
     RUN_TEST_CASE(EspcpMessageDispatcher, GetResponseFromEsp32);
+    RUN_TEST_CASE(EspcpMessageDispatcher, ProcessTransportMessage);
 }

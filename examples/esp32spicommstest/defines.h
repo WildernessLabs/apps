@@ -379,7 +379,7 @@ int espcp_send_message_body(espcp_configuration_t *, espcp_message_t *);
 espcp_message_t *espcp_get_message_body(espcp_configuration_t *, espcp_message_t *);
 int espcp_get_message_header_acknowledgement(espcp_configuration_t *, espcp_message_t *, espcp_message_t **);
 espcp_message_t *espcp_get_message_header(espcp_configuration_t *);
-int espcp_process_transport_message(espcp_configuration_t *, espcp_message_and_semaphore_t *);
+int espcp_process_transport_message(espcp_configuration_t *, espcp_message_t *);
 int espcp_get_response_from_esp32(espcp_configuration_t *);
 
 #endif /* __EXAMPLES_ESPCPTEST_DEFINES_H */
