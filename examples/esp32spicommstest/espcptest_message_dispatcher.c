@@ -458,7 +458,7 @@ TEST(EspcpMessageDispatcher, SendValidMessageBody)
  *  Helper method to emulate the hardware interface interaction with the
  *  ESP32.
  * 
- *  This method supports TEST(EspcpMessageDispatcher, SendValidMessageHeader).
+ *  This method supports TEST(EspcpMessageDispatcher, GetValidMessageHeader).
   *
  * Input Parameters:
  *  tx - Pointer to a buffer of data to be "sent" to the ESP32.
@@ -475,7 +475,7 @@ TEST(EspcpMessageDispatcher, SendValidMessageBody)
 void mdh_get_valid_message_header_helper(void *tx, void *rx, size_t length)
 {
   /*
-   *  Stage 0 - The method will get a message body.
+   *  Stage 0 - The method will get a message header.
    */
   uint8_t message_header[] = 
   { 
@@ -691,7 +691,7 @@ void mdh_get_valid_message_body_helper(void *tx, void *rx, size_t length)
 
 /****************************************************************************
  * 
- * Test sending a valid message body to the ESP32.
+ * Test getting a valid message body to the ESP32.
  * 
  * Pre-requisite:
  *  None.
@@ -737,6 +737,151 @@ TEST(EspcpMessageDispatcher, GetMessageBody)
 }
 
 /****************************************************************************
+ * Name: mdh_get_response_from_esp32_helper
+ *
+ * Description:
+ *  Helper method to emulate the hardware interface interaction with the
+ *  ESP32.
+ * 
+ *  This method supports TEST(EspcpMessageDispatcher, GetResponseFromEsp32).
+  *
+ * Input Parameters:
+ *  tx - Pointer to a buffer of data to be "sent" to the ESP32.
+ *  rx - Buffer that will be populated with data "received" from the ESP32.
+ *  length - length of the buffer(s).
+ *
+ * Returned Value:
+ *  None.
+ *
+ * Assumptions/Limitations:
+ *  None
+ *
+ ****************************************************************************/
+void mdh_get_response_from_esp32_helper(void *tx, void *rx, size_t length)
+{
+  /*
+   *  Stage 0 - First step, the ESP will send a message header.
+   */
+  uint8_t ho_header[] = 
+  { 
+    0x80, 0x01, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0xda, 0x8b, 0x31, 0x34, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+  };
+
+  /*
+   *  Stage 1 - Next, the STM32 will send an acknowledgement, in this case we send an ACK.
+   *  send an ACK.
+   */
+  uint8_t ho_acknowledgement[] = 
+  {
+    0x00, 0x01, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x5a, 0x05, 0xcf, 0xee, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+  };
+
+  /*
+   *  Stage 2 - Message with body, header.
+   */
+  uint8_t mb_header[] =
+  {
+    0x40, 0x01, 0x0b, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0a, 0x00, 0x00, 0x00, 0x05, 0x00,
+    0x00, 0x00, 0xb1, 0xbf, 0x24, 0x4d, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+  };
+
+  /*
+   *  Stage 3 - Message with body, header acknowledgement.
+   */
+  uint8_t mb_header_acknowledgement[] =
+  {
+    0x00, 0x01, 0x0b, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0a, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x9c, 0x96, 0xf8, 0xa4, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00    
+  };
+
+  /*
+   *  Stage 4 - Message with body, message.
+   */
+  uint8_t mb_message[] =
+  {
+    0x80, 0x01, 0x0b, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0a, 0x00, 0x00, 0x00, 0x05, 0x00,
+    0x00, 0x00, 0x00, 0xcb, 0xc0, 0xf2, 0x00, 0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00,
+  };
+
+  /*
+   *  Stage 5 - Message with body, message acknowledgement.
+   */
+  uint8_t mb_message_acknowledgement[] =
+  {
+    0x00, 0x01, 0x0b, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0a, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x9c, 0x96, 0xf8, 0xa4, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+  };
+
+  switch (g_mdh_test_stage)
+  {
+    case 0:
+      TEST_ASSERT_EQUAL(NULL, tx);
+      TEST_ASSERT_EQUAL(true, rx != NULL);
+      TEST_ASSERT_EQUAL(sizeof(ho_header), length);
+      memcpy(rx, ho_header, length);
+      break;
+    case 1:
+      TEST_ASSERT_EQUAL(NULL, rx);
+      TEST_ASSERT_EQUAL(true, tx != NULL);
+      TEST_ASSERT_EQUAL(sizeof(ho_acknowledgement), length);
+      TEST_ASSERT_EQUAL_UINT8_ARRAY(ho_acknowledgement, tx, length);
+      break;
+    case 2:
+      TEST_ASSERT_EQUAL(NULL, tx);
+      TEST_ASSERT_EQUAL(true, rx != NULL);
+      TEST_ASSERT_EQUAL(sizeof(mb_header), length);
+      memcpy(rx, mb_header, length);
+      break;
+    case 3:
+      TEST_ASSERT_EQUAL(NULL, rx);
+      TEST_ASSERT_EQUAL(true, tx != NULL);
+      TEST_ASSERT_EQUAL(sizeof(mb_header_acknowledgement), length);
+      TEST_ASSERT_EQUAL_UINT8_ARRAY(mb_header_acknowledgement, tx, length);
+      break;
+    case 4:
+      TEST_ASSERT_EQUAL(NULL, tx);
+      TEST_ASSERT_EQUAL(true, rx != NULL);
+      TEST_ASSERT_EQUAL(sizeof(mb_message), length);
+      memcpy(rx, mb_message, length);
+      break;
+    case 5:
+      TEST_ASSERT_EQUAL(NULL, rx);
+      TEST_ASSERT_EQUAL(true, tx != NULL);
+      TEST_ASSERT_EQUAL(sizeof(mb_message_acknowledgement), length);
+      TEST_ASSERT_EQUAL_UINT8_ARRAY(mb_message_acknowledgement, tx, length);
+      break;
+    default:
+      TEST_ASSERT_EQUAL(false, true);   /* Force an error as we should never get here. */
+      break;
+  }
+  g_mdh_test_stage++;
+}
+
+/****************************************************************************
+ * 
+ * Test getting a response message from the ESP32.
+ * 
+ * Pre-requisite:
+ *  None.
+ * 
+ ****************************************************************************/
+TEST(EspcpMessageDispatcher, GetResponseFromEsp32)
+{
+  g_mdh_test_stage = 0;
+  g_configuration->send_data_to_esp32 = mdh_get_response_from_esp32_helper;
+  /*
+   *    First get a message from the ESP32 that is a header only message (no payload).
+   */
+  TEST_ASSERT_EQUAL(0, espcp_get_response_from_esp32(g_configuration));
+  /*
+   *    Next up we are going to get a message with a body.
+   */
+  TEST_ASSERT_EQUAL(0, espcp_get_response_from_esp32(g_configuration));
+}
+
+/****************************************************************************
  *
  * Run the test cases.
  * 
@@ -750,4 +895,5 @@ TEST_GROUP(EspcpMessageDispatcher)
     RUN_TEST_CASE(EspcpMessageDispatcher, GetValidMessageHeader);
     RUN_TEST_CASE(EspcpMessageDispatcher, GetInvalidMessageHeader);
     RUN_TEST_CASE(EspcpMessageDispatcher, GetMessageBody);
+    RUN_TEST_CASE(EspcpMessageDispatcher, GetResponseFromEsp32);
 }
