@@ -396,9 +396,15 @@ void mdh_send_valid_message_body_helper(void *tx, void *rx, size_t length)
   switch (g_mdh_test_stage)
   {
     case 0:
+      TEST_ASSERT_EQUAL(NULL, rx);
+      TEST_ASSERT_EQUAL(true, tx != NULL);
+      TEST_ASSERT_EQUAL(sizeof(expected_message_body), length);
       TEST_ASSERT_EQUAL_UINT8_ARRAY(expected_message_body, tx, length);
       break;
     case 1:
+      TEST_ASSERT_EQUAL(NULL, tx);
+      TEST_ASSERT_EQUAL(true, rx != NULL);
+      TEST_ASSERT_EQUAL(sizeof(acknowledgement), length);
       memcpy(rx, acknowledgement, length);
       break;
     default:
@@ -492,11 +498,13 @@ void mdh_get_valid_message_header_helper(void *tx, void *rx, size_t length)
     case 0:
       TEST_ASSERT_EQUAL(NULL, tx);
       TEST_ASSERT_EQUAL(true, rx != NULL);
+      TEST_ASSERT_EQUAL(sizeof(message_header), length);
       memcpy(rx, message_header, length);
       break;
     case 1:
       TEST_ASSERT_EQUAL(NULL, rx);
       TEST_ASSERT_EQUAL(true, tx != NULL);
+      TEST_ASSERT_EQUAL(sizeof(acknowledgement), length);
       TEST_ASSERT_EQUAL_UINT8_ARRAY(acknowledgement, tx, length);
       break;
     default:
@@ -566,6 +574,7 @@ void mdh_get_invalid_message_header_helper(void *tx, void *rx, size_t length)
   };
   TEST_ASSERT_EQUAL(NULL, tx);
   TEST_ASSERT_EQUAL(true, rx != NULL);
+  TEST_ASSERT_EQUAL(sizeof(message_header), length);
   memcpy(rx, message_header, length);
 }
 
@@ -652,25 +661,25 @@ void mdh_get_valid_message_body_helper(void *tx, void *rx, size_t length)
     case 0:
       TEST_ASSERT_EQUAL(NULL, tx);
       TEST_ASSERT_EQUAL(true, rx != NULL);
-      TEST_ASSERT_EQUAL(32, length);
+      TEST_ASSERT_EQUAL(sizeof(message_body), length);
       memcpy(rx, message_body, length);
       break;
     case 1:
       TEST_ASSERT_EQUAL(NULL, rx);
       TEST_ASSERT_EQUAL(true, tx != NULL);
-      TEST_ASSERT_EQUAL(28, length);
+      TEST_ASSERT_EQUAL(sizeof(expected_acknowledgement), length);
       TEST_ASSERT_EQUAL_UINT8_ARRAY(expected_acknowledgement, tx, length);
       break;
     case 2:
       TEST_ASSERT_EQUAL(NULL, tx);
       TEST_ASSERT_EQUAL(true, rx != NULL);
-      TEST_ASSERT_EQUAL(32, length);
+      TEST_ASSERT_EQUAL(sizeof(message_body_with_crc_error), length);
       memcpy(rx, message_body_with_crc_error, length);
       break;
     case 3:
       TEST_ASSERT_EQUAL(NULL, rx);
       TEST_ASSERT_EQUAL(true, tx != NULL);
-      TEST_ASSERT_EQUAL(28, length);
+      TEST_ASSERT_EQUAL(sizeof(expected_crc_error_acknowledgement), length);
       TEST_ASSERT_EQUAL_UINT8_ARRAY(expected_crc_error_acknowledgement, tx, length);
       break;
     default:
