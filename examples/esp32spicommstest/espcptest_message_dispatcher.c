@@ -912,6 +912,33 @@ TEST(EspcpMessageDispatcher, ProcessTransportMessage)
 }
 
 /****************************************************************************
+ * 
+ * Test the process of sending a message.
+ * 
+ * Pre-requisite:
+ *  None.
+ * 
+ ****************************************************************************/
+TEST(EspcpMessageDispatcher, SendMessage)
+{
+  espcp_message_t *message = malloc(sizeof(espcp_message_t));
+  memset(message, 0, sizeof(espcp_message_t));
+  message->message_type = 0x80;
+  message->interface = 5;
+  message->function = 1;
+  message->message_id = 3;
+
+  espcp_message_and_semaphore_t *ms = (espcp_message_and_semaphore_t *) malloc(sizeof(espcp_message_and_semaphore_t));
+  ms->message = message;
+  ms->semaphore = NULL;
+  /*
+   *  Passing NULL for the message should generate an error.
+   */
+  g_configuration->send_data_to_esp32 = NULL;
+  TEST_ASSERT_EQUAL(3, espcp_send_message(g_configuration, ms));
+}
+
+/****************************************************************************
  *
  * Run the test cases.
  * 
@@ -927,4 +954,5 @@ TEST_GROUP(EspcpMessageDispatcher)
     RUN_TEST_CASE(EspcpMessageDispatcher, GetMessageBody);
     RUN_TEST_CASE(EspcpMessageDispatcher, GetResponseFromEsp32);
     RUN_TEST_CASE(EspcpMessageDispatcher, ProcessTransportMessage);
+    RUN_TEST_CASE(EspcpMessageDispatcher, SendMessage);
 }
