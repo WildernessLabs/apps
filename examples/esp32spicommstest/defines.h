@@ -338,6 +338,7 @@ bool espcptest_assert_print_buf(FAR const char *func,
  */
 int espcp_init(void);
 espcp_configuration_t *espcp_get_default_configuration(void);
+void espcp_spi_setup(void);
 
 /*
  *    Thread prototypes.

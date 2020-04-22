@@ -241,7 +241,8 @@ int esp32spicommstest_main(int argc, char *argv[])
 
   get_mallinfo(&mem_before);
 
-  runAllTests();
+  // runAllTests();
+  espcp_spi_setup();
 
   printf("Unit-test groups done... OK:%d, FAILED:%d, TOTAL:%d\n",
          overall.ok, overall.failed, overall.ok + overall.failed);
