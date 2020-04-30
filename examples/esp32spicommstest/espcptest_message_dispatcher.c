@@ -191,7 +191,7 @@ TEST(EspcpMessageDispatcher, QueueSendResponseMessage)
   TEST_ASSERT_EQUAL(OK, mq_getattr(g_queue_id, &mqStatus));
   TEST_ASSERT_EQUAL(0, mqStatus.mq_curmsgs);
 
-  espcp_queue_send_response_message();
+  espcp_queue_send_response_message(0, NULL, NULL);
 
   TEST_ASSERT_EQUAL(OK, mq_getattr(g_queue_id, &mqStatus));
   TEST_ASSERT_EQUAL(1, mqStatus.mq_curmsgs);

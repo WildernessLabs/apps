@@ -52,6 +52,8 @@
 #include <semaphore.h>
 #include <mqueue.h>
 
+#include "espcp_shared_enums.h"
+
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
@@ -301,6 +303,8 @@ typedef struct espcp_message_and_semaphore_s espcp_message_and_semaphore_t;
  */
 typedef bool (*comparison_function_t)(uint32_t, void *);
 
+typedef int (*queue_send_response_message_function_t)(int, void *, void*);
+
 /****************************************************************************
  * Public Data
  ****************************************************************************/
@@ -337,8 +341,8 @@ bool espcptest_assert_print_buf(FAR const char *func,
  *    Coprocessor prototypes.
  */
 int espcp_init(void);
+int espcp_spi_setup(queue_send_response_message_function_t);
 espcp_configuration_t *espcp_get_default_configuration(void);
-void espcp_spi_setup(void);
 
 /*
  *    Thread prototypes.
@@ -371,7 +375,7 @@ bool gl_add_item_to_tail(gl_linked_list_t *, void *);
  */
 int espcp_setup_message_dispatcher(void);
 int espcp_teardown_message_dispatcher(void);
-void espcp_queue_send_response_message(void);
+int espcp_queue_send_response_message(int, void *, void *);
 uint32_t espcp_get_next_message_id(void);
 int espcp_send_message(espcp_configuration_t *, espcp_message_and_semaphore_t *);
 int espcp_send_header(espcp_configuration_t *, espcp_message_t *);

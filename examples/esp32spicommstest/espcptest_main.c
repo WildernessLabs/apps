@@ -162,6 +162,41 @@ static void runAllTests(void)
 }
 
 /****************************************************************************
+ * Name: runSpiHardwareTests
+ *
+ * Description:
+ *  Test the SPI hardware interface.  This need to be run on the Meadow
+ *  board, it cannot be run on the emulator.
+ *
+ * Input Parameters:
+ *   None
+ *
+ * Returned Value:
+ *   None
+ *
+ * Assumptions/Limitations:
+ *   None
+ *
+ ****************************************************************************/
+static void runSpiHardwareTests(void)
+{
+  espcp_configuration_t *configuration = espcp_get_default_configuration();
+  espcp_spi_setup(espcp_queue_send_response_message);
+  espcp_message_t *message = (espcp_message_t *) malloc(sizeof(espcp_message_t));
+  message->message_type = espcp_message_types_header;
+  message->interface = espcp_esp32_interfaces_system;
+  message->function = espcp_system_function_battery_level;
+  message->status_code = 0;
+  message->payload = NULL;
+  message->payload_length = 0;
+  espcp_send_header(configuration, message);
+
+  espcp_message_t *acknowledgement;
+  int result = espcp_get_message_header_acknowledgement(configuration, message, &acknowledgement);
+  assert(result == espcp_status_codes_completed_ok);
+}
+
+/****************************************************************************
  * Public Functions
  ****************************************************************************/
 bool espcptest_assert_print_value(FAR const char *func,
@@ -242,7 +277,7 @@ int esp32spicommstest_main(int argc, char *argv[])
   get_mallinfo(&mem_before);
 
   // runAllTests();
-  espcp_spi_setup();
+  runSpiHardwareTests();
 
   printf("Unit-test groups done... OK:%d, FAILED:%d, TOTAL:%d\n",
          overall.ok, overall.failed, overall.ok + overall.failed);
