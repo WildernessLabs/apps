@@ -187,12 +187,33 @@ static void runSpiHardwareTests(void)
   message->interface = espcp_esp32_interfaces_system;
   message->function = espcp_system_function_battery_level;
   message->status_code = 0;
+  message->message_id = espcp_get_next_message_id();
   message->payload = NULL;
   message->payload_length = 0;
   espcp_send_header(configuration, message);
 
   espcp_message_t *acknowledgement;
-  int result = espcp_get_message_header_acknowledgement(configuration, message, &acknowledgement);
+  int result;
+  result = espcp_get_message_header_acknowledgement(configuration, message, &acknowledgement);
+  assert(result == espcp_status_codes_completed_ok);
+
+  espcp_wi_fi_credentials_t *credentials = (espcp_wi_fi_credentials_t *) malloc(sizeof(espcp_wi_fi_credentials_t));
+  credentials->network_name = "YourNetworkName";
+  credentials->password = "YourPassword";
+  message->interface = espcp_esp32_interfaces_wi_fi;
+  message->function = espcp_wi_fi_function_start;
+  message->status_code = 0;
+  message->message_id = espcp_get_next_message_id();
+  message->payload_length = espcp_wi_fi_credentials_buffer_size(credentials);
+  message->payload = (uint8_t *) malloc(message->payload_length);
+  espcp_encode_wi_fi_credentials(credentials, message->payload);
+
+  espcp_send_header(configuration, message);
+  result = espcp_get_message_header_acknowledgement(configuration, message, &acknowledgement);
+  assert(result == espcp_status_codes_completed_ok);
+
+  message->message_type = espcp_message_types_data;
+  result = espcp_send_message_body(configuration, message);
   assert(result == espcp_status_codes_completed_ok);
 }
 
