@@ -62,7 +62,7 @@ enum espcp_system_function
     espcp_system_function_get_configuration = 0,
     espcp_system_function_set_configuration = 1,
     espcp_system_function_deep_sleep = 2,
-    espcp_system_function_battery_level = 3
+    espcp_system_function_get_battery_charge_level = 3
 };
 typedef enum espcp_system_function espcp_system_function_t;
 

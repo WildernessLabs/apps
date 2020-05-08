@@ -202,6 +202,12 @@ struct espcp_close_request_s
 };
 typedef struct espcp_close_request_s espcp_close_request_t;
 
+struct espcp_get_battery_charge_level_response_s
+{
+    uint32_t level;
+};
+typedef struct espcp_get_battery_charge_level_response_s espcp_get_battery_charge_level_response_t;
+
 
 /*
  *      Encoding methods for the ESP32 SPI communications layer.
@@ -306,6 +312,9 @@ espcp_read_response_t *espcp_extract_read_response(uint8_t *);
 void espcp_encode_close_request(espcp_close_request_t *, uint8_t *);
 int espcp_close_request_buffer_size(espcp_close_request_t *);
 espcp_close_request_t *espcp_extract_close_request(uint8_t *);
+void espcp_encode_get_battery_charge_level_response(espcp_get_battery_charge_level_response_t *, uint8_t *);
+int espcp_get_battery_charge_level_response_buffer_size(espcp_get_battery_charge_level_response_t *);
+espcp_get_battery_charge_level_response_t *espcp_extract_get_battery_charge_level_response(uint8_t *);
 
 
 #endif /* _ESPCP_ENCODERS_H */
