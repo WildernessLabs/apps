@@ -192,32 +192,34 @@ static void runSpiHardwareTests(void)
   message->message_id = espcp_get_next_message_id();
   message->payload = NULL;
   message->payload_length = 0;
-  espcp_send_header(configuration, message);
-
-  espcp_message_t *acknowledgement;
   int result;
-  result = espcp_get_message_header_acknowledgement(configuration, message, &acknowledgement);
+  result = espcp_send_header(configuration, message);
+
   assert(result == espcp_status_codes_completed_ok);
 
   //
   //  Wait for the message waiting signal.
   //
-  espcp_wait_for_message_waiting_signal();
+  // espcp_wait_for_message_waiting_signal();
 
-  message->message_type = espcp_message_types_transport;
-  message->interface = espcp_esp32_interfaces_transport;
-  message->function = espcp_transport_function_send_response;
-  message->status_code = 0;
-  message->message_id = espcp_get_next_message_id();
-  message->payload = NULL;
-  message->payload_length = 0;
-  espcp_send_header(configuration, message);
+  // message->message_type = espcp_message_types_transport;
+  // message->interface = espcp_esp32_interfaces_transport;
+  // message->function = espcp_transport_function_send_response;
+  // message->status_code = 0;
+  // message->message_id = espcp_get_next_message_id();
+  // message->payload = NULL;
+  // message->payload_length = 0;
+  // espcp_send_header(configuration, message);
 
-  result = espcp_get_message_header_acknowledgement(configuration, message, &acknowledgement);
-  assert(result == espcp_status_codes_completed_ok);
+  // espcp_message_t *acknowledgement;
+  // result = espcp_get_message_header_acknowledgement(configuration, message, &acknowledgement);
+  // assert(result == espcp_status_codes_completed_ok);
 
-  result = espcp_get_response_from_esp32(configuration);
-  assert(result == espcp_status_codes_completed_ok);
+  // result = espcp_get_response_from_esp32(configuration);
+  // assert(result == espcp_status_codes_completed_ok);
+
+
+
 
   // espcp_wi_fi_credentials_t *credentials = (espcp_wi_fi_credentials_t *) malloc(sizeof(espcp_wi_fi_credentials_t));
   // credentials->network_name = "YOUR NETWORK NAME";
@@ -237,6 +239,35 @@ static void runSpiHardwareTests(void)
   // message->message_type = espcp_message_types_data;
   // result = espcp_send_message_body(configuration, message);
   // assert(result == espcp_status_codes_completed_ok);
+}
+
+//
+//  Temporary hack.
+//
+espcp_configuration_t *espcp_get_configuration(void);
+
+void testMessageThread(void)
+{
+  espcp_init();
+  espcp_configuration_t *configuration = espcp_get_configuration();
+
+  espcp_message_t *message = (espcp_message_t *) malloc(sizeof(espcp_message_t));
+  message->message_type = espcp_message_types_header;
+  message->interface = espcp_esp32_interfaces_system;
+  message->function = espcp_system_function_get_battery_charge_level;
+  message->status_code = 0;
+  message->message_id = espcp_get_next_message_id();
+  message->payload = NULL;
+  message->payload_length = 0;
+
+  espcp_message_and_semaphore_t *message_and_semaphore = (espcp_message_and_semaphore_t *) malloc(sizeof(espcp_message_and_semaphore_t));
+  message_and_semaphore->message = message;
+  message_and_semaphore->semaphore = NULL;
+
+  int result = espcp_add_message_to_queue(configuration->request_queue, message_and_semaphore);
+  assert(result == espcp_status_codes_completed_ok);
+
+  usleep(1000000);
 }
 
 /****************************************************************************
@@ -320,7 +351,8 @@ int esp32spicommstest_main(int argc, char *argv[])
   get_mallinfo(&mem_before);
 
   // runAllTests();
-  runSpiHardwareTests();
+  // runSpiHardwareTests();
+  testMessageThread();
 
   printf("Unit-test groups done... OK:%d, FAILED:%d, TOTAL:%d\n",
          overall.ok, overall.failed, overall.ok + overall.failed);
