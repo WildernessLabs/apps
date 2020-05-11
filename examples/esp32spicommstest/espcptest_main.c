@@ -56,6 +56,7 @@
 #include <arpa/inet.h>
 
 #include "defines.h"
+#include "secrets.h"
 
 /****************************************************************************
  * Definitions
@@ -246,7 +247,7 @@ static void runSpiHardwareTests(void)
 //
 espcp_configuration_t *espcp_get_configuration(void);
 
-void testMessageThread(void)
+void testGetBatteryLevel(void)
 {
   espcp_init();
   espcp_configuration_t *configuration = espcp_get_configuration();
@@ -259,6 +260,35 @@ void testMessageThread(void)
   message->message_id = espcp_get_next_message_id();
   message->payload = NULL;
   message->payload_length = 0;
+
+  espcp_message_and_semaphore_t *message_and_semaphore = (espcp_message_and_semaphore_t *) malloc(sizeof(espcp_message_and_semaphore_t));
+  message_and_semaphore->message = message;
+  message_and_semaphore->semaphore = NULL;
+
+  int result = espcp_add_message_to_queue(configuration->request_queue, message_and_semaphore);
+  assert(result == espcp_status_codes_completed_ok);
+
+  usleep(1000000);
+}
+
+void testStartWiFi(void)
+{
+  espcp_init();
+  espcp_configuration_t *configuration = espcp_get_configuration();
+
+  espcp_wi_fi_credentials_t *credentials = (espcp_wi_fi_credentials_t *) malloc(sizeof(espcp_wi_fi_credentials_t));
+  credentials->network_name = NETWORK_NAME;
+  credentials->password = NETWORK_PASSWORD;
+
+  espcp_message_t *message = (espcp_message_t *) malloc(sizeof(espcp_message_t));
+  message->message_type = espcp_message_types_header;
+  message->interface = espcp_esp32_interfaces_wi_fi;
+  message->function = espcp_wi_fi_function_start;
+  message->status_code = 0;
+  message->message_id = espcp_get_next_message_id();
+  message->payload_length = espcp_wi_fi_credentials_buffer_size(credentials);
+  message->payload = (uint8_t *) malloc(message->payload_length);
+  espcp_encode_wi_fi_credentials(credentials, message->payload);
 
   espcp_message_and_semaphore_t *message_and_semaphore = (espcp_message_and_semaphore_t *) malloc(sizeof(espcp_message_and_semaphore_t));
   message_and_semaphore->message = message;
@@ -352,7 +382,8 @@ int esp32spicommstest_main(int argc, char *argv[])
 
   // runAllTests();
   // runSpiHardwareTests();
-  testMessageThread();
+  // testMessageThread();
+  testStartWiFi();
 
   printf("Unit-test groups done... OK:%d, FAILED:%d, TOTAL:%d\n",
          overall.ok, overall.failed, overall.ok + overall.failed);
