@@ -292,12 +292,19 @@ void testStartWiFi(void)
 
   espcp_message_and_semaphore_t *message_and_semaphore = (espcp_message_and_semaphore_t *) malloc(sizeof(espcp_message_and_semaphore_t));
   message_and_semaphore->message = message;
-  message_and_semaphore->semaphore = NULL;
+  sem_t semaphore;
+  message_and_semaphore->semaphore = &semaphore;
+  sem_init(message_and_semaphore->semaphore, 0, 0);
 
   int result = espcp_add_message_to_queue(configuration->request_queue, message_and_semaphore);
   assert(result == espcp_status_codes_completed_ok);
+  sem_wait(message_and_semaphore->semaphore);
+  printf("Done\n");
+}
 
-  usleep(1000000);
+void getGoogleHomePage()
+{
+  
 }
 
 /****************************************************************************
