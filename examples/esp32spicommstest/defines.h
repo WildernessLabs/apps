@@ -260,6 +260,18 @@ typedef bool (*comparison_function_t)(uint32_t, void *);
 
 typedef int (*queue_send_response_message_function_t)(int, void *, void*);
 
+
+/*
+ *  IP address, subnet mask etc.
+ */
+struct espcp_ip_information_s
+{
+    uint8_t ip[4];
+    uint8_t subnet[4];
+    uint8_t gateway[4];
+};
+typedef struct espcp_ip_information_s espcp_ip_information_t;
+
 /****************************************************************************
  * Public Data
  ****************************************************************************/
@@ -342,5 +354,15 @@ int espcp_get_message_header_acknowledgement(espcp_configuration_t *, espcp_mess
 espcp_message_t *espcp_get_message_header(espcp_configuration_t *);
 int espcp_process_transport_message(espcp_configuration_t *, espcp_message_t *);
 int espcp_get_response_from_esp32(espcp_configuration_t *);
+
+/*
+ *  ESP32 system methods.
+ */
+int32_t espcp_get_battery_charge_level(void);
+
+/*
+ *  ESP32 WiFi functions.
+ */
+espcp_ip_information_t *espcp_start_wifi(char *, char *);
 
 #endif /* __EXAMPLES_ESPCPTEST_DEFINES_H */

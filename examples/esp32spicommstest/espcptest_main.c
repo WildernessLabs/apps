@@ -302,9 +302,16 @@ void testStartWiFi(void)
   printf("Done\n");
 }
 
+void runBatteryLevelTest(void)
+{
+  espcp_init();
+  int32_t level = espcp_get_battery_charge_level();
+}
+
 void getGoogleHomePage()
 {
-  
+  espcp_init();
+  espcp_ip_information_t *ip = espcp_start_wifi(NETWORK_NAME, NETWORK_PASSWORD);  
 }
 
 /****************************************************************************
@@ -390,7 +397,8 @@ int esp32spicommstest_main(int argc, char *argv[])
   // runAllTests();
   // runSpiHardwareTests();
   // testMessageThread();
-  testStartWiFi();
+  // runBatteryLevelTest();
+  getGoogleHomePage();
 
   printf("Unit-test groups done... OK:%d, FAILED:%d, TOTAL:%d\n",
          overall.ok, overall.failed, overall.ok + overall.failed);
