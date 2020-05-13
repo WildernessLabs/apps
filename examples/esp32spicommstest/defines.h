@@ -51,6 +51,9 @@
 #include <assert.h>
 #include <semaphore.h>
 #include <mqueue.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
 
 #include "espcp_shared_enums.h"
 #include "espcp_encoders.h"
@@ -364,5 +367,10 @@ int32_t espcp_get_battery_charge_level(void);
  *  ESP32 WiFi functions.
  */
 espcp_ip_information_t *espcp_start_wifi(char *, char *);
+
+/*
+ * ESP32 POSIX methods.
+ */
+int32_t espcp_getaddrinfo(const char *, const char *, const struct addrinfo *, struct addrinfo **);
 
 #endif /* __EXAMPLES_ESPCPTEST_DEFINES_H */
