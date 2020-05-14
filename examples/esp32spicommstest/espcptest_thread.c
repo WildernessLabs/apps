@@ -207,11 +207,9 @@ TEST(EspcpThread, SendMessagesToThread)
     message->interface = 1;
     message->function = 2;
     message->message_id = index + 1;
+    message->semaphore = NULL;
 
-    espcp_message_and_semaphore_t *message_and_semaphore = malloc(sizeof(espcp_message_and_semaphore_t));
-    message_and_semaphore->semaphore = NULL;
-    message_and_semaphore->message = message;
-    espcp_add_message_to_queue(g_configuration->request_queue, message_and_semaphore);
+    espcp_add_message_to_queue(g_configuration->request_queue, message);
   }
 }
 

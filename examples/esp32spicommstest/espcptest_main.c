@@ -162,176 +162,29 @@ static void runAllTests(void)
   RUN_TEST_GROUP(EspcpThread);
 }
 
-/****************************************************************************
- * Name: runSpiHardwareTests
- *
- * Description:
- *  Test the SPI hardware interface.  This need to be run on the Meadow
- *  board, it cannot be run on the emulator.
- *
- * Input Parameters:
- *   None
- *
- * Returned Value:
- *   None
- *
- * Assumptions/Limitations:
- *   None
- *
- ****************************************************************************/
-static void runSpiHardwareTests(void)
+
+void getGoogleHomePage(void)
 {
-  espcp_configuration_t *configuration = espcp_get_default_configuration();
-  configuration->request_queue = espcp_create_message_queue(ESPCP_MESSAGE_QUEUE_NAME);
-
-  espcp_spi_setup(espcp_queue_send_response_message);
-  espcp_message_t *message = (espcp_message_t *) malloc(sizeof(espcp_message_t));
-  message->message_type = espcp_message_types_header;
-  message->interface = espcp_esp32_interfaces_system;
-  message->function = espcp_system_function_get_battery_charge_level;
-  message->status_code = 0;
-  message->message_id = espcp_get_next_message_id();
-  message->payload = NULL;
-  message->payload_length = 0;
-  int result;
-  result = espcp_send_header(configuration, message);
-
-  assert(result == espcp_status_codes_completed_ok);
-
-  //
-  //  Wait for the message waiting signal.
-  //
-  // espcp_wait_for_message_waiting_signal();
-
-  // message->message_type = espcp_message_types_transport;
-  // message->interface = espcp_esp32_interfaces_transport;
-  // message->function = espcp_transport_function_send_response;
-  // message->status_code = 0;
-  // message->message_id = espcp_get_next_message_id();
-  // message->payload = NULL;
-  // message->payload_length = 0;
-  // espcp_send_header(configuration, message);
-
-  // espcp_message_t *acknowledgement;
-  // result = espcp_get_message_header_acknowledgement(configuration, message, &acknowledgement);
-  // assert(result == espcp_status_codes_completed_ok);
-
-  // result = espcp_get_response_from_esp32(configuration);
-  // assert(result == espcp_status_codes_completed_ok);
-
-
-
-
-  // espcp_wi_fi_credentials_t *credentials = (espcp_wi_fi_credentials_t *) malloc(sizeof(espcp_wi_fi_credentials_t));
-  // credentials->network_name = "YOUR NETWORK NAME";
-  // credentials->password = "YOUR PASSWORD";
-  // message->interface = espcp_esp32_interfaces_wi_fi;
-  // message->function = espcp_wi_fi_function_start;
-  // message->status_code = 0;
-  // message->message_id = espcp_get_next_message_id();
-  // message->payload_length = espcp_wi_fi_credentials_buffer_size(credentials);
-  // message->payload = (uint8_t *) malloc(message->payload_length);
-  // espcp_encode_wi_fi_credentials(credentials, message->payload);
-
-  // espcp_send_header(configuration, message);
-  // result = espcp_get_message_header_acknowledgement(configuration, message, &acknowledgement);
-  // assert(result == espcp_status_codes_completed_ok);
-
-  // message->message_type = espcp_message_types_data;
-  // result = espcp_send_message_body(configuration, message);
-  // assert(result == espcp_status_codes_completed_ok);
-}
-
-//
-//  Temporary hack.
-//
-espcp_configuration_t *espcp_get_configuration(void);
-
-void testGetBatteryLevel(void)
-{
+  int result = 0;
   espcp_init();
-  espcp_configuration_t *configuration = espcp_get_configuration();
+  espcp_ip_information_t *ip = espcp_start_wifi(NETWORK_NAME, NETWORK_PASSWORD);
 
-  espcp_message_t *message = (espcp_message_t *) malloc(sizeof(espcp_message_t));
-  message->message_type = espcp_message_types_header;
-  message->interface = espcp_esp32_interfaces_system;
-  message->function = espcp_system_function_get_battery_charge_level;
-  message->status_code = 0;
-  message->message_id = espcp_get_next_message_id();
-  message->payload = NULL;
-  message->payload_length = 0;
+  struct addrinfo hints;
+  memset(&hints, 0, sizeof(struct addrinfo));
+  hints.ai_family = espcp_address_family_type_af_inet;
+  hints.ai_socktype = espcp_socket_protocol_type_sock_stream;
+  hints.ai_addrlen = 0;
+  hints.ai_addr = NULL;
+  hints.ai_canonname = "";
+  struct addrinfo *res;
 
-  espcp_message_and_semaphore_t *message_and_semaphore = (espcp_message_and_semaphore_t *) malloc(sizeof(espcp_message_and_semaphore_t));
-  message_and_semaphore->message = message;
-  message_and_semaphore->semaphore = NULL;
-
-  int result = espcp_add_message_to_queue(configuration->request_queue, message_and_semaphore);
-  assert(result == espcp_status_codes_completed_ok);
-
-  usleep(1000000);
-}
-
-void testStartWiFi(void)
-{
-  espcp_init();
-  espcp_configuration_t *configuration = espcp_get_configuration();
-
-  espcp_wi_fi_credentials_t *credentials = (espcp_wi_fi_credentials_t *) malloc(sizeof(espcp_wi_fi_credentials_t));
-  credentials->network_name = NETWORK_NAME;
-  credentials->password = NETWORK_PASSWORD;
-
-  espcp_message_t *message = (espcp_message_t *) malloc(sizeof(espcp_message_t));
-  message->message_type = espcp_message_types_header;
-  message->interface = espcp_esp32_interfaces_wi_fi;
-  message->function = espcp_wi_fi_function_start;
-  message->status_code = 0;
-  message->message_id = espcp_get_next_message_id();
-  message->payload_length = espcp_wi_fi_credentials_buffer_size(credentials);
-  message->payload = (uint8_t *) malloc(message->payload_length);
-  espcp_encode_wi_fi_credentials(credentials, message->payload);
-
-  espcp_message_and_semaphore_t *message_and_semaphore = (espcp_message_and_semaphore_t *) malloc(sizeof(espcp_message_and_semaphore_t));
-  message_and_semaphore->message = message;
-  sem_t semaphore;
-  message_and_semaphore->semaphore = &semaphore;
-  sem_init(message_and_semaphore->semaphore, 0, 0);
-
-  int result = espcp_add_message_to_queue(configuration->request_queue, message_and_semaphore);
-  assert(result == espcp_status_codes_completed_ok);
-  sem_wait(message_and_semaphore->semaphore);
-  printf("Done\n");
-}
-
-void runBatteryLevelTest(void)
-{
-  espcp_init();
-  int32_t level = espcp_get_battery_charge_level();
-}
-
-void getGoogleHomePage()
-{
-  espcp_init();
-  espcp_ip_information_t *ip = espcp_start_wifi(NETWORK_NAME, NETWORK_PASSWORD);  
+  result = espcp_getaddrinfo("www.google.com", "80", &hints, &res);
+  if (result != 0)
+  {
+    return;
+  }
 
   /*
-    //
-    //    getaddrinfo
-    //
-    var hints = new AddrInfo();
-    hints.Family = (int)AddressFamilyType.AfInet;
-    hints.SocketType = (int)SocketType.Stream;
-    hints.AddrLength = 0;
-    hints.CanonName = "";
-
-    DebugHelpers.DebugHelpers.LogMessage(true, "Requesting lookup for www.google.com:80");
-    var errorCode = _f7MicroCoprocessor.GetAddrInfo("www.google.com", "80", hints, out var res);
-    DebugHelpers.DebugHelpers.LogMessage(true, $"    Error code {errorCode}");
-    if (errorCode != 0)
-    {
-        DebugHelpers.DebugHelpers.LogMessage(true, $"Exiting test");
-        return;
-    }
-    var getAddrInfoResult = (AddrInfo)res;
     //
     //    socket
     //
@@ -535,9 +388,6 @@ int esp32spicommstest_main(int argc, char *argv[])
 
   get_mallinfo(&mem_before);
 
-  // runAllTests();
-  // runSpiHardwareTests();
-  // testMessageThread();
   // runBatteryLevelTest();
   getGoogleHomePage();
 

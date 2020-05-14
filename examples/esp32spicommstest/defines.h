@@ -327,7 +327,7 @@ int espcp_thread_stop(espcp_configuration_t *);
  */
 mqd_t espcp_create_message_queue(char *name);
 int espcp_delete_message_queue(mqd_t);
-int espcp_add_message_to_queue(mqd_t, espcp_message_and_semaphore_t *);
+int espcp_add_message_to_queue(mqd_t, espcp_message_t *);
 void *espcp_get_message_from_queue(mqd_t);
 void espcp_queue_kill_nuttx_thread_message(mqd_t);
 
@@ -348,7 +348,7 @@ int espcp_setup_message_dispatcher(void);
 int espcp_teardown_message_dispatcher(void);
 int espcp_queue_send_response_message(int, void *, void *);
 uint32_t espcp_get_next_message_id(void);
-int espcp_send_message(espcp_configuration_t *, espcp_message_and_semaphore_t *);
+int espcp_send_message(espcp_configuration_t *, espcp_message_t *);
 int espcp_send_header(espcp_configuration_t *, espcp_message_t *);
 void espcp_send_acknowledgement(espcp_configuration_t *, espcp_message_t *, int);
 int espcp_send_message_body(espcp_configuration_t *, espcp_message_t *);

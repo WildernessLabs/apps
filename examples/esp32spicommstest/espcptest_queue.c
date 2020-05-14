@@ -152,11 +152,9 @@ TEST(EspcpQueue, AddMessage)
   /*
    *  Add a message to the queue.
    */
-  espcp_message_t esp32_message;
-  esp32_message.message_id = 1;
-  espcp_message_and_semaphore_t message;
+  espcp_message_t message;
+  message.message_id = 1;
   sem_t semaphore;
-  message.message = &esp32_message;
   message.semaphore = &semaphore;
   TEST_ASSERT_EQUAL(OK, espcp_add_message_to_queue(g_queue_id, &message));
 
@@ -170,11 +168,11 @@ TEST(EspcpQueue, AddMessage)
    *  Now get the "message" from the queue and see if we get a pointer to
    *  the original message.
    */
-  espcp_message_and_semaphore_t *retrieved_message;
+  espcp_message_t *retrieved_message;
   int number_of_bytes = mq_receive(g_queue_id, (void *) &retrieved_message, sizeof(retrieved_message), NULL);
-  TEST_ASSERT_EQUAL(sizeof(espcp_message_and_semaphore_t *), number_of_bytes);
+  TEST_ASSERT_EQUAL(sizeof(espcp_message_t *), number_of_bytes);
   TEST_ASSERT_EQUAL(&message, retrieved_message);
-  TEST_ASSERT_EQUAL(1, retrieved_message->message->message_id);
+  TEST_ASSERT_EQUAL(1, retrieved_message->message_id);
 
   /*
    *  There should now be no messages in the queue.
@@ -205,11 +203,9 @@ TEST(EspcpQueue, AddAndRetrieveMessages)
   /*
    *  Add a message to the queue.
    */
-  espcp_message_t esp32_message;
-  esp32_message.message_id = 23;
-  espcp_message_and_semaphore_t message;
+  espcp_message_t message;
+  message.message_id = 23;
   sem_t semaphore;
-  message.message = &esp32_message;
   message.semaphore = &semaphore;
   TEST_ASSERT_EQUAL(OK, espcp_add_message_to_queue(g_queue_id, &message));
 
@@ -223,9 +219,9 @@ TEST(EspcpQueue, AddAndRetrieveMessages)
    *  Now get the "message" from the queue and see if we get a pointer to
    *  the original message.
    */
-  espcp_message_and_semaphore_t *retrieved_message = (espcp_message_and_semaphore_t *) espcp_get_message_from_queue(g_queue_id);
+  espcp_message_t *retrieved_message = (espcp_message_t *) espcp_get_message_from_queue(g_queue_id);
   TEST_ASSERT_EQUAL(&message, retrieved_message);
-  TEST_ASSERT_EQUAL(23, retrieved_message->message->message_id);
+  TEST_ASSERT_EQUAL(23, retrieved_message->message_id);
 
   /*
    *  There should now be no messages in the queue.
@@ -254,12 +250,12 @@ TEST(EspcpQueue, QueueKillNuttxThreadMessage)
   TEST_ASSERT_EQUAL(OK, mq_getattr(g_queue_id, &mqStatus));
   TEST_ASSERT_EQUAL(1, mqStatus.mq_curmsgs);
 
-  espcp_message_and_semaphore_t *retrieved_message;
+  espcp_message_t *retrieved_message;
   int number_of_bytes = mq_receive(g_queue_id, (void *) &retrieved_message, sizeof(retrieved_message), NULL);
-  TEST_ASSERT_EQUAL(sizeof(espcp_message_and_semaphore_t *), number_of_bytes);
-  TEST_ASSERT_EQUAL(0x20, retrieved_message->message->message_type);
-  TEST_ASSERT_EQUAL(5, retrieved_message->message->interface);
-  TEST_ASSERT_EQUAL(2, retrieved_message->message->function);
+  TEST_ASSERT_EQUAL(sizeof(espcp_message_t *), number_of_bytes);
+  TEST_ASSERT_EQUAL(0x20, retrieved_message->message_type);
+  TEST_ASSERT_EQUAL(5, retrieved_message->interface);
+  TEST_ASSERT_EQUAL(2, retrieved_message->function);
 }
 
 /****************************************************************************

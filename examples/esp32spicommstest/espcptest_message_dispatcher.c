@@ -196,12 +196,12 @@ TEST(EspcpMessageDispatcher, QueueSendResponseMessage)
   TEST_ASSERT_EQUAL(OK, mq_getattr(g_queue_id, &mqStatus));
   TEST_ASSERT_EQUAL(1, mqStatus.mq_curmsgs);
 
-  espcp_message_and_semaphore_t *retrieved_message;
+  espcp_message_t *retrieved_message;
   int number_of_bytes = mq_receive(g_queue_id, (void *) &retrieved_message, sizeof(retrieved_message), NULL);
-  TEST_ASSERT_EQUAL(sizeof(espcp_message_and_semaphore_t *), number_of_bytes);
-  TEST_ASSERT_EQUAL(0x20, retrieved_message->message->message_type);
-  TEST_ASSERT_EQUAL(5, retrieved_message->message->interface);
-  TEST_ASSERT_EQUAL(1, retrieved_message->message->function);
+  TEST_ASSERT_EQUAL(sizeof(espcp_message_t *), number_of_bytes);
+  TEST_ASSERT_EQUAL(0x20, retrieved_message->message_type);
+  TEST_ASSERT_EQUAL(5, retrieved_message->interface);
+  TEST_ASSERT_EQUAL(1, retrieved_message->function);
 }
 
 /****************************************************************************
@@ -927,15 +927,13 @@ TEST(EspcpMessageDispatcher, SendMessage)
   message->interface = 5;
   message->function = 1;
   message->message_id = 3;
+  message->semaphore = NULL;
 
-  espcp_message_and_semaphore_t *ms = (espcp_message_and_semaphore_t *) malloc(sizeof(espcp_message_and_semaphore_t));
-  ms->message = message;
-  ms->semaphore = NULL;
   /*
    *  Passing NULL for the message should generate an error.
    */
   g_configuration->send_data_to_esp32 = NULL;
-  TEST_ASSERT_EQUAL(3, espcp_send_message(g_configuration, ms));
+  TEST_ASSERT_EQUAL(3, espcp_send_message(g_configuration, message));
 }
 
 /****************************************************************************

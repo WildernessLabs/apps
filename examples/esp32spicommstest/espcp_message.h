@@ -139,22 +139,10 @@ struct espcp_message_s
      *  Number of bytes in the payload.
      */
     uint32_t payload_length;
+
+    sem_t *semaphore;
 };
 typedef struct espcp_message_s espcp_message_t;
-
-/*
- *  Structure holding a message for (or from) the ESP32 coprocessor and
- *  a semaphore (created by the caller).
- * 
- *  The semaphore is used to convert the asynchronous nature of EPS32
- *  message processing system into a synchronous calling system.
- */ 
-struct espcp_message_and_semaphore_s
-{
-  sem_t *semaphore;
-  espcp_message_t *message;
-};
-typedef struct espcp_message_and_semaphore_s espcp_message_and_semaphore_t;
 
 /****************************************************************************
  * Public Function Prototypes
