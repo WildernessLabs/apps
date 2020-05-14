@@ -372,5 +372,12 @@ espcp_ip_information_t *espcp_start_wifi(char *, char *);
  * ESP32 POSIX methods.
  */
 int32_t espcp_getaddrinfo(const char *, const char *, const struct addrinfo *, struct addrinfo **);
+int32_t espcp_socket(int, int, int);
+int32_t espcp_connect(int, const struct sockaddr *, socklen_t);
+void espcp_freeaddrinfo(struct addrinfo *);
+int32_t espcp_setsockopt(int, int, int, const void *, socklen_t);
+int32_t espcp_write(int, const void *, size_t);
+int32_t espcp_read(int, const void *, size_t);
+int32_t espcp_close(int);
 
 #endif /* __EXAMPLES_ESPCPTEST_DEFINES_H */
