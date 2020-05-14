@@ -184,19 +184,13 @@ void getGoogleHomePage(void)
     return;
   }
 
+  int socket_handle = espcp_socket(res->ai_family, res->ai_socktype, 0);
+  if (socket_handle < 0)
+  {
+    return;
+  }
+
   /*
-    //
-    //    socket
-    //
-    DebugHelpers.DebugHelpers.LogMessage(true, "Getting socket handle");
-    int socketHandle = _f7MicroCoprocessor.Socket(getAddrInfoResult.Family, getAddrInfoResult.SocketType, 0);
-    DebugHelpers.DebugHelpers.LogMessage(true, $"    Socket handle: {socketHandle}");
-    if (socketHandle < 0)
-    {
-        _f7MicroCoprocessor.FreeAddrInfo(getAddrInfoResult.MyHeapAddress);
-        DebugHelpers.DebugHelpers.LogMessage(true, $"Exiting test");
-        return;
-    }
     //
     //    connect
     //
