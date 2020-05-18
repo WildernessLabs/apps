@@ -209,6 +209,14 @@ void getGoogleHomePage(void)
     return;
   }
 
+  struct timeval receiving_timeout;
+  receiving_timeout.tv_sec = 5;
+  receiving_timeout.tv_usec = 0; 
+  if (espcp_setsockopt(socket_handle, SOL_SOCKET, SO_RCVTIMEO, &receiving_timeout, sizeof(receiving_timeout)) < 0)
+  {
+    return;
+  }
+
   /*
     //
     //    setsockopt
@@ -225,26 +233,6 @@ void getGoogleHomePage(void)
     }
     DebugHelpers.DebugHelpers.LogMessage(true, "    Timeout set for socket.");
   
-    //
-    //    write
-    //
-    string uri = "/";
-    string host = "www.google.com";
-    string request = $"GET {uri} HTTP/1.0\r\nHost: {host}\r\nUser-Agent: esp-idf/3.3 esp32\r\n\r\n";
-    byte[] writeBuffer = System.Text.Encoding.UTF8.GetBytes(request);
-    DebugHelpers.DebugHelpers.LogMessage(true, "Sending request to server (write)");
-    var amountWritten = _f7MicroCoprocessor.Write(socketHandle, writeBuffer, writeBuffer.Length);
-    DebugHelpers.DebugHelpers.LogMessage(true, $"    {amountWritten} bytes sent to server");
-    //
-    //    TODO: need to work out how to deal with errno.
-    //
-    if (amountWritten < 0)
-    {
-        _f7MicroCoprocessor.Close(socketHandle);
-        DebugHelpers.DebugHelpers.LogMessage(true, $"Exiting test");
-        return;
-    }
-    DebugHelpers.DebugHelpers.LogMessage(true, "    Request written to server.");
     //
     //    read
     //
