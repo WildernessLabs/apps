@@ -197,6 +197,18 @@ void getGoogleHomePage(void)
 
   espcp_freeaddrinfo(res);
 
+  #define WEB_SERVER "www.google.com"
+  #define WEB_PATH "/"
+  #define WEB_PORT "80"
+  #define REQUEST "GET " WEB_PATH " HTTP/1.0\r\nHost: " WEB_SERVER ":" WEB_PORT  "\r\n" \
+                  "User-Agent: Meadow\r\n\r\n"
+
+  int amount_written = espcp_write(socket_handle, REQUEST, strlen(REQUEST));
+  if (amount_written < 0)
+  {
+    return;
+  }
+
   /*
     //
     //    setsockopt
@@ -212,6 +224,7 @@ void getGoogleHomePage(void)
         return;
     }
     DebugHelpers.DebugHelpers.LogMessage(true, "    Timeout set for socket.");
+  
     //
     //    write
     //
