@@ -217,54 +217,25 @@ void getGoogleHomePage(void)
     return;
   }
 
+  const int BUFFER_SIZE = 1024;
+  uint8_t buffer[BUFFER_SIZE];
+  int total_bytes = 0;
+  int amount_read = 0;
+  bool firstBlock = true;
+  do
+  {
+    memset(buffer, 0, BUFFER_SIZE);
+    amount_read = espcp_read(socket_handle, buffer, BUFFER_SIZE);
+    if (amount_read > 0)
+    {
+        total_bytes += amount_read;
+    }
 
+    firstBlock = false;
+  } while (amount_read > 0);
 
   /*
-    //
-    //    read
-    //
-    const int BUFFER_SIZE = 1024;
-    var readBuffer = new byte[BUFFER_SIZE];
-    int totalNumberOfBytes = 0;
-    int amountRead = 0;
-    string result = "";
-    bool firstBlock = true;
-    DebugHelpers.DebugHelpers.LogMessage(true, "Reading data from server (read)");
-    do
-    {
-        Array.Clear(readBuffer, 0, BUFFER_SIZE);
-        amountRead = _f7MicroCoprocessor.Read(socketHandle, readBuffer, BUFFER_SIZE);
-        DebugHelpers.DebugHelpers.LogMessage(true, $"    {amountRead} bytes read from server");
-        if (amountRead > 0)
-        {
-            result += System.Text.Encoding.UTF8.GetString(readBuffer);
-            totalNumberOfBytes += amountRead;
-            if (firstBlock)
-            {
-                var lines = result.Split(new[] {'\r', '\n'}, StringSplitOptions.RemoveEmptyEntries);
-                var numberLinesToDisplay = lines.Length > 5 ? 5 : lines.Length;
-                DebugHelpers.DebugHelpers.LogMessage(true, $"    First {numberLinesToDisplay} lines:");
-                for (int index = 0; index < numberLinesToDisplay; index++)
-                {
-                    DebugHelpers.DebugHelpers.LogMessage(true, $"    Line {index + 1}: {lines[index]}");
-                }
-            }
-        }
-        else
-        {
-            if (amountRead < 0)
-            {
-                _f7MicroCoprocessor.Close(socketHandle);
-                DebugHelpers.DebugHelpers.LogMessage(true, $"Exiting test");
-                return;
-            }
-        }
-
-        firstBlock = false;
-    } while (amountRead > 0);
-
-    DebugHelpers.DebugHelpers.LogMessage(true, $"    Total {totalNumberOfBytes} bytes read from server.");
-    //
+   //
     //    close
     //
     DebugHelpers.DebugHelpers.LogMessage(true, "Closing socket (close)");
