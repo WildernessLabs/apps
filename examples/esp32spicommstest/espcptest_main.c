@@ -221,7 +221,7 @@ void getGoogleHomePage(void)
   uint8_t buffer[BUFFER_SIZE];
   int total_bytes = 0;
   int amount_read = 0;
-  bool firstBlock = true;
+  bool first_block = true;
   do
   {
     memset(buffer, 0, BUFFER_SIZE);
@@ -231,22 +231,10 @@ void getGoogleHomePage(void)
         total_bytes += amount_read;
     }
 
-    firstBlock = false;
+    first_block = false;
   } while (amount_read > 0);
 
-  /*
-   //
-    //    close
-    //
-    DebugHelpers.DebugHelpers.LogMessage(true, "Closing socket (close)");
-    if (_f7MicroCoprocessor.Close(socketHandle) < 0)
-    {
-        DebugHelpers.DebugHelpers.LogMessage(true, $"Exiting test");
-        return;
-    }
-
-    DebugHelpers.DebugHelpers.LogMessage(true, "HTTP GET Test Complete.");
-  */
+  espcp_close(socket_handle);
 }
 
 /****************************************************************************
