@@ -217,22 +217,9 @@ void getGoogleHomePage(void)
     return;
   }
 
+
+
   /*
-    //
-    //    setsockopt
-    //
-    DebugHelpers.DebugHelpers.LogMessage(true, "Setting socket options (setsockopt)");
-    var tv = new TimeVal();
-    tv.TvSec = 5;
-    tv.TvUsec = 0;
-    if (_f7MicroCoprocessor.SetSockOpt(socketHandle, SocketLevelType.SolSocket, SocketOptionType.SoRcvTimeO, tv, 0) != 0)
-    {
-        _f7MicroCoprocessor.Close(socketHandle);
-        DebugHelpers.DebugHelpers.LogMessage(true, $"Exiting test");
-        return;
-    }
-    DebugHelpers.DebugHelpers.LogMessage(true, "    Timeout set for socket.");
-  
     //
     //    read
     //
