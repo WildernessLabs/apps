@@ -190,26 +190,14 @@ void getGoogleHomePage(void)
     return;
   }
 
+  if (espcp_connect(socket_handle, res->ai_addr, res->ai_addrlen) != 0)
+  {
+    return;
+  }
+
+  espcp_freeaddrinfo(res);
+
   /*
-    //
-    //    connect
-    //
-    DebugHelpers.DebugHelpers.LogMessage(true, "Opening connection (connect)");
-    SockAddr sockAddr = Encoders.ExtractSockAddr(getAddrInfoResult.Addr, 0);
-    if (_f7MicroCoprocessor.Connect(socketHandle, sockAddr, (int)getAddrInfoResult.AddrLen) < 0)
-    {
-        _f7MicroCoprocessor.Close(socketHandle);
-        _f7MicroCoprocessor.FreeAddrInfo(getAddrInfoResult.MyHeapAddress);
-        DebugHelpers.DebugHelpers.LogMessage(true, $"Exiting test");
-        return;
-    }
-    DebugHelpers.DebugHelpers.LogMessage(true, "    Connected.");
-    //
-    //    freeaddrinfo
-    //
-    DebugHelpers.DebugHelpers.LogMessage(true, "Freeing address information resources (freeaddrinfo)");
-    _f7MicroCoprocessor.FreeAddrInfo(getAddrInfoResult.MyHeapAddress);
-    DebugHelpers.DebugHelpers.LogMessage(true, "    Complete.");
     //
     //    setsockopt
     //
