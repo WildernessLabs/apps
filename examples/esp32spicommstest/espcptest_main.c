@@ -178,7 +178,10 @@ void getGoogleHomePage(void)
   hints.ai_canonname = "";
   struct addrinfo *res;
 
-  result = espcp_getaddrinfo("www.google.com", "80", &hints, &res);
+  #define WEB_SERVER "www.google.com"
+  #define WEB_PORT "80"
+
+  result = espcp_getaddrinfo(WEB_SERVER, WEB_PORT, &hints, &res);
   if (result != 0)
   {
     return;
@@ -197,9 +200,7 @@ void getGoogleHomePage(void)
 
   espcp_freeaddrinfo(res);
 
-  #define WEB_SERVER "www.google.com"
   #define WEB_PATH "/"
-  #define WEB_PORT "80"
   #define REQUEST "GET " WEB_PATH " HTTP/1.0\r\nHost: " WEB_SERVER ":" WEB_PORT  "\r\n" \
                   "User-Agent: Meadow\r\n\r\n"
 
