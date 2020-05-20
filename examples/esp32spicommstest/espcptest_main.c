@@ -153,26 +153,48 @@ static void run_tests(FAR const char *name, void (CODE *test_fn)(void))
  *   None
  *
  ****************************************************************************/
-static void runAllTests(void)
-{
-  RUN_TEST_GROUP(GenericList);
-  RUN_TEST_GROUP(EspcpCoprocessor);
-  RUN_TEST_GROUP(EspcpQueue);
-  RUN_TEST_GROUP(EspcpMessageDispatcher);
-  RUN_TEST_GROUP(EspcpThread);
-}
+// static void runAllTests(void)
+// {
+//   RUN_TEST_GROUP(GenericList);
+//   RUN_TEST_GROUP(EspcpCoprocessor);
+//   RUN_TEST_GROUP(EspcpQueue);
+//   RUN_TEST_GROUP(EspcpMessageDispatcher);
+//   RUN_TEST_GROUP(EspcpThread);
+// }
 
-
-void getGoogleHomePage(void)
+/****************************************************************************
+ * Name: get_google_homepage
+ *
+ * Description:
+ *  Get the Google home page using emulated POSIX calls.  These emulated
+ *  calls will be passed to the ESP32.
+ *
+ * Input Parameters:
+ *   None
+ *
+ * Returned Value:
+ *   None
+ *
+ * Assumptions/Limitations:
+ *   None
+ *
+ ****************************************************************************/
+void get_google_homepage(void)
 {
   int result = 0;
-  espcp_init();
-  espcp_ip_information_t *ip = espcp_start_wifi(NETWORK_NAME, NETWORK_PASSWORD);
 
+  printf("Initialising the network and restarting the ESP32.\n");
+  espcp_init();
+
+  printf("Starting the WiFi\n");
+  espcp_ip_information_t *ip = espcp_start_wifi(NETWORK_NAME, NETWORK_PASSWORD);
+  printf("IP Address: %d.%d.%d.%d\n", ip->ip[0], ip->ip[1], ip->ip[2], ip->ip[3]);
+
+  printf("Looking up Googles' IP address.\n");
   struct addrinfo hints;
   memset(&hints, 0, sizeof(struct addrinfo));
-  hints.ai_family = espcp_address_family_type_af_inet;
-  hints.ai_socktype = espcp_socket_protocol_type_sock_stream;
+  hints.ai_family = AF_INET;
+  hints.ai_socktype = SOCK_STREAM;
   hints.ai_addrlen = 0;
   hints.ai_addr = NULL;
   hints.ai_canonname = "";
@@ -184,58 +206,96 @@ void getGoogleHomePage(void)
   result = espcp_getaddrinfo(WEB_SERVER, WEB_PORT, &hints, &res);
   if (result != 0)
   {
+    printf("getaddr failed to lookup the server %s:%s, result: %d\n", WEB_SERVER, WEB_PORT, result);
     return;
   }
+  printf("getaddr has found the server %s:%s\n", WEB_SERVER, WEB_PORT);
 
+  printf("Opening socket.\n");
   int socket_handle = espcp_socket(res->ai_family, res->ai_socktype, 0);
   if (socket_handle < 0)
   {
+    printf("socket failed to return socket handle.\n");
     return;
   }
+  printf("Socket handle: 0x%02x\n", socket_handle);
 
-  if (espcp_connect(socket_handle, res->ai_addr, res->ai_addrlen) != 0)
+  printf("Opening connection.\n");
+  result = espcp_connect(socket_handle, res->ai_addr, res->ai_addrlen);
+  if (result != 0)
   {
+    printf("connect failed to connect to server, result code: %d\n", result);
     return;
   }
+  printf("Connected to server.\n");
 
+  printf("Freeing addrinfo structure.\n");
   espcp_freeaddrinfo(res);
+  printf("addrinfo structure released.\n");
 
+  printf("Sending request to server:\n");
   #define WEB_PATH "/"
-  #define REQUEST "GET " WEB_PATH " HTTP/1.0\r\nHost: " WEB_SERVER ":" WEB_PORT  "\r\n" \
+  #define REQUEST "GET " WEB_PATH " HTTP/1.0\r\nHost: " WEB_SERVER ":" WEB_PORT "\r\n" \
                   "User-Agent: Meadow\r\n\r\n"
 
+  printf("-------------------- REQUEST --------------------\n");
+  printf("%s", REQUEST);
+  printf("----------------- END OF REQUEST ----------------\n");
   int amount_written = espcp_write(socket_handle, REQUEST, strlen(REQUEST));
   if (amount_written < 0)
   {
+    printf("Failed to write full data buffer to server, result code: %d\n", errno);
     return;
   }
+  printf("%d bytes sent to server\n", amount_written);
 
   struct timeval receiving_timeout;
   receiving_timeout.tv_sec = 5;
   receiving_timeout.tv_usec = 0; 
-  if (espcp_setsockopt(socket_handle, SOL_SOCKET, SO_RCVTIMEO, &receiving_timeout, sizeof(receiving_timeout)) < 0)
+  printf("Setting socket receive timeout to %d seconds.\n", receiving_timeout.tv_sec);
+  result = espcp_setsockopt(socket_handle, SOL_SOCKET, SO_RCVTIMEO, &receiving_timeout, sizeof(receiving_timeout));
+  if (result < 0)
   {
+    printf("Failed to set the timeout, result code: %d\n", result);
     return;
   }
+  printf("Socket receive time out set.\n");
 
+  printf("Reading data from server.\n");
   const int BUFFER_SIZE = 1024;
   uint8_t buffer[BUFFER_SIZE];
   int total_bytes = 0;
   int amount_read = 0;
   bool first_block = true;
+  int count = 0;
   do
   {
     memset(buffer, 0, BUFFER_SIZE);
     amount_read = espcp_read(socket_handle, buffer, BUFFER_SIZE);
+    count++;
     if (amount_read > 0)
     {
         total_bytes += amount_read;
+        if (first_block)
+        {
+          printf("-------------------- FIRST BLOCK (100 bytes)--------------------\n");
+          char small_block[200];
+          strncpy(small_block, (char *) buffer, 100);
+          printf("%s\n", small_block);
+          printf("------------------------- END OF BLOCK -------------------------\n");
+        }
     }
-
     first_block = false;
   } while (amount_read > 0);
+  printf("Read completed, %d bytes read in %d operations.\n", total_bytes, count);
 
-  espcp_close(socket_handle);
+  printf("Closing the socket.\n");
+  result = espcp_close(socket_handle);
+  if (result < 0)
+  {
+    printf("Failed to close the socket, result code: %d\n", result);
+  }
+  printf("Socket closed.\n\n");
 }
 
 /****************************************************************************
@@ -312,25 +372,27 @@ int esp32spicommstest_main(int argc, char *argv[])
 
   memset(&overall, 0, sizeof(overall));
 
-  printf("Starting unit-tests...\n");
+  printf("Starting Tests...\n");
   fflush(stdout);
   fflush(stderr);
 
   get_mallinfo(&mem_before);
 
   // runBatteryLevelTest();
-  getGoogleHomePage();
+  get_google_homepage();
 
-  printf("Unit-test groups done... OK:%d, FAILED:%d, TOTAL:%d\n",
-         overall.ok, overall.failed, overall.ok + overall.failed);
-  printf(" -- number of checks made: %d\n", overall.nchecks);
-  fflush(stdout);
-  fflush(stderr);
+  printf("Tests complete.\n\n\n");
 
-  get_mallinfo(&mem_after);
+  // printf("Unit-test groups done... OK:%d, FAILED:%d, TOTAL:%d\n",
+  //        overall.ok, overall.failed, overall.ok + overall.failed);
+  // printf(" -- number of checks made: %d\n", overall.nchecks);
+  // fflush(stdout);
+  // fflush(stderr);
 
-  print_mallinfo(&mem_before, "HEAP BEFORE TESTS");
-  print_mallinfo(&mem_after, "HEAP AFTER TESTS");
+  // get_mallinfo(&mem_after);
+
+  // print_mallinfo(&mem_before, "HEAP BEFORE TESTS");
+  // print_mallinfo(&mem_after, "HEAP AFTER TESTS");
 
   fflush(stdout);
   fflush(stderr);
