@@ -115,23 +115,23 @@
 //---------------------------------------------------------------------
 // Thread priorities
 #define HCOM_THREAD_PRIORITY_HCOM_RECEIVE 120
-#define HCOM_THREAD_NAME_HCOM_RECEIVE "HcomRecv"
+#define HCOM_THREAD_NAME_HCOM_RECEIVE "HcomxRecv"
 
 // Insure hcom recv thread runs before esp32 recv
 #define HCOM_THREAD_PRIORITY_ESP32_RECEIVE (HCOM_THREAD_PRIORITY_HCOM_RECEIVE - 1)
-#define HCOM_THREAD_NAME_ESP32_RECEIVE "EspRecv"
+#define HCOM_THREAD_NAME_ESP32_RECEIVE "EspxRecv"
 
 // This pipe carries .Net Console.WriteLine output to Host via stdout
 #define HCOM_THREAD_PRIORITY_STDOUT_PIPE 120
-#define HCOM_THREAD_NAME_STDOUT_PIPE "MonoText"
+#define HCOM_THREAD_NAME_STDOUT_PIPE "MonoxText"
 
 // This thread is used for remote debugging mono apps
 #define HCOM_THREAD_PRIORITY_REMOTE_DBG 120
-#define HCOM_THREAD_NAME_REMOTE_DBG "RemoteDbg"
+#define HCOM_THREAD_NAME_REMOTE_DBG "RemotexDbg"
 
 // The ramlog is created by nuttx and contains syslog text
 #define HCOM_THREAD_PRIORITY_TRACE_RAMLOG 120
-#define HCOM_THREAD_NAME_TRACE_RAMLOG "RamlogRead"
+#define HCOM_THREAD_NAME_TRACE_RAMLOG "RamlogxRead"
 
 //---------------------------------------------------------------------
 
@@ -444,7 +444,8 @@ extern "C"
  ****************************************************************************************************/
 
   // Startup Manager
-  int hcom_manager_setup(void);
+  int hcom_initial_startup(void);
+
 // #if defined(CONFIG_STM32F7_PWR)
 //   int hcom_manager_syslog_mask_init(void);
 // #endif
@@ -571,7 +572,7 @@ extern "C"
 
 //   // Common Utils and persistent (battery backed) storage functions
   int hcom_utils_setup(void);
-//   void hcom_utils_shutdown(void);
+  void hcom_utils_shutdown(void);
 //   void hcom_utils_bbreg_write(uint32_t regNumber, uint32_t value);
 //   uint32_t hcom_utils_bbreg_read(uint32_t regNumber);
 //   bool hcom_utils_bbreg_is_bit_set_clear(uint32_t regNumber, uint32_t value);
@@ -610,7 +611,7 @@ extern "C"
 
 
 // Diagnostic aids
-#define HCOM_TASK_SHOW_CREATED_TASK_PID_NAME  0
+#define HCOM_TASK_SHOW_CREATED_TASK_PID_NAME  1
 #define HCOM_COMMON_UTILS_DIAG_PRINT_BUFFER   1
 #define HCOM_COMMON_UTILS_GPIO_D0_D8_DOUT     0
 #define HCOM_COMMON_UTILS_GPIO_A0_MISO_DOUT   0

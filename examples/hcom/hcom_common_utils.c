@@ -437,20 +437,22 @@ void hcom_utils_f7syslog(int priority, FAR const IPTR char *fmt, ...)
 #if defined CONFIG_RAMLOG_SYSLOG
   stringLen = stringLen;    // Keep conpiler from warning (I know there's a better way...)
 #else
-  // syslog - check if these should be routed to host.
-  // Note: no timestamp for these messages
-  if(hcom_utils_bbreg_is_bit_set(HCOM_BATTERY_BACKED_REG_BIT_FLAGS,
-          HCOM_BBREG_TRACE_MSG_TO_HOST_BIT_FLAG))
-  {
-    // Strip off cr/lf since Meadow.CLI takes care of this
-    if(_f7syslogTextBuf[stringLen - 1] == 0x0a || _f7syslogTextBuf[stringLen - 1] == 0x0d)
-      stringLen--;
-    if(_f7syslogTextBuf[stringLen - 1] == 0x0a || _f7syslogTextBuf[stringLen - 1] == 0x0d)
-      stringLen--;
+// p-m
+  stringLen = stringLen;    // Keep conpiler from warning (I know there's a better way...)
+  // // syslog - check if these should be routed to host.
+  // // Note: no timestamp for these messages
+  // if(hcom_utils_bbreg_is_bit_set(HCOM_BATTERY_BACKED_REG_BIT_FLAGS,
+  //         HCOM_BBREG_TRACE_MSG_TO_HOST_BIT_FLAG))
+  // {
+  //   // Strip off cr/lf since Meadow.CLI takes care of this
+  //   if(_f7syslogTextBuf[stringLen - 1] == 0x0a || _f7syslogTextBuf[stringLen - 1] == 0x0d)
+  //     stringLen--;
+  //   if(_f7syslogTextBuf[stringLen - 1] == 0x0a || _f7syslogTextBuf[stringLen - 1] == 0x0d)
+  //     stringLen--;
   
-    hcom_comms_send_raw_string_msg(HCOM_HOST_REQUEST_TEXT_TRACE_MSG, 0, _f7syslogTextBuf,
-            stringLen, thisFile, __LINE__);
-  }
+  //   hcom_comms_send_raw_string_msg(HCOM_HOST_REQUEST_TEXT_TRACE_MSG, 0, _f7syslogTextBuf,
+  //           stringLen, thisFile, __LINE__);
+  // }
 #endif
   sem_post(&_f7syslogSem);
 }

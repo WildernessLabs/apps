@@ -71,19 +71,72 @@ static int _hcom_pid;
 //  ****************************************************************************/
 
 static void hcom_manager_shutdown(void);
-static int hcom_manager_create_worker_thread(void);
-
-// #ifdef CONFIG_BUILD_PROTECTED
-// static int hcom_comms_recv_worker_kthread(int argc, char *argv[]);
-// #else
-// static FAR void *hcom_comms_recv_worker_pthread(FAR void *arg);
-// #endif
-
-static int hcom_comms_recv_task_main_thread(int argc, FAR char *argv[]);
+static int hcom_manager_setup(void);
+static int hcom_task_main_thread(int argc, FAR char *argv[]);
 
 // /****************************************************************************
 //  * Public Functions
 //  ****************************************************************************/
+// This thread will do all initialization of hcom, then becomes the thread that
+// receives CLI messages.
+// Note: This may be replaced by being the Nuttx thread created after booting up.
+// i.e. hcom_main
+int hcom_initial_startup()
+{
+  _hcom_pid = task_create(HCOM_THREAD_NAME_HCOM_RECEIVE,
+    HCOM_THREAD_PRIORITY_HCOM_RECEIVE,
+    8192, (main_t)hcom_task_main_thread,
+    (FAR char * const *)  NULL);
+
+  if (_hcom_pid < 0)
+  {
+    syslog(1, "Main task creation failed:%d\n", _hcom_pid); usleep(100 * 1000);
+    return _hcom_pid;
+  }
+
+  syslog(1, "MGR-->%s() new task PID:%d, caller PID:%d\n", __func__, _hcom_pid, getpid()); usleep(100 * 1000);
+
+  // Let the starting thread continue with its work
+  return OK;
+}
+
+// This is the hcom tasks main thread. All other threads within hcom
+// are created by this thread or one of it's child threads. This means
+// that they are all in the same "task group." See the following
+// https://cwiki.apache.org/confluence/display/NUTTX/Tasks+vs.+Threads+FAQ
+// https://cwiki.apache.org/confluence/pages/viewpage.action?pageId=158862687
+int hcom_task_main_thread(int argc, FAR char *argv[])
+{
+  syslog(1, "MGR-->HCOM task main thread running\n"); usleep(100 * 1000);
+  int ret;
+
+// #if HCOM_TASK_SHOW_CREATED_TASK_PID_NAME > 0
+//   hcom_utils_f7syslog(LOG_NOTICE, "New task main thread PID:%d\n", getpid());
+// #endif
+
+  usleep(100 * 1000);
+
+  // General setup
+  ret = hcom_manager_setup();
+  if (ret < 0)
+  {
+    syslog(LOG_CRIT, "%s@%d-hcom_manager_setup:%d\n", thisFile, __LINE__, ret);
+    return ret;
+  }
+
+  //-------------------------------------------------------
+  // Now run hcom CLI receive
+  // Main thread only returns on shutdown or serious error
+  //-------------------------------------------------------  
+  ret = hcom_comms_recv_thread_loop();
+  if (ret < 0)
+  {
+    hcom_utils_f7syslog(LOG_CRIT, "%s@%d-%s thread exit:%d\n", thisFile, __LINE__, HCOM_THREAD_NAME_HCOM_RECEIVE, ret);
+  }
+
+  hcom_manager_shutdown();
+  return OK;
+}
 
 // #if defined(CONFIG_STM32F7_PWR)
 // int hcom_manager_syslog_mask_init()
@@ -125,23 +178,65 @@ static int hcom_comms_recv_task_main_thread(int argc, FAR char *argv[]);
 // }
 // #endif
 
-// //=============================================================
-// int hcom_manager_setup(FAR struct mtd_dev_s *mtd)
+//=============================================================
 int hcom_manager_setup()
 {
+  syslog(1, "MGR-->Entered %s\n", __func__);  usleep(100 * 1000);
+
   int ret;
 
-  syslog(1, "Entered %s \n", __func__);  usleep(10 * 1000);
+  // p-m This is temporary until more code is in place
+  int syslog_mask = LOG_MASK(LOG_EMERG) | LOG_MASK(LOG_ALERT) | LOG_MASK(LOG_CRIT) |
+              LOG_MASK(LOG_ERR) | LOG_MASK(LOG_WARNING) | LOG_MASK(LOG_NOTICE) | 
+              LOG_MASK(LOG_INFO);  // | LOG_MASK(LOG_DEBUG);
 
-//   if (mtd == NULL)
-//   {
-//     return ERROR;
-//   }
-  
+  // Sets new mask and returns the previous syslog_mask
+  int syslog_mask_old = setlogmask(syslog_mask);
+  syslog(1, "MGR-->%s-syslog:%d, old syslog:%d\n", __func__, syslog_mask, syslog_mask_old);  usleep(100 * 1000);
+
+ #if defined (CONFIG_RAMLOG_SYSLOG)
+  // Sets up some basic initialization for ramlog, but may not
+  // create the ramlog read thread etc. as this is not a commonly
+  // needed feature.
+  syslog(1, "%s@%d-Calling hcom_ramlog_trace_setup\n", thisFile, __LINE__); usleep(100 * 1000);
+  ret = hcom_ramlog_trace_setup();
+  if (ret < 0)
+  {
+    syslog(1, "%s@%d-hcom_ramlog_trace_setup failed:%d\n", thisFile, __LINE__, ret);
+    // hcom_utils_f7syslog(LOG_CRIT, "%s@%d-setup log tracing %d\n", thisFile, __LINE__, ret);
+    return ret;
+  }
+  syslog(1, "%s@%d-Calling hcom_ramlog_trace_setup SUCCESS\n", thisFile, __LINE__);
+#endif
+
+//   char *traceCombo[] = {
+//     "none",
+//     "Host",
+//     "UART1",
+//     "Host+UART1"};
+//   // Assumes host and uart1 are bits 1 & 2
+//   uint32_t value = hcom_utils_bbreg_read(HCOM_BATTERY_BACKED_REG_BIT_FLAGS);
+//   value >>= 1;
+//   char *traceDest = traceCombo[value & 0x00000003];
+
+//   // Provide some information that may be useful
+//   //hcom_utils_f7syslog(LOG_INFO, "Meadow %s (%s@%s) %s, Mono:%s, Trace level:0x%02x(was 0x%02x), to:%s, type:%s\n",
+//   syslog(LOG_INFO, "Meadow %s (%s@%s) %s, Mono:%s, Trace level:0x%02x(was 0x%02x), to:%s, type:%s\n",
+//         HCOM_DEVICE_INFO_MEADOW_OS_VERSION, __DATE__, __TIME__, 
+//         _power_on_restart ? "power-on restart" :"rebooted",
+//         hcom_utils_is_mono_disabled() ? "Disabled" : "Enabled",
+//         _syslog_mask, _syslog_mask_old, traceDest,
+// #if defined CONFIG_RAMLOG_SYSLOG
+//         "ramlog");
+// #else
+//         "syslog");
+// #endif
+
   ret = hcom_utils_setup();
   if (ret < 0)
   {
-    hcom_utils_f7syslog(LOG_CRIT, "%s@%d-setup hcom utils:%d\n", thisFile, __LINE__, ret);
+    syslog(LOG_CRIT, "%s@%d-setup hcom utils:%d\n", thisFile, __LINE__, ret);
+    // hcom_utils_f7syslog(LOG_CRIT, "%s@%d-setup hcom utils:%d\n", thisFile, __LINE__, ret);
     return ret;
   }
 
@@ -149,18 +244,6 @@ int hcom_manager_setup()
 //   // variables within mono_main.c before it is started by nuttx. When mono_main is started
 //   // it checks if special action is necessary.
 //   hcom_utils_boot_time_mono_check();
-
-#if defined (CONFIG_RAMLOG_SYSLOG)
-  // Sets up some basic initialization for ramlog, but does not
-  // create the receive thread etc. as this is not a commonly
-  // needed feature.
-  ret = hcom_ramlog_trace_setup();
-  if (ret < 0)
-  {
-    hcom_utils_f7syslog(LOG_CRIT, "%s@%d-setup log tracing %d\n", thisFile, __LINE__, ret);
-    return ret;
-  }
-#endif
 
 //   // Sets the MTD for the file system
 //   // Note: the calling thread is the nuttx startup thread. Any activity here may delay the
@@ -220,12 +303,12 @@ int hcom_manager_setup()
 //   }
 // #endif
 
-  ret = hcom_comms_recv_setup();
-  if (ret < 0)
-  {
-    hcom_utils_f7syslog(LOG_CRIT, "%s@%d-setup Host comms %d\n", thisFile, __LINE__, ret);
-    return ret;
-  }
+//   ret = hcom_comms_recv_setup();
+//   if (ret < 0)
+//   {
+//     hcom_utils_f7syslog(LOG_CRIT, "%s@%d-setup Host comms %d\n", thisFile, __LINE__, ret);
+//     return ret;
+//   }
 
 //   ret = hcom_comms_send_setup();
 //   if (ret < 0)
@@ -276,121 +359,92 @@ int hcom_manager_setup()
 //   }
 // #endif
 
-  // Do this last! - Create a thread to handle receiving and responding to received messages
-  ret = hcom_manager_create_worker_thread();
-  if (ret < 0)
-  {
-    hcom_utils_f7syslog(LOG_CRIT, "%s@%d-create hcom thread %s\n", thisFile, __LINE__, ret);
-    return ret;
-  }
+  // // Do this last! - Create a thread to handle receiving and responding to received messages
+  // ret = hcom_manager_create_worker_thread();
+  // if (ret < 0)
+  // {
+  //   hcom_utils_f7syslog(LOG_CRIT, "%s@%d-create hcom thread %s\n", thisFile, __LINE__, ret);
+  //   return ret;
+  // }
 
   return OK;
-  }
+}
 
 // //===============================================================
 // // Create a thread to handle the work. It may create a pthread
 // // or kernel thread depending on the build configuration
-int hcom_manager_create_worker_thread()
-{
-// #ifdef CONFIG_BUILD_PROTECTED
-//   // Note: I've seen the reported stack size at 0x17e4 (6116)
-//   _hcom_pid = kthread_create(HCOM_THREAD_NAME_HCOM_RECEIVE,
+// int hcom_manager_create_worker_thread()
+// {
+//   _hcom_pid = task_create(HCOM_THREAD_NAME_HCOM_RECEIVE,
 //     HCOM_THREAD_PRIORITY_HCOM_RECEIVE,
-//     8192, (main_t)hcom_comms_recv_worker_kthread,
+//     8192, (main_t)hcom_comms_recv_task_main_thread,
 //     (FAR char * const *)  NULL);
-//   if(_hcom_pid <= 0)
+
+//   if(_hcom_pid < 0)
 //   {
-//     return -ENOEXEC;
+//     return _hcom_pid;
 //   }
-// #else
-//   int ret;
-//   pthread_t thread;
-//   pthread_attr_t attr;
-//   struct sched_param param;
-
-//   param.sched_priority = 100;
-//   (void)pthread_attr_init(&attr);
-//   (void)pthread_attr_setschedparam(&attr, &param);
-
-//   // Note: earlier a stack size of 2048 had trouble
-//   // doubling solved problem. Alot of the things that where on the
-//   // stack have been removed. 2048 may now be good enough (peter 4Jun19)
-//   (void)pthread_attr_setstacksize(&attr, 4096);
-
-//   //int pthread_create(FAR pthread_t *thread, FAR const pthread_attr_t *attr,
-//   //             pthread_startroutine_t start_routine, pthread_addr_t arg)
-//   ret = pthread_create(&thread, &attr, hcom_comms_recv_worker_pthread, NULL);
-//   if (ret < 0)
-//   {
-//     hcom_utils_f7syslog(LOG_CRIT, "%s@%d-%s thread err:%d\n", thisFile, __LINE__,
-//             HCOM_THREAD_NAME_HCOM_RECEIVE, ret);
-//     return ret;
-//   }
-// #endif
-  _hcom_pid = task_create(HCOM_THREAD_NAME_HCOM_RECEIVE,
-    HCOM_THREAD_PRIORITY_HCOM_RECEIVE,
-    8192, (main_t)hcom_comms_recv_task_main_thread,
-    (FAR char * const *)  NULL);
-
-  // Let the starting thread continue with its work
-  return OK;
-}
+//   // Let the starting thread continue with its work
+//   return OK;
+// }
 
 //============================================================================
 // hcom main thread
-int hcom_comms_recv_task_main_thread(int argc, FAR char *argv[])
-{
- int ret;
+// int hcom_comms_recv_task_main_thread(int argc, FAR char *argv[])
+// {
+//  int ret;
 
-// #if HCOM_TASK_SHOW_CREATED_TASK_PID_NAME > 0
-//   struct tcb_s *rtcb = this_task();
-//   hcom_utils_f7syslog(LOG_NOTICE, "PID:%d is '%s'\n", getpid(), rtcb->name);
-// #endif
+// // #if HCOM_TASK_SHOW_CREATED_TASK_PID_NAME > 0
+// //   struct tcb_s *rtcb = this_task();
+// //   hcom_utils_f7syslog(LOG_NOTICE, "PID:%d is '%s'\n", getpid(), rtcb->name);
+// // #endif
 
-//   char *traceCombo[] = {
-//     "none",
-//     "Host",
-//     "UART1",
-//     "Host+UART1"};
-//   // Assumes host and uart1 are bits 1 & 2
-//   uint32_t value = hcom_utils_bbreg_read(HCOM_BATTERY_BACKED_REG_BIT_FLAGS);
-//   value >>= 1;
-//   char *traceDest = traceCombo[value & 0x00000003];
+// //   char *traceCombo[] = {
+// //     "none",
+// //     "Host",
+// //     "UART1",
+// //     "Host+UART1"};
+// //   // Assumes host and uart1 are bits 1 & 2
+// //   uint32_t value = hcom_utils_bbreg_read(HCOM_BATTERY_BACKED_REG_BIT_FLAGS);
+// //   value >>= 1;
+// //   char *traceDest = traceCombo[value & 0x00000003];
 
-//   // Provide some information that may be useful
-//   //hcom_utils_f7syslog(LOG_INFO, "Meadow %s (%s@%s) %s, Mono:%s, Trace level:0x%02x(was 0x%02x), to:%s, type:%s\n",
-//   syslog(LOG_INFO, "Meadow %s (%s@%s) %s, Mono:%s, Trace level:0x%02x(was 0x%02x), to:%s, type:%s\n",
-//         HCOM_DEVICE_INFO_MEADOW_OS_VERSION, __DATE__, __TIME__, 
-//         _power_on_restart ? "power-on restart" :"rebooted",
-//         hcom_utils_is_mono_disabled() ? "Disabled" : "Enabled",
-//         _syslog_mask, _syslog_mask_old, traceDest,
-// #if defined CONFIG_RAMLOG_SYSLOG
-//         "ramlog");
-// #else
-//         "syslog");
-// #endif
+// //   // Provide some information that may be useful
+// //   //hcom_utils_f7syslog(LOG_INFO, "Meadow %s (%s@%s) %s, Mono:%s, Trace level:0x%02x(was 0x%02x), to:%s, type:%s\n",
+// //   syslog(LOG_INFO, "Meadow %s (%s@%s) %s, Mono:%s, Trace level:0x%02x(was 0x%02x), to:%s, type:%s\n",
+// //         HCOM_DEVICE_INFO_MEADOW_OS_VERSION, __DATE__, __TIME__, 
+// //         _power_on_restart ? "power-on restart" :"rebooted",
+// //         hcom_utils_is_mono_disabled() ? "Disabled" : "Enabled",
+// //         _syslog_mask, _syslog_mask_old, traceDest,
+// // #if defined CONFIG_RAMLOG_SYSLOG
+// //         "ramlog");
+// // #else
+// //         "syslog");
+// // #endif
 
-  //-------------------------------------------------------
-  // Main thread only returns on shutdown or serious error
-  //-------------------------------------------------------  
-  ret = hcom_comms_recv_thread_loop();
-  if (ret < 0)
-  {
-    hcom_utils_f7syslog(LOG_CRIT, "%s@%d-%s thread exit:%d\n", thisFile, __LINE__, HCOM_THREAD_NAME_HCOM_RECEIVE, ret);
-  }
+//   // //-------------------------------------------------------
+//   // // Main thread only returns on shutdown or serious error
+//   // //-------------------------------------------------------  
+//   // ret = hcom_comms_recv_thread_loop();
+//   // if (ret < 0)
+//   // {
+//   //   hcom_utils_f7syslog(LOG_CRIT, "%s@%d-%s thread exit:%d\n", thisFile, __LINE__, HCOM_THREAD_NAME_HCOM_RECEIVE, ret);
+//   // }
 
-  hcom_manager_shutdown();
+//   // hcom_manager_shutdown();
 
-  hcom_utils_f7syslog(LOG_INFO, "%s thread exit'\n", HCOM_THREAD_NAME_HCOM_RECEIVE);
+//   // hcom_utils_f7syslog(LOG_INFO, "%s thread exit'\n", HCOM_THREAD_NAME_HCOM_RECEIVE);
 
- return OK;      // Thread exit
-}
+//  return OK;      // Thread exit
+// }
 
 //=========================================================================
 // Notify all interested children that we are shutting down. This closes the
 // comms file descriptor which will cause the worker thread to exit.
 void hcom_manager_shutdown()
 {
+  syslog(1, "MGR-->%s@%d-Entered:%s hcom_ramlog_trace_setup\n", thisFile, __LINE__, __func__); usleep(100 * 1000);
+  
   // todo - confirm that all functions that need shutdown are called
 //   hcom_comms_recv_shutdown();
 //   hcom_mono_pipe_shutdown();

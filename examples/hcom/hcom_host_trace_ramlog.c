@@ -104,6 +104,8 @@ static int hcom_ramlog_trace_open_uart1_serial_port(void);
  ****************************************************************************/
 int hcom_ramlog_trace_setup()
 {
+  syslog(1, "%s@%d-Entered\n", thisFile, __LINE__); usleep(100 * 1000);
+
   _shutting_down = false;
   _trace_ramlog_initialized = false;
   _ramlog_fd = -1;
@@ -113,6 +115,8 @@ int hcom_ramlog_trace_setup()
 
   // p-m - force to uart1 for early testing
   _trace_ramlog_to_uart1 = true;
+
+  // p-m Override defaults from battery backed register values
   // if(hcom_utils_bbreg_is_bit_set(HCOM_BATTERY_BACKED_REG_BIT_FLAGS,
   //         HCOM_BBREG_TRACE_MSG_TO_UART1_BIT_FLAG))
   //   _trace_ramlog_to_uart1 = true;
@@ -124,7 +128,8 @@ int hcom_ramlog_trace_setup()
   // If either enabled initialize
   if(_trace_ramlog_to_uart1 || _trace_ramlog_to_host)
   {
-    // The only way to undo this initialization is restarting Meadow
+    // The only way to undo this initialization is restarting the MCU
+  // syslog(1, "RLOG-->%s@%d-Calling hcom_ramlog_trace_lazy_initialization()\n", thisFile, __LINE__); usleep(100 * 1000);
     hcom_ramlog_trace_lazy_initialization();
   }
   return OK;
@@ -134,6 +139,7 @@ int hcom_ramlog_trace_setup()
 // Closing connection forces a receive error which, causes the thread to return.
 void hcom_ramlog_trace_shutdown()
 {
+  syslog(1, "%s@%d-RAMLOG asked to shutdown\n", thisFile, __LINE__); usleep(100 * 1000);
   _shutting_down = true;
 
   if(_ramlog_fd > -1)
@@ -158,11 +164,13 @@ void hcom_ramlog_trace_shutdown()
 // Because this feature is rarely used we initialize only when needed
 int hcom_ramlog_trace_lazy_initialization()
 {
+  // syslog(1, "RLOG-->%s@%d-Entered %s\n", thisFile, __LINE__, __func__); usleep(100 * 1000);
   int ret;
 
   if(_trace_ramlog_initialized)
     return OK;
 
+  // syslog(1, "RLOG-->%s@%d-Calling malloc()\n", thisFile, __LINE__); usleep(100 * 1000);
   // Create a circular buffer to manage messages read from ramlog
   _ramlog_cbuf = (struct host_com_cir_buffer_s *)malloc(sizeof(struct host_com_cir_buffer_s));
   if (_ramlog_cbuf == NULL)
@@ -181,6 +189,7 @@ int hcom_ramlog_trace_lazy_initialization()
   }
   
   // Host message buffer
+  // syslog(1, "RLOG-->%s@%d-Calling malloc() #2\n", thisFile, __LINE__); usleep(100 * 1000);
   _singleMsgBuf = malloc(HCOM_PROTOCOL_REQUEST_MAX_SIMPLE_DATA_LEN);
   if (_singleMsgBuf == NULL)
   {
@@ -189,6 +198,7 @@ int hcom_ramlog_trace_lazy_initialization()
   }
 
   // Create a thread to read the ramlog
+  // syslog(1, "RLOG-->%s@%d-Calling hcom_ramlog_trace_make_thread()\n", thisFile, __LINE__); usleep(100 * 1000);
   ret = hcom_ramlog_trace_make_thread();
   if (ret < 0)
   {
@@ -204,6 +214,7 @@ int hcom_ramlog_trace_lazy_initialization()
 //=============================================================
 int hcom_ramlog_trace_make_thread()
 {
+  // syslog(1, "RLOG-->%s@%d-Entered %s, PID:%d\n", thisFile, __LINE__, __func__, getpid()); usleep(100 * 1000);
     int ret;
     pthread_t thread;
     pthread_attr_t attr;
@@ -212,7 +223,7 @@ int hcom_ramlog_trace_make_thread()
     param.sched_priority = HCOM_THREAD_PRIORITY_TRACE_RAMLOG;
     (void)pthread_attr_init(&attr);
     (void)pthread_attr_setschedparam(&attr, &param);
-    (void)pthread_attr_setstacksize(&attr, 1024);
+    (void)pthread_attr_setstacksize(&attr, 2048);
 
     ret = pthread_create(&thread, &attr, hcom_ramlog_trace_pthread, NULL);
     if (ret < 0)
@@ -228,16 +239,18 @@ int hcom_ramlog_trace_make_thread()
 // This thread receives all ramlog messages received from syslog
 FAR void *hcom_ramlog_trace_pthread(FAR void *arg)
 {
+  // syslog(1, "RLOG-->%s@%d-Entered %s, ramlog PID:%d\n", thisFile, __LINE__, __func__, getpid()); usleep(100 * 1000);
   int ret;
   
-#if HCOM_TASK_SHOW_CREATED_TASK_PID_NAME > 0
-  struct tcb_s *rtcb = this_task();
-  hcom_utils_f7syslog(LOG_NOTICE, "PID:%d is '%s'\n", getpid(), rtcb->name);
-#endif
+// #if HCOM_TASK_SHOW_CREATED_TASK_PID_NAME > 0
+//   struct tcb_s *rtcb = this_task();
+//   hcom_utils_f7syslog(LOG_NOTICE, "PID:%d is '%s'\n", getpid(), rtcb->name);
+// #endif
 
   while(!_shutting_down)
   {
     // Must have ramlog, it's the source of all trace data
+  // syslog(1, "RLOG-->%s@%d-Calling hcom_ramlog_trace_open_ramlog()\n", thisFile, __LINE__); usleep(100 * 1000);
     ret = hcom_ramlog_trace_open_ramlog();
     if(ret < 0)
     {
@@ -305,6 +318,8 @@ int hcom_ramlog_trace_open_ramlog()
             thisFile, __LINE__, HCOM_TRACE_RAMLOG_DEVICE_NAME, errno);
     return -1;
   }
+  // syslog(1, "RLOG-->%s@%d-%s(), RAMLOG OPENED %s \n", thisFile, __LINE__, __func__, HCOM_TRACE_RAMLOG_DEVICE_NAME); usleep(100 * 1000);
+
   return OK;
 }
 
@@ -325,6 +340,7 @@ int hcom_ramlog_trace_open_uart1_serial_port()
     _uart1_fd = -1;
     return -1;
   }
+  // syslog(1, "RLOG-->%s@%d-%s(), RAMLOG Serial Port OPENED %s \n", thisFile, __LINE__, __func__, HCOM_TRACE_RAMLOG_SERIAL_NAME); usleep(100 * 1000);
   return OK;
 }
 

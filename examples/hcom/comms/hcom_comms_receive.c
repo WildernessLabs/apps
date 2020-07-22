@@ -121,10 +121,17 @@ void hcom_comms_recv_shutdown()
 }
 
 //=======================================================================
-// A dedicated thread lives here. However, this thread calls throughout hcom
+// The dedicated thread lives here. However, this thread calls throughout hcom
 int hcom_comms_recv_thread_loop()
 {
-  syslog(1 , "Entered %s()\n", __func__);
+  syslog(1 , "Entered %s()-testing only look for every 10 sec for 1 minute\n", __func__);
+  for(int i = 0; i < 6; i++)
+  {
+    syslog(1, "%d seconds have elapsed\n", i * 10);
+    sleep(10);
+  }
+
+  return OK;
 
   int ret;
   bool wait_before_retry = false;
