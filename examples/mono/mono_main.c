@@ -320,6 +320,15 @@ int mono_main(int argc, char *argv[])
     return OK;
     //-------------------------------------------------
   }
+  
+  syslog(1, "Entered %s and calling hcom_manager_setup\n", __func__);
+
+  // Start small
+  int experimentXXX = hcom_manager_setup(); usleep(10 * 1000);
+  
+  syslog(1, "Exiting %s\n", __func__);
+  sleep(60 * 60);  // Don't exit for an hour
+  return OK;
 
   // NuttX is attempting to start mono.
   // Check if it should be started
