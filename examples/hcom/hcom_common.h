@@ -1,9 +1,7 @@
 /****************************************************************************
- * hcom/hcom_common.h
+ * \apps\examples\hcom\hcom_common.h
  * 
  *   Copyright (C) 2019 - 2020 Wilderness Labs. All rights reserved.
- *   Copyright (C) 2017 Gregory Nutt. All rights reserved.
- *   Copyright (C) 2017 Alan Carvalho de Assis. All rights reserved.
  *   Author:  Wilderness Labs
  *
  * Redistribution and use in source and binary forms, with or without
@@ -66,12 +64,15 @@
 #include <nuttx/arch.h>
 #include <nuttx/mtd/mtd.h>
 #include <nuttx/userspace.h>
-//#include <nuttx/kthread.h>
 
-// #include "chip/stm32f76xx77xx_memorymap.h"
-// #include "chip/stm32_rtcc.h"    // battery backed registers and ram
-
-// #include "hcom_mono_main.h"
+// Need for battery backed registers
+// Either define locally or call over to OS side to have work done
+#if defined (CONFIG_ARCH_CHIP_STM32F7)
+#include "../../../nuttx/arch/arm/src/stm32f7/chip/stm32f76xx77xx_memorymap.h"
+#include "../../../nuttx/arch/arm/src/stm32f7/chip/stm32_rtcc.h"
+#else
+#error "This implementation only designed to work with STM32F7"
+#endif
 
 #ifndef OK
   #define OK 0
@@ -137,13 +138,14 @@
 
 // These define how long the receive thread waits before "waking up"
 // p-m DON'T FORGET
+#define HCOM_RECV_TIMEOUT_DEFAULT_SECONDS 60
 // #define HCOM_RECV_TIMEOUT_DEFAULT_SECONDS 15
-#define HCOM_RECV_TIMEOUT_DEFAULT_SECONDS (5 * 60)    // 5 minutes
+// #define HCOM_RECV_TIMEOUT_DEFAULT_SECONDS (5 * 60)    // 5 minutes
 // #define HCOM_RECV_TIMEOUT_DEFAULT_SECONDS (1 * 60 * 60) // once an hour report hcom thread running
 #define HCOM_RECV_TIMEOUT_ACTIVE_SECONDS 5
 
-#define HCOM_CONNECTION_TIMEOUT_STARTUP 50 * 1000   // At startup we connect quickly
-#define HCOM_CONNECTION_TIMEOUT_RUNNING 5000 * 1000 // If no host connection at first wait longer
+#define HCOM_CONNECTION_TIMEOUT_STARTUP 250 * 1000    // At startup we connect quickly
+#define HCOM_CONNECTION_TIMEOUT_RUNNING 5000 * 1000   // If no host connection at first wait longer
 // How many fast connection attempts during startup before falling to a slower rate
 #define HCOM_CONNECTION_STARTUP_ATTEMPTS ((1000000 / HCOM_CONNECTION_TIMEOUT_STARTUP) * 5) // 5 seconds
 
@@ -233,19 +235,21 @@ enum hcom_current_data_packet_activity
 #define HCOM_TRACE_LEVEL_NOTICE_INFO 2
 #define HCOM_TRACE_LEVEL_NOTICE_INFO_DEBUG 3
 
-//--------------------------------------------------------------------
+//----------------------------------------------------------------
 // Redefine Battery Backed Registers so we know what's what
-// #define HCOM_BATTERY_BACKED_REG_SYSLOG_MASK   STM32_RTC_BK31R
+#define HCOM_BATTERY_BACKED_REG_SYSLOG_MASK   STM32_RTC_BK31R
+// p=m move this around
 // #define HCOM_BATTERY_BACKED_REG_MONO_ACCESS   STM32_RTC_BK30R
 // #define HCOM_BATTERY_BACKED_REG_MONO_ACTION   STM32_RTC_BK29R
-
-// #define HCOM_BATTERY_BACKED_REG_BIT_FLAGS     STM32_RTC_BK28R
-// // This bit indicates if the restart was initiated by hcom command
-// #define HCOM_BBREG_RESTART_CONCLUDED_BIT_FLAG 0x00000001
-// // This bit indicates if we are to send trace messages to the host PC
-// #define HCOM_BBREG_TRACE_MSG_TO_HOST_BIT_FLAG 0x00000002
-// // This bit indicates if we are to send trace messages to the uart1
-// #define HCOM_BBREG_TRACE_MSG_TO_UART1_BIT_FLAG 0x00000004
+#define HCOM_BATTERY_BACKED_REG_BIT_FLAGS     STM32_RTC_BK28R
+// This bit indicates if the restart was initiated by hcom command
+#define HCOM_BBREG_RESTART_CONCLUDED_BIT_FLAG 0x00000001
+// This bit indicates if we are to send trace messages to the host PC
+#define HCOM_BBREG_TRACE_MSG_TO_HOST_BIT_FLAG 0x00000002
+// This bit indicates if we are to send trace messages to the uart1
+#define HCOM_BBREG_TRACE_MSG_TO_UART1_BIT_FLAG 0x00000004
+// This bit indicates if mono should be started during startup
+#define HCOM_BBREG_MONO_START_BIT_FLAG 0x00000008
 
 //--------------------------------------------------------------------
 // HCOM protocol
@@ -444,7 +448,7 @@ extern "C"
  ****************************************************************************************************/
 
   // Startup Manager
-  int hcom_initial_startup(void);
+  // int hcom_initial_startup(void);
 
 // #if defined(CONFIG_STM32F7_PWR)
 //   int hcom_manager_syslog_mask_init(void);
@@ -456,20 +460,20 @@ extern "C"
   int hcom_comms_recv_thread_loop(void);
   const char *hcom_comms_recv_get_device_name(void);
 
-//   // USB CDC/ACM send host messages
-//   int hcom_comms_send_setup(void);
-//   void hcom_comms_send_msg_shutdown(void);
-//   void hcom_comms_send_header_msg(uint16_t requestType, uint32_t userData,
-//           char *sourceFileName, int sourceLineNumber);
-//   void hcom_comms_send_simple_string_msg(uint16_t requestType, uint32_t userData, char *shortText,
-//           char *sourceFileName, int sourceLineNumber);
-//   int hcom_comms_send_raw_string_msg(uint16_t requestType, uint32_t userData, char *shortText,
-//           size_t msgLength, char *sourceFileName, int sourceLineNumber);
+  // USB CDC/ACM send host messages
+  int hcom_comms_send_setup(void);
+  void hcom_comms_send_msg_shutdown(void);
+  void hcom_comms_send_header_msg(uint16_t requestType, uint32_t userData,
+          char *sourceFileName, int sourceLineNumber);
+  void hcom_comms_send_simple_string_msg(uint16_t requestType, uint32_t userData, char *shortText,
+          char *sourceFileName, int sourceLineNumber);
+  int hcom_comms_send_raw_string_msg(uint16_t requestType, uint32_t userData, char *shortText,
+          size_t msgLength, char *sourceFileName, int sourceLineNumber);
 
 //   // Save and Parse request
-//   int hcom_save_parse_request_setup(void);
-//   void hcom_save_parse_request_shutdown(void);
-//   int hcom_comms_recv_process_raw_data(uint8_t recvBuff[], const ssize_t recvByteCnt);
+  int hcom_save_parse_request_setup(void);
+  void hcom_save_parse_request_shutdown(void);
+  int hcom_comms_recv_process_raw_data(uint8_t recvBuff[], const ssize_t recvByteCnt);
 
 //   // Execute Request for downloaded file
 //   int hcom_exec_rqst_download_file_rqst_setup(void);
@@ -477,7 +481,7 @@ extern "C"
 //   void hcom_exec_rqst_download_file_rqst_start(const uint8_t *recvPacketData,
 //       const size_t recvPacketDataSize,uint32_t partitionId, uint16_t requestType);
 //   void hcom_exec_rqst_download_file_rqst_end(uint32_t user_data);
-//   void hcom_exec_rqst_data_packet_recvd(const uint8_t *packet, const size_t packetSize, uint16_t seqNumb);
+  void hcom_exec_rqst_data_packet_recvd(const uint8_t *packet, const size_t packetSize, uint16_t seqNumb);
 
 //   // Execute Flash file system related request
 //   int hcom_exec_flash_fs_setup(FAR struct mtd_dev_s *mtd);
@@ -561,6 +565,14 @@ extern "C"
                                   size_t packetBufferSize, size_t *packetLength);
   int hcom_cirbuf_release_memory(struct host_com_cir_buffer_s *hcom_cbuf);
 
+// HCOM proxy access allows needed OS level resources to be tunneled to
+// the operating system
+int hcom_proxy_access_setup(void);
+int hcom_proxy_set_register(uint32_t address, uint32_t value);
+int hcom_proxy_get_register(uint32_t address, uint32_t *value);
+int hcom_proxy_update_register(uint32_t address, uint32_t clearBits, uint32_t setBits);
+int hcom_proxy_first_test(uint32_t value);
+
 //   // mono pipe user messages
 //   int hcom_mono_pipe_setup(void);
 //   void hcom_mono_pipe_shutdown(void);
@@ -573,21 +585,21 @@ extern "C"
 //   // Common Utils and persistent (battery backed) storage functions
   int hcom_utils_setup(void);
   void hcom_utils_shutdown(void);
-//   void hcom_utils_bbreg_write(uint32_t regNumber, uint32_t value);
-//   uint32_t hcom_utils_bbreg_read(uint32_t regNumber);
-//   bool hcom_utils_bbreg_is_bit_set_clear(uint32_t regNumber, uint32_t value);
-//   void hcom_utils_bbreg_set_bit(uint32_t regNumber, uint32_t value);
-//   bool hcom_utils_bbreg_is_bit_set(uint32_t regNumber, uint32_t value);
-//   void hcom_utils_bbreg_clear_bit(uint32_t regNumber, uint32_t value);
+  void hcom_utils_register_write(uint32_t regNumber, uint32_t value);
+  uint32_t hcom_utils_register_read(uint32_t regNumber);
+  bool hcom_utils_register_is_bits_set_n_clear(uint32_t regNumber, uint32_t value);
+  void hcom_utils_register_set_bits(uint32_t regNumber, uint32_t value);
+  bool hcom_utils_register_is_bit_set(uint32_t regNumber, uint32_t value);
+  void hcom_utils_register_clear_bits(uint32_t regNumber, uint32_t value);
 //   bool hcom_utils_boot_time_qemu_check(void);
-//   void hcom_utils_boot_time_mono_check(void);
-//   bool hcom_utils_is_mono_disabled(void);
+  int hcom_mono_ctrl_start_mono_if_needed(void);
+  bool hcom_mono_ctrl_is_mono_enabled(void);
   void hcom_utils_diag_print_buffer(const uint8_t packetBuffer[], const int bufLen, uint8_t logPriority);
   void hcom_utils_f7syslog(int priority, FAR const IPTR char *fmt, ...);
   void hcom_utils_f7syslog_x(int priority, FAR const IPTR char *fmt, ...);
   void hcom_utils_safe_ramlog(int priority, FAR const IPTR char *fmt, va_list args);
-//   void hcom_utils_dbg_gpio_1led_update(bool ledOn);
-//   void hcom_utils_dbg_gpio_8bit_update(uint8_t newValue, bool ledOn);
+  void hcom_utils_dbg_gpio_1led_update(bool ledOn);
+  void hcom_utils_dbg_gpio_8bit_update(uint8_t newValue, bool ledOn);
 
   // Ramlog to host/uart
 #if defined (CONFIG_RAMLOG_SYSLOG)
@@ -611,39 +623,38 @@ extern "C"
 
 
 // Diagnostic aids
-#define HCOM_TASK_SHOW_CREATED_TASK_PID_NAME  1
+#define HCOM_TASK_SHOW_CREATED_TASK_PID_NAME  0
 #define HCOM_COMMON_UTILS_DIAG_PRINT_BUFFER   1
-#define HCOM_COMMON_UTILS_GPIO_D0_D8_DOUT     0
+#define HCOM_COMMON_UTILS_GPIO_D00_D08_DOUT   0
 #define HCOM_COMMON_UTILS_GPIO_A0_MISO_DOUT   0
 
 #if HCOM_COMMON_UTILS_GPIO_A0_MISO_DOUT > 0
 //=================================================================
 // These for testing only
-#define MEADOW_DIAG_GPIO_01_OUTPUT  (GPIO_OUTPUT | GPIO_PORTA | GPIO_PIN4 | GPIO_FLOAT | GPIO_PUSHPULL | GPIO_SPEED_100MHz)
-#define MEADOW_DIAG_GPIO_02_OUTPUT  (GPIO_OUTPUT | GPIO_PORTA | GPIO_PIN5 | GPIO_FLOAT | GPIO_PUSHPULL | GPIO_SPEED_100MHz)
-#define MEADOW_DIAG_GPIO_03_OUTPUT  (GPIO_OUTPUT | GPIO_PORTA | GPIO_PIN3 | GPIO_FLOAT | GPIO_PUSHPULL | GPIO_SPEED_100MHz)
-#define MEADOW_DIAG_GPIO_04_OUTPUT  (GPIO_OUTPUT | GPIO_PORTA | GPIO_PIN7 | GPIO_FLOAT | GPIO_PUSHPULL | GPIO_SPEED_100MHz)
-#define MEADOW_DIAG_GPIO_05_OUTPUT  (GPIO_OUTPUT | GPIO_PORTC | GPIO_PIN0 | GPIO_FLOAT | GPIO_PUSHPULL | GPIO_SPEED_100MHz)
-#define MEADOW_DIAG_GPIO_06_OUTPUT  (GPIO_OUTPUT | GPIO_PORTC | GPIO_PIN1 | GPIO_FLOAT | GPIO_PUSHPULL | GPIO_SPEED_100MHz)
-#define MEADOW_DIAG_GPIO_07_OUTPUT  (GPIO_OUTPUT | GPIO_PORTC | GPIO_PIN10| GPIO_FLOAT | GPIO_PUSHPULL | GPIO_SPEED_100MHz)
-#define MEADOW_DIAG_GPIO_08_OUTPUT  (GPIO_OUTPUT | GPIO_PORTB | GPIO_PIN5 | GPIO_FLOAT | GPIO_PUSHPULL | GPIO_SPEED_100MHz)
-#define MEADOW_DIAG_GPIO_09_OUTPUT  (GPIO_OUTPUT | GPIO_PORTC | GPIO_PIN11| GPIO_FLOAT | GPIO_PUSHPULL | GPIO_SPEED_100MHz)
+#define MEADOW_DIAG_GPIO_A0___01_OUTPUT  (GPIO_OUTPUT | GPIO_PORTA | GPIO_PIN4 | GPIO_FLOAT | GPIO_PUSHPULL | GPIO_SPEED_100MHz)
+#define MEADOW_DIAG_GPIO_A1___02_OUTPUT  (GPIO_OUTPUT | GPIO_PORTA | GPIO_PIN5 | GPIO_FLOAT | GPIO_PUSHPULL | GPIO_SPEED_100MHz)
+#define MEADOW_DIAG_GPIO_A2___03_OUTPUT  (GPIO_OUTPUT | GPIO_PORTA | GPIO_PIN3 | GPIO_FLOAT | GPIO_PUSHPULL | GPIO_SPEED_100MHz)
+#define MEADOW_DIAG_GPIO_A3___04_OUTPUT  (GPIO_OUTPUT | GPIO_PORTA | GPIO_PIN7 | GPIO_FLOAT | GPIO_PUSHPULL | GPIO_SPEED_100MHz)
+#define MEADOW_DIAG_GPIO_A4___05_OUTPUT  (GPIO_OUTPUT | GPIO_PORTC | GPIO_PIN0 | GPIO_FLOAT | GPIO_PUSHPULL | GPIO_SPEED_100MHz)
+#define MEADOW_DIAG_GPIO_A5___06_OUTPUT  (GPIO_OUTPUT | GPIO_PORTC | GPIO_PIN1 | GPIO_FLOAT | GPIO_PUSHPULL | GPIO_SPEED_100MHz)
+#define MEADOW_DIAG_GPIO_SCK__07_OUTPUT  (GPIO_OUTPUT | GPIO_PORTC | GPIO_PIN10| GPIO_FLOAT | GPIO_PUSHPULL | GPIO_SPEED_100MHz)
+#define MEADOW_DIAG_GPIO_MOSI_08_OUTPUT  (GPIO_OUTPUT | GPIO_PORTB | GPIO_PIN5 | GPIO_FLOAT | GPIO_PUSHPULL | GPIO_SPEED_100MHz)
+#define MEADOW_DIAG_GPIO_MISO_09_OUTPUT  (GPIO_OUTPUT | GPIO_PORTC | GPIO_PIN11| GPIO_FLOAT | GPIO_PUSHPULL | GPIO_SPEED_100MHz)
 #endif
 
-#if HCOM_COMMON_UTILS_GPIO_D0_D8_DOUT > 0
+#if HCOM_COMMON_UTILS_GPIO_D00_D08_DOUT > 0
 //=================================================================
 // These for testing only
-#define HCOM_MEADOW_GPIO_D00_OUTPUT  (GPIO_OUTPUT | GPIO_PORTI | GPIO_PIN9 | GPIO_PULLUP | GPIO_OPENDRAIN | GPIO_SPEED_100MHz)
-#define HCOM_MEADOW_GPIO_D01_OUTPUT  (GPIO_OUTPUT | GPIO_PORTH | GPIO_PIN13| GPIO_PULLUP | GPIO_OPENDRAIN | GPIO_SPEED_100MHz)
-#define HCOM_MEADOW_GPIO_D02_OUTPUT  (GPIO_OUTPUT | GPIO_PORTC | GPIO_PIN6 | GPIO_PULLUP | GPIO_OPENDRAIN | GPIO_SPEED_100MHz)
-#define HCOM_MEADOW_GPIO_D03_OUTPUT  (GPIO_OUTPUT | GPIO_PORTB | GPIO_PIN8 | GPIO_PULLUP | GPIO_OPENDRAIN | GPIO_SPEED_100MHz)
-#define HCOM_MEADOW_GPIO_D04_OUTPUT  (GPIO_OUTPUT | GPIO_PORTB | GPIO_PIN9 | GPIO_PULLUP | GPIO_OPENDRAIN | GPIO_SPEED_100MHz)
-#define HCOM_MEADOW_GPIO_D05_OUTPUT  (GPIO_OUTPUT | GPIO_PORTC | GPIO_PIN7 | GPIO_PULLUP | GPIO_OPENDRAIN | GPIO_SPEED_100MHz)
-#define HCOM_MEADOW_GPIO_D06_OUTPUT  (GPIO_OUTPUT | GPIO_PORTB | GPIO_PIN0 | GPIO_PULLUP | GPIO_OPENDRAIN | GPIO_SPEED_100MHz)
-#define HCOM_MEADOW_GPIO_D07_OUTPUT  (GPIO_OUTPUT | GPIO_PORTB | GPIO_PIN7 | GPIO_PULLUP | GPIO_OPENDRAIN | GPIO_SPEED_100MHz)
-#define HCOM_MEADOW_GPIO_D08_OUTPUT  (GPIO_OUTPUT | GPIO_PORTB | GPIO_PIN6 | GPIO_PULLUP | GPIO_OPENDRAIN | GPIO_SPEED_100MHz)
+#define MEADOW_DIAG_GPIO_D00__10_OUTPUT  (GPIO_OUTPUT | GPIO_PORTI | GPIO_PIN9 | GPIO_PULLUP | GPIO_OPENDRAIN | GPIO_SPEED_100MHz)
+#define MEADOW_DIAG_GPIO_D01__11_OUTPUT  (GPIO_OUTPUT | GPIO_PORTH | GPIO_PIN13| GPIO_PULLUP | GPIO_OPENDRAIN | GPIO_SPEED_100MHz)
+#define MEADOW_DIAG_GPIO_D02__12_OUTPUT  (GPIO_OUTPUT | GPIO_PORTC | GPIO_PIN6 | GPIO_PULLUP | GPIO_OPENDRAIN | GPIO_SPEED_100MHz)
+#define MEADOW_DIAG_GPIO_D03__13_OUTPUT  (GPIO_OUTPUT | GPIO_PORTB | GPIO_PIN8 | GPIO_PULLUP | GPIO_OPENDRAIN | GPIO_SPEED_100MHz)
+#define MEADOW_DIAG_GPIO_D04__14_OUTPUT  (GPIO_OUTPUT | GPIO_PORTB | GPIO_PIN9 | GPIO_PULLUP | GPIO_OPENDRAIN | GPIO_SPEED_100MHz)
+#define MEADOW_DIAG_GPIO_D05__15_OUTPUT  (GPIO_OUTPUT | GPIO_PORTC | GPIO_PIN7 | GPIO_PULLUP | GPIO_OPENDRAIN | GPIO_SPEED_100MHz)
+#define MEADOW_DIAG_GPIO_D06__16_OUTPUT  (GPIO_OUTPUT | GPIO_PORTB | GPIO_PIN0 | GPIO_PULLUP | GPIO_OPENDRAIN | GPIO_SPEED_100MHz)
+#define MEADOW_DIAG_GPIO_D07__17_OUTPUT  (GPIO_OUTPUT | GPIO_PORTB | GPIO_PIN7 | GPIO_PULLUP | GPIO_OPENDRAIN | GPIO_SPEED_100MHz)
+#define MEADOW_DIAG_GPIO_D08__18_OUTPUT  (GPIO_OUTPUT | GPIO_PORTB | GPIO_PIN6 | GPIO_PULLUP | GPIO_OPENDRAIN | GPIO_SPEED_100MHz)
 #endif
-
 
 #endif // __ASSEMBLY__
 

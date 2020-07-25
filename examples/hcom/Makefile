@@ -49,11 +49,17 @@ STACKSIZE = $(CONFIG_EXAMPLES_HCOM_STACKSIZE)
 
 HCOM_DIR = ../../../hcom/
 ASRCS =
-CSRCS = comms/hcom_comms_receive.c comms/hcom_comms_send.c comms/hcom_comms_support.c \
-	hcom_common_utils.c hcom_host_trace_ramlog.c
+CSRCS = hcom_common_utils.c \
+	hcom_host_trace_ramlog.c \
+	hcom_mono_control.c \
+	comms/hcom_comms_receive.c \
+	comms/hcom_comms_send.c \
+	comms/hcom_comms_support.c \
+	commands/hcom_save_parse_request.c \
+	commands/hcom_exec_rqst_download.c \
+	hcom_proxy_access.c
+
 MAINSRC = hcom_startup_manager.c
-
-
 
 CONFIG_EXAMPLES_HCOM_PROGNAME ?= hcom$(EXEEXT)
 PROGNAME = $(CONFIG_EXAMPLES_HCOM_PROGNAME)

@@ -1,5 +1,5 @@
 /****************************************************************************
- * /hcom/hcom_startup_manager.c
+ * \examples\hcom\hcom_startup_manager.c
  * 
  *   Copyright (C) 2019 - 2020 Wilderness Labs. All rights reserved.
  *   Author:  Wilderness Labs
@@ -52,185 +52,64 @@
 // #include <../sched/sched/sched.h>
 // #endif
 
-// /****************************************************************************
-//  * Pre-processor Definitions
-//  ****************************************************************************/
+/****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+extern int hcom_main (int argc, char* argv[]);
 
-// /****************************************************************************
-//  * Private Data
-//  ****************************************************************************/
+/****************************************************************************
+ * Private Data
+ ****************************************************************************/
 static char *thisFile = __FILE__;
+static int _syslog_mask;
+static int _syslog_mask_old;
+static bool _power_on_restart;
 
-static int _hcom_pid;
-// static int _syslog_mask;
-// static int _syslog_mask_old;
-// static bool _power_on_restart;
+/****************************************************************************
+ * Private Function Prototypes
+ ****************************************************************************/
 
-// /****************************************************************************
-//  * Private Function Prototypes
-//  ****************************************************************************/
-
+static int hcom_manager_syslog_mask_init(void);
 static void hcom_manager_shutdown(void);
 static int hcom_manager_setup(void);
-static int hcom_task_main_thread(int argc, FAR char *argv[]);
 
-// /****************************************************************************
-//  * Public Functions
-//  ****************************************************************************/
-// This thread will do all initialization of hcom, then becomes the thread that
-// receives CLI messages.
-// Note: This may be replaced by being the Nuttx thread created after booting up.
-// i.e. hcom_main
-int hcom_initial_startup()
-{
-  _hcom_pid = task_create(HCOM_THREAD_NAME_HCOM_RECEIVE,
-    HCOM_THREAD_PRIORITY_HCOM_RECEIVE,
-    8192, (main_t)hcom_task_main_thread,
-    (FAR char * const *)  NULL);
-
-  if (_hcom_pid < 0)
-  {
-    syslog(1, "Main task creation failed:%d\n", _hcom_pid); usleep(100 * 1000);
-    return _hcom_pid;
-  }
-
-  syslog(1, "MGR-->%s() new task PID:%d, caller PID:%d\n", __func__, _hcom_pid, getpid()); usleep(100 * 1000);
-
-  // Let the starting thread continue with its work
-  return OK;
-}
-
-// This is the hcom tasks main thread. All other threads within hcom
-// are created by this thread or one of it's child threads. This means
-// that they are all in the same "task group." See the following
+/****************************************************************************
+ * Public Functions
+ ****************************************************************************/
+// This is the hcom tasks main thread, created by Nuttx when it has finished
+// starting the OS. This thread will do all initialization of hcom, then
+// becomes the thread that receives CLI messages.
+// All other threads are created by this thread or one of it's child threads.
+// This means that they are all in the same "task group." See the following
 // https://cwiki.apache.org/confluence/display/NUTTX/Tasks+vs.+Threads+FAQ
 // https://cwiki.apache.org/confluence/pages/viewpage.action?pageId=158862687
-int hcom_task_main_thread(int argc, FAR char *argv[])
+int hcom_main(int argc, char *argv[])
 {
-  syslog(1, "MGR-->HCOM task main thread running\n"); usleep(100 * 1000);
   int ret;
 
 // #if HCOM_TASK_SHOW_CREATED_TASK_PID_NAME > 0
-//   hcom_utils_f7syslog(LOG_NOTICE, "New task main thread PID:%d\n", getpid());
+  syslog(1, "MGR-->The HCOM Main thread, \"init\" is running. It's PID:%d\n", getpid()); usleep(50 * 1000);
 // #endif
-
-  usleep(100 * 1000);
-
-  // General setup
-  ret = hcom_manager_setup();
-  if (ret < 0)
-  {
-    syslog(LOG_CRIT, "%s@%d-hcom_manager_setup:%d\n", thisFile, __LINE__, ret);
-    return ret;
-  }
-
-  //-------------------------------------------------------
-  // Now run hcom CLI receive
-  // Main thread only returns on shutdown or serious error
-  //-------------------------------------------------------  
-  ret = hcom_comms_recv_thread_loop();
-  if (ret < 0)
-  {
-    hcom_utils_f7syslog(LOG_CRIT, "%s@%d-%s thread exit:%d\n", thisFile, __LINE__, HCOM_THREAD_NAME_HCOM_RECEIVE, ret);
-  }
-
-  hcom_manager_shutdown();
-  return OK;
-}
-
-// #if defined(CONFIG_STM32F7_PWR)
-// int hcom_manager_syslog_mask_init()
-// {
-//   // Check if this is a reboot or a power-on restart. The MCU on Power-on
-//   // restart clears all 32 battery backed registers to 0.
-//   if(hcom_utils_bbreg_read(HCOM_BATTERY_BACKED_REG_SYSLOG_MASK) == 0)
-//   {
-//     // Power-on restart
-//     _power_on_restart = true;
-
-//     // Set and save the syslog level to the default value
-//     _syslog_mask = LOG_MASK(LOG_EMERG) | LOG_MASK(LOG_ALERT) | LOG_MASK(LOG_CRIT) |
-//                LOG_MASK(LOG_ERR) | LOG_MASK(LOG_WARNING);
-//     hcom_utils_bbreg_write(HCOM_BATTERY_BACKED_REG_SYSLOG_MASK, _syslog_mask);
-//   }
-//   else
-//   {
-//     // Rebooted - it's safe to use the battery backed registers and SRAM values
-//     _power_on_restart = false;
-//     _syslog_mask = hcom_utils_bbreg_read(HCOM_BATTERY_BACKED_REG_SYSLOG_MASK);
-//   }
-
-//   // Save for emergency debugging :-)
-//   // _syslog_mask = LOG_MASK(LOG_EMERG) | LOG_MASK(LOG_ALERT) | LOG_MASK(LOG_CRIT) |
-//   //             LOG_MASK(LOG_ERR) | LOG_MASK(LOG_WARNING) | LOG_MASK(LOG_NOTICE) | 
-//   //             LOG_MASK(LOG_INFO);  // | LOG_MASK(LOG_DEBUG);
-
-
-//   // Sets new mask and returns the previous syslog_mask
-//   _syslog_mask_old = setlogmask(_syslog_mask);
-//   if (_syslog_mask_old < 0)
-//   {
-//     hcom_utils_f7syslog(LOG_CRIT, "%s@%d-setlogmask err:%d\n", thisFile, __LINE__, _syslog_mask_old);
-//     return _syslog_mask_old;
-//   }
-
-//   return OK;
-// }
-// #endif
-
-//=============================================================
-int hcom_manager_setup()
-{
-  syslog(1, "MGR-->Entered %s\n", __func__);  usleep(100 * 1000);
-
-  int ret;
-
-  // p-m This is temporary until more code is in place
-  int syslog_mask = LOG_MASK(LOG_EMERG) | LOG_MASK(LOG_ALERT) | LOG_MASK(LOG_CRIT) |
-              LOG_MASK(LOG_ERR) | LOG_MASK(LOG_WARNING) | LOG_MASK(LOG_NOTICE) | 
-              LOG_MASK(LOG_INFO);  // | LOG_MASK(LOG_DEBUG);
-
-  // Sets new mask and returns the previous syslog_mask
-  int syslog_mask_old = setlogmask(syslog_mask);
-  syslog(1, "MGR-->%s-syslog:%d, old syslog:%d\n", __func__, syslog_mask, syslog_mask_old);  usleep(100 * 1000);
 
  #if defined (CONFIG_RAMLOG_SYSLOG)
-  // Sets up some basic initialization for ramlog, but may not
-  // create the ramlog read thread etc. as this is not a commonly
-  // needed feature.
-  syslog(1, "%s@%d-Calling hcom_ramlog_trace_setup\n", thisFile, __LINE__); usleep(100 * 1000);
+  // Sets up some basic initialization for ramlog, but may not create the
+  // ramlog read thread etc. as this is not a commonly needed feature, some
+  // setup is postponed until needed.
   ret = hcom_ramlog_trace_setup();
   if (ret < 0)
   {
-    syslog(1, "%s@%d-hcom_ramlog_trace_setup failed:%d\n", thisFile, __LINE__, ret);
-    // hcom_utils_f7syslog(LOG_CRIT, "%s@%d-setup log tracing %d\n", thisFile, __LINE__, ret);
+    hcom_utils_f7syslog(LOG_CRIT, "%s@%d-setup log tracing %d\n", thisFile, __LINE__, ret);
     return ret;
   }
-  syslog(1, "%s@%d-Calling hcom_ramlog_trace_setup SUCCESS\n", thisFile, __LINE__);
 #endif
 
-//   char *traceCombo[] = {
-//     "none",
-//     "Host",
-//     "UART1",
-//     "Host+UART1"};
-//   // Assumes host and uart1 are bits 1 & 2
-//   uint32_t value = hcom_utils_bbreg_read(HCOM_BATTERY_BACKED_REG_BIT_FLAGS);
-//   value >>= 1;
-//   char *traceDest = traceCombo[value & 0x00000003];
-
-//   // Provide some information that may be useful
-//   //hcom_utils_f7syslog(LOG_INFO, "Meadow %s (%s@%s) %s, Mono:%s, Trace level:0x%02x(was 0x%02x), to:%s, type:%s\n",
-//   syslog(LOG_INFO, "Meadow %s (%s@%s) %s, Mono:%s, Trace level:0x%02x(was 0x%02x), to:%s, type:%s\n",
-//         HCOM_DEVICE_INFO_MEADOW_OS_VERSION, __DATE__, __TIME__, 
-//         _power_on_restart ? "power-on restart" :"rebooted",
-//         hcom_utils_is_mono_disabled() ? "Disabled" : "Enabled",
-//         _syslog_mask, _syslog_mask_old, traceDest,
-// #if defined CONFIG_RAMLOG_SYSLOG
-//         "ramlog");
-// #else
-//         "syslog");
-// #endif
+  ret = hcom_proxy_access_setup();
+  if (ret < 0)
+  {
+    syslog(LOG_CRIT, "%s@%d-setup hcom proxy access:%d\n", thisFile, __LINE__, ret);
+    // hcom_utils_f7syslog(LOG_CRIT, "%s@%d-setup hcom utils:%d\n", thisFile, __LINE__, ret);
+    return ret;
+  }
 
   ret = hcom_utils_setup();
   if (ret < 0)
@@ -240,10 +119,163 @@ int hcom_manager_setup()
     return ret;
   }
 
+#if defined HCOM_NOT_DEFINED
+// TESTS OF REGISTER ACCESS VIA THE PROXY
+#define BBR_TEST_VALUE_DB (0xdeadbeef)
+#define BBR_TEST_VALUE_0x00010000 (0x00010000)
+#define BBR_TEST_VALUE_0 (0)
+
+// USE THIS BBR STM32_RTC_BK30R
+uint32_t testValue;
+
+// Write and read a register
+hcom_utils_register_write(STM32_RTC_BK30R, 0);
+hcom_utils_register_write(STM32_RTC_BK30R, BBR_TEST_VALUE_DB);
+testValue = hcom_utils_register_read(STM32_RTC_BK30R);
+syslog(1, "Register Tests 1: Expected 0x%08x and got 0x%08x\n", BBR_TEST_VALUE_DB, testValue);
+
+// Set a bit and read value
+hcom_utils_register_write(STM32_RTC_BK30R, 0);
+hcom_utils_register_set_bits(STM32_RTC_BK30R, BBR_TEST_VALUE_0x00010000);
+testValue = hcom_utils_register_read(STM32_RTC_BK30R);
+syslog(1, "Register Tests 2: Expected 0x%08x and got 0x%08x\n", BBR_TEST_VALUE_0x00010000, testValue);
+
+// Test if expected bit is set
+hcom_utils_register_write(STM32_RTC_BK30R, BBR_TEST_VALUE_0x00010000);
+bool bitsettest = hcom_utils_register_is_bit_set(STM32_RTC_BK30R, BBR_TEST_VALUE_0x00010000);
+syslog(1, "Register Tests 3: Expected 1 and got %d\n", bitsettest);
+
+// Clear bit and insure it's clear
+hcom_utils_register_write(STM32_RTC_BK30R, BBR_TEST_VALUE_0x00010000);
+hcom_utils_register_clear_bits(STM32_RTC_BK30R, BBR_TEST_VALUE_0x00010000);
+testValue = hcom_utils_register_read(STM32_RTC_BK30R);
+syslog(1, "Register Tests 4: Expected 0x%08x and got 0x%08x\n", BBR_TEST_VALUE_0, testValue);
+
+// Verify we can read and clear the same bit
+hcom_utils_register_write(STM32_RTC_BK30R, 0);
+hcom_utils_register_set_bits(STM32_RTC_BK30R, BBR_TEST_VALUE_0x00010000);
+bitsettest = hcom_utils_register_is_bits_set_n_clear(STM32_RTC_BK30R, BBR_TEST_VALUE_0x00010000);
+syslog(1, "Register Tests 5: Expected 1 and got %d\n", bitsettest);
+
+testValue = hcom_utils_register_read(STM32_RTC_BK30R);
+syslog(1, "Register Tests 6: Expected 0x%08x and got 0x%08x\n", BBR_TEST_VALUE_0, testValue);
+#endif
+
+#if defined(CONFIG_STM32F7_PWR)
+  // Restore desired syslog mask from battery backed registers
+  ret = hcom_manager_syslog_mask_init();
+  if(ret < 0)
+  {
+    syslog(LOG_CRIT, "%s@%d-hcom_manager_syslog_mask_init failed:%d\n", thisFile, __LINE__, ret);
+    return ret; 
+  }
+#endif
+
+  // General setup
+  ret = hcom_manager_setup();
+  if (ret < 0)
+  {
+    syslog(LOG_CRIT, "%s@%d-hcom_manager_setup failed:%d\n", thisFile, __LINE__, ret);
+    return ret;
+  }
+
+  //-------------------------------------------------------
+  // This main thread will now run hcom CLI receive. It only
+  // returns on shutdown or serious error
+  //-------------------------------------------------------  
+  ret = hcom_comms_recv_thread_loop();
+  if (ret < 0)
+  {
+    hcom_utils_f7syslog(LOG_CRIT, "%s@%d-%s main-thread exited:%d\n",
+            thisFile, __LINE__, HCOM_THREAD_NAME_HCOM_RECEIVE, ret);
+  }
+
+  hcom_manager_shutdown();
+  return OK;
+}
+
+//==========================================================
+// This function sets up the syslog mask as desired
+int hcom_manager_syslog_mask_init()
+{
+  //p-m - accessing BBRs directly crashes Nuttx
+  return OK; 
+
+#if defined(CONFIG_STM32F7_PWR)
+  // Check if this is a reboot or a power-on restart. The MCU on Power-on
+  // clears all 32 battery backed registers to 0.
+  if(hcom_utils_register_read(HCOM_BATTERY_BACKED_REG_SYSLOG_MASK) == 0)
+  {
+    // Power-on restart
+    _power_on_restart = true;
+
+    // Set and save the syslog level to the default value
+    _syslog_mask = LOG_MASK(LOG_EMERG) | LOG_MASK(LOG_ALERT) | LOG_MASK(LOG_CRIT) |
+               LOG_MASK(LOG_ERR) | LOG_MASK(LOG_WARNING);
+    hcom_utils_register_write(HCOM_BATTERY_BACKED_REG_SYSLOG_MASK, _syslog_mask);
+  }
+  else
+  {
+    // Rebooted - it's safe to use the battery backed registers and SRAM values
+    _power_on_restart = false;
+    _syslog_mask = hcom_utils_register_read(HCOM_BATTERY_BACKED_REG_SYSLOG_MASK);
+  }
+
+  // Save for emergency debugging :-)
+  // _syslog_mask = LOG_MASK(LOG_EMERG) | LOG_MASK(LOG_ALERT) | LOG_MASK(LOG_CRIT) |
+  //             LOG_MASK(LOG_ERR) | LOG_MASK(LOG_WARNING) | LOG_MASK(LOG_NOTICE) | 
+  //             LOG_MASK(LOG_INFO);  // | LOG_MASK(LOG_DEBUG);
+
+  // Sets new mask and returns the previous syslog_mask
+  _syslog_mask_old = setlogmask(_syslog_mask);
+  if (_syslog_mask_old < 0)
+  {
+    hcom_utils_f7syslog(LOG_CRIT, "%s@%d-setlogmask err:%d\n", thisFile, __LINE__, _syslog_mask_old);
+    return _syslog_mask_old;    // not old mask be error
+  }
+#else
+  // Without battery backed registers the best we can do is defaults
+  _power_on_restart = true;
+  _syslog_mask = LOG_MASK(LOG_EMERG) | LOG_MASK(LOG_ALERT) | LOG_MASK(LOG_CRIT) |
+              LOG_MASK(LOG_ERR) | LOG_MASK(LOG_WARNING);
+  _syslog_mask_old = setlogmask(_syslog_mask);
+#endif
+
+  // This is an informational syslog message
+  char *traceCombo[] = {
+    "none",
+    "Host",
+    "UART1",
+    "Host+UART1"};
+  // Assumes host and uart1 are bits 1 & 2
+  uint32_t value = hcom_utils_register_read(HCOM_BATTERY_BACKED_REG_BIT_FLAGS);
+  value >>= 1;
+  char *traceDest = traceCombo[value & 0x00000003];
+
+  // Provide some information that may be useful
+  hcom_utils_f7syslog(LOG_INFO, "Meadow %s (%s@%s) %s, Mono:%s, Trace level:0x%02x(was 0x%02x), to:%s, type:%s\n",
+        HCOM_DEVICE_INFO_MEADOW_OS_VERSION, __DATE__, __TIME__, 
+        _power_on_restart ? "power-on restart" :"rebooted",
+        hcom_mono_ctrl_is_mono_enabled() ? "Enabled" : "Disabled",
+        _syslog_mask, _syslog_mask_old, traceDest,
+#if defined CONFIG_RAMLOG_SYSLOG
+        "ramlog");
+#else
+        "syslog");
+#endif
+
+  return OK;
+}
+
+//=============================================================
+int hcom_manager_setup()
+{
+  int ret;
+
 //   // Determine if there's any special action required by mono_main. This sets up
 //   // variables within mono_main.c before it is started by nuttx. When mono_main is started
 //   // it checks if special action is necessary.
-//   hcom_utils_boot_time_mono_check();
+//   hcom_mono_ctrl_start_mono_if_needed();
 
 //   // Sets the MTD for the file system
 //   // Note: the calling thread is the nuttx startup thread. Any activity here may delay the
@@ -279,13 +311,13 @@ int hcom_manager_setup()
 //     return ret;
 //   }
 
-//   // Allocates memory for the circular buffer
-//   ret = hcom_save_parse_request_setup();
-//   if (ret < 0)
-//   {
-//     hcom_utils_f7syslog(LOG_CRIT, "%s@%d-setup host request %d\n", thisFile, __LINE__, ret);
-//     return ret;
-//   }
+  // Allocates memory for the circular buffer
+  ret = hcom_save_parse_request_setup();
+  if (ret < 0)
+  {
+    hcom_utils_f7syslog(LOG_CRIT, "%s@%d-setup host request %d\n", thisFile, __LINE__, ret);
+    return ret;
+  }
 
 //   ret = hcom_fs_setup(mtd);
 //   if (ret < 0)
@@ -303,19 +335,19 @@ int hcom_manager_setup()
 //   }
 // #endif
 
-//   ret = hcom_comms_recv_setup();
-//   if (ret < 0)
-//   {
-//     hcom_utils_f7syslog(LOG_CRIT, "%s@%d-setup Host comms %d\n", thisFile, __LINE__, ret);
-//     return ret;
-//   }
+  ret = hcom_comms_recv_setup();
+  if (ret < 0)
+  {
+    hcom_utils_f7syslog(LOG_CRIT, "%s@%d-setup Host comms %d\n", thisFile, __LINE__, ret);
+    return ret;
+  }
 
-//   ret = hcom_comms_send_setup();
-//   if (ret < 0)
-//   {
-//     hcom_utils_f7syslog(LOG_CRIT, "%s@%d-setup host msg builder:%d\n", thisFile, __LINE__, ret);
-//     return ret;
-//   }
+  ret = hcom_comms_send_setup();
+  if (ret < 0)
+  {
+    hcom_utils_f7syslog(LOG_CRIT, "%s@%d-setup host msg builder:%d\n", thisFile, __LINE__, ret);
+    return ret;
+  }
 
 // #if defined(CONFIG_HCOM_FILESYSTEM_INIT)
 //   // This will format the file system as needed. This will prevent the nuttx OS from
@@ -370,24 +402,6 @@ int hcom_manager_setup()
   return OK;
 }
 
-// //===============================================================
-// // Create a thread to handle the work. It may create a pthread
-// // or kernel thread depending on the build configuration
-// int hcom_manager_create_worker_thread()
-// {
-//   _hcom_pid = task_create(HCOM_THREAD_NAME_HCOM_RECEIVE,
-//     HCOM_THREAD_PRIORITY_HCOM_RECEIVE,
-//     8192, (main_t)hcom_comms_recv_task_main_thread,
-//     (FAR char * const *)  NULL);
-
-//   if(_hcom_pid < 0)
-//   {
-//     return _hcom_pid;
-//   }
-//   // Let the starting thread continue with its work
-//   return OK;
-// }
-
 //============================================================================
 // hcom main thread
 // int hcom_comms_recv_task_main_thread(int argc, FAR char *argv[])
@@ -397,29 +411,6 @@ int hcom_manager_setup()
 // // #if HCOM_TASK_SHOW_CREATED_TASK_PID_NAME > 0
 // //   struct tcb_s *rtcb = this_task();
 // //   hcom_utils_f7syslog(LOG_NOTICE, "PID:%d is '%s'\n", getpid(), rtcb->name);
-// // #endif
-
-// //   char *traceCombo[] = {
-// //     "none",
-// //     "Host",
-// //     "UART1",
-// //     "Host+UART1"};
-// //   // Assumes host and uart1 are bits 1 & 2
-// //   uint32_t value = hcom_utils_bbreg_read(HCOM_BATTERY_BACKED_REG_BIT_FLAGS);
-// //   value >>= 1;
-// //   char *traceDest = traceCombo[value & 0x00000003];
-
-// //   // Provide some information that may be useful
-// //   //hcom_utils_f7syslog(LOG_INFO, "Meadow %s (%s@%s) %s, Mono:%s, Trace level:0x%02x(was 0x%02x), to:%s, type:%s\n",
-// //   syslog(LOG_INFO, "Meadow %s (%s@%s) %s, Mono:%s, Trace level:0x%02x(was 0x%02x), to:%s, type:%s\n",
-// //         HCOM_DEVICE_INFO_MEADOW_OS_VERSION, __DATE__, __TIME__, 
-// //         _power_on_restart ? "power-on restart" :"rebooted",
-// //         hcom_utils_is_mono_disabled() ? "Disabled" : "Enabled",
-// //         _syslog_mask, _syslog_mask_old, traceDest,
-// // #if defined CONFIG_RAMLOG_SYSLOG
-// //         "ramlog");
-// // #else
-// //         "syslog");
 // // #endif
 
 //   // //-------------------------------------------------------
@@ -446,11 +437,11 @@ void hcom_manager_shutdown()
   syslog(1, "MGR-->%s@%d-Entered:%s hcom_ramlog_trace_setup\n", thisFile, __LINE__, __func__); usleep(100 * 1000);
   
   // todo - confirm that all functions that need shutdown are called
-//   hcom_comms_recv_shutdown();
+  hcom_comms_recv_shutdown();
 //   hcom_mono_pipe_shutdown();
-//   hcom_utils_shutdown();
-//   hcom_save_parse_request_shutdown();
-//   hcom_comms_send_msg_shutdown();
+  hcom_utils_shutdown();
+  hcom_save_parse_request_shutdown();
+  hcom_comms_send_msg_shutdown();
 //   hcom_file_commands_shutdown();
 //   hcom_fs_shutdown();
 //   hcom_remote_dbg_shutdown();

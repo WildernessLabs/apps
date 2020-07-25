@@ -1,8 +1,7 @@
 /****************************************************************************
- * configs/stm32f777-zit6-meadow/src/hcom/hcom_comms_receive.c
+ * \examples\hcom\comms\hcom_comms_receive.c
  * 
  *   Copyright (C) 2019 - 2020 Wilderness Labs. All rights reserved.
- *   Copyright (C) 2017 Gregory Nutt. All rights reserved.
  *   Author:  Wilderness Labs
  *
  * Redistribution and use in source and binary forms, with or without
@@ -55,12 +54,10 @@ static char *thisFile = __FILE__;
 
 static bool _shutting_down;
 
-// p-m
-// // Both of the file descriptors are "detached." Meaning that multiple threads
-// // can use the related resource.
-// static FAR struct file _connection_read_file_fd;
-int _connection_read_file_fd;
-static bool _is_connection_read_open;
+// Both of the file descriptors are "detached." Meaning that multiple threads
+// can use the related resource.
+int _comms_read_fd;
+static bool _is_comms_read_open;
 
 static uint8_t *_tempRecvBuff;
 static bool _firstTimeToConnect;
@@ -86,17 +83,20 @@ static int hcom_comms_recv_restart_concluded(void);
 
 int hcom_comms_recv_setup()
 {
-  syslog(1, "Entered %s\n", __func__);
+  syslog(1, "RCV-->Entered %s\n", __func__);
 
   _shutting_down = false;
-  _is_connection_read_open = false;
+  _is_comms_read_open = false;
   _firstTimeToConnect = true;
   _tempRecvBuff = malloc(HCOM_SAFE_PACKET_BUF_SIZE);  
+
+  // p-m - Should this really be configurable via menuconfig?
   deviceName = CONFIG_HCOM_COMMS_DEVICE_NAME;
 
   /* If we detect that we are booting into QEMU, then use serial comms
      instead of the configured device name (USB ACM) */
 
+  // p-m - qemu support, not yet implemented
   // if (hcom_utils_boot_time_qemu_check())
   //   deviceName = "/dev/ttyS1";
 
@@ -115,8 +115,8 @@ void hcom_comms_recv_shutdown()
   _shutting_down = true;
 
   // Forces a receive error which, causes the thread to return.
-  // file_close(&_connection_read_file_fd);
-  _is_connection_read_open = false;
+  // file_close(&_comms_read_fd);
+  _is_comms_read_open = false;
   free(_tempRecvBuff);
 }
 
@@ -124,15 +124,6 @@ void hcom_comms_recv_shutdown()
 // The dedicated thread lives here. However, this thread calls throughout hcom
 int hcom_comms_recv_thread_loop()
 {
-  syslog(1 , "Entered %s()-testing only look for every 10 sec for 1 minute\n", __func__);
-  for(int i = 0; i < 6; i++)
-  {
-    syslog(1, "%d seconds have elapsed\n", i * 10);
-    sleep(10);
-  }
-
-  return OK;
-
   int ret;
   bool wait_before_retry = false;
 
@@ -174,27 +165,38 @@ int hcom_comms_recv_thread_loop()
 // "Concluded" message type
 int hcom_comms_recv_restart_concluded()
 {
-  // p-m
   // char *monoStartupMsg;
 
-  // // Check if a CLI command was responsible for this restart, If it was a
-  // // `Concluded` message must be sent
-  // if(hcom_utils_bbreg_is_bit_set_clear(HCOM_BATTERY_BACKED_REG_BIT_FLAGS,
+  // Check if a CLI command was responsible for this restart, If it was a
+  // `Concluded` message must be sent
+  syslog(1, "Entered %s() register addr:%p\n", __func__, HCOM_BATTERY_BACKED_REG_BIT_FLAGS); usleep(50 * 1000);
+
+  if(hcom_utils_register_is_bit_set(HCOM_BATTERY_BACKED_REG_BIT_FLAGS,
+    HCOM_BBREG_TRACE_MSG_TO_UART1_BIT_FLAG))
+  {
+    syslog(1, "Send to Uart1\n"); usleep(50 * 1000);
+  }
+  else
+  {
+    syslog(1, "DON'T Send to Uart1\n"); usleep(50 * 1000);
+  }
+  
+  // if(hcom_utils_register_is_bits_set_n_clear(HCOM_BATTERY_BACKED_REG_BIT_FLAGS,
   //   HCOM_BBREG_RESTART_CONCLUDED_BIT_FLAG))
   // {
   //   hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
   // }
 
   //--------------------------------------------
-  // p-m
-  // // Report to host the status of mono
-  // if(hcom_utils_is_mono_disabled())
-  //   monoStartupMsg = "Mono disabled, will not run app.exe";
-  // else
+  // Report to host the status of mono
+  // if(hcom_mono_ctrl_is_mono_enabled())
   //   monoStartupMsg = "Mono enabled, will run app.exe";
+  // else
+  //   monoStartupMsg = "Mono disabled, will not run app.exe";
 
   // hcom_comms_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0,
   //         monoStartupMsg, thisFile, __LINE__);
+  syslog(1, "Exited %s()\n", __func__); usleep(50 * 1000);
   return OK;
 }
 
@@ -204,9 +206,9 @@ int hcom_comms_recv_open_connection()
 {
   useconds_t hostConnectionAttemptCount = HCOM_CONNECTION_STARTUP_ATTEMPTS;
 
-  syslog(1, "Entered %s\n", __func__);
+  syslog(1, "RCV-->Entered %s(), deviceName is:'%s'\n", __func__, deviceName);
 
-  if(_is_connection_read_open)
+  if(_is_comms_read_open)
     return OK;
 
   hcom_comms_dbg(LOG_DEBUG, "%s@%d-usb open read %s\n", thisFile, __LINE__,
@@ -214,29 +216,24 @@ int hcom_comms_recv_open_connection()
 
   while(!_shutting_down)
   {
-    // p-m
-    // // Open reader. file_open differs from 'open' in that open uses the
-    // // file descriptor that is part of a task where as file_open allows
-    // // for a "disconnected" file descriptor which can be shared by different
-    // // threads/tasks.
-    // int ret = file_open(&_connection_read_file_fd, deviceName, O_RDONLY);
-
-    _connection_read_file_fd = open(deviceName, O_RDONLY);
-    if(_connection_read_file_fd >= 0)
+    // Open reader.
+    _comms_read_fd = open(deviceName, O_RDONLY);
+    if(_comms_read_fd >= 0)
     {
-      syslog(1, "Connection opened %s\n", deviceName);
-      _is_connection_read_open = true;
+      syslog(1, "RCV-->Connection opened %s\n", deviceName);
+      _is_comms_read_open = true;
       break;
     }
 
-    syslog(1, "Connection failed %s\n", deviceName);
     // TODO - consider inspecting ret for problems?
+    // p-m - IS THIS REALLY NECESSARY?
+    // After x attempts switch to a slower attempt rate
     if (hostConnectionAttemptCount > 0)
     {
       hostConnectionAttemptCount--;
     }
 
-    // Wait and try again at first every 50 millisec then every 5 seconds
+    // Wait and try again at first every 250 millisec then every 5 seconds
     usleep(hostConnectionAttemptCount > 0 ?
       HCOM_CONNECTION_TIMEOUT_STARTUP : HCOM_CONNECTION_TIMEOUT_RUNNING);
   }
@@ -252,13 +249,12 @@ int hcom_comms_recv_open_connection()
 // needed. This thread is the only thread receiving via USB serial data.
 bool hcom_comms_receive_data()
 {
-  syslog(1, "Received data from %s\n", deviceName);
   hcom_comms_dbg(LOG_DEBUG, "Waiting for '%s' message\n", HCOM_COMMUNICATIONS_DEVICE_NAME);
 
   // Stay in this loop forever
   while (!_shutting_down)
   {
-    // p-m
+    // p-m - hcom_exec_rqst_download_is_download_active() not implemented yet
     ssize_t readResult = hcom_comms_recv_wait_until_change(_tempRecvBuff,
               false ?
                 HCOM_RECV_TIMEOUT_ACTIVE_SECONDS : HCOM_RECV_TIMEOUT_DEFAULT_SECONDS);
@@ -270,21 +266,19 @@ bool hcom_comms_receive_data()
     if (readResult > 0)
     {
       // We've received some data
-      // p-m
-      syslog(1, "Received data from %s\n", deviceName);
-      hcom_utils_diag_print_buffer(_tempRecvBuff, readResult, 1);
+      syslog(1, "RCV-->Received %d bytes\n", readResult);
 
-      // int result = hcom_comms_recv_process_raw_data(_tempRecvBuff, readResult);
-      // if (result < 0)
-      // {
-      //   hcom_utils_f7syslog(LOG_WARNING, "%s@%d-%d received\n", thisFile, __LINE__, result);
-      // }
+      int result = hcom_comms_recv_process_raw_data(_tempRecvBuff, readResult);
+      if (result < 0)
+      {
+        hcom_utils_f7syslog(LOG_WARNING, "%s@%d-%d received\n", thisFile, __LINE__, result);
+      }
       continue;
     }
 
     if (readResult == 0)
     {
-      // readResult must == 0 (end-of-file). Host PC probably dropped connection
+      // readResult == 0 (end-of-file). Host PC probably dropped connection
       hcom_utils_f7syslog(LOG_INFO, "%s@%d-HCOM received EOF\n", thisFile, __LINE__);
       continue;
     }
@@ -292,7 +286,7 @@ bool hcom_comms_receive_data()
     // readResult < 0
     if (readResult == -ETIMEDOUT) // Time out is usually not a problem
     {
-      // p-m
+      // p-m - download is not yet implemented
       // if (hcom_exec_rqst_download_is_download_active())
       if (false)
       {
@@ -318,14 +312,12 @@ bool hcom_comms_receive_data()
       }
       else
       {
-        hcom_utils_f7syslog(LOG_ERR, "%s@%d-HCOM recv error:%d\n", thisFile, __LINE__, readResult);        
+        hcom_utils_f7syslog(LOG_ERR, "%s@%d-HCOM recv error:%d, errno:%d\n", thisFile, __LINE__, readResult, errno);
         delayBeforeRetry = false;    // No retry delay
       }
 
-      // p-m
-      // file_close(&_connection_read_file_fd);
-      close(_connection_read_file_fd);
-      _is_connection_read_open = false;
+      close(_comms_read_fd);
+      _is_comms_read_open = false;
 
       return delayBeforeRetry; // get a new connection and repeat
     }
@@ -355,11 +347,8 @@ ssize_t hcom_comms_recv_wait_until_change(uint8_t *recvBuffer, time_t readTimeou
   // This is a blocking read. read() will return:
   // (1) readReturn > 0 and readReturn <= buffer size on success
   // (2) readReturn == 0 on end of file
-  // (3) readReturn < 0 on a read error or interruption by a signal
-  // p-m
-  //readReturn = file_read(&_connection_read_file_fd, recvBuffer, HCOM_PROTOCOL_PACKET_MAX_SIZE);
-
-  readReturn = read(_connection_read_file_fd, recvBuffer, HCOM_PROTOCOL_PACKET_MAX_SIZE);
+  // (3) readReturn < 0 on a read error or interruption by a signal, value in errno
+  readReturn = read(_comms_read_fd, recvBuffer, HCOM_PROTOCOL_PACKET_MAX_SIZE);
   (void)hcom_comms_recv_timer_start(_recv_timerid, 0); // Stop the timer
   sched_unlock();
 
@@ -373,6 +362,8 @@ ssize_t hcom_comms_recv_wait_until_change(uint8_t *recvBuffer, time_t readTimeou
   }
 
   // readReturn < 0
+  readReturn = -errno;
+
   // EINTR (Error Interrupt) is not an error... it simply means that this read was
   // interrupted by a signal before it obtained data. The signal may be SIGALRM
   // indicating an timeout condition. We will know this case because the signal handler

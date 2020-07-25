@@ -1,8 +1,7 @@
 /****************************************************************************
- * configs/stm32f777-zit6-meadow/src/hcom/hcom_host_trace_ramlog.c
+ * \examples\hcom\hcom_host_trace_ramlog.c
  *
  *   Copyright (C) 2020 Wilderness Labs. All rights reserved.
- *   Copyright (C) 2017 Gregory Nutt. All rights reserved.
  *   Author:  Wilderness Labs
  *
  * Redistribution and use in source and binary forms, with or without
@@ -104,7 +103,7 @@ static int hcom_ramlog_trace_open_uart1_serial_port(void);
  ****************************************************************************/
 int hcom_ramlog_trace_setup()
 {
-  syslog(1, "%s@%d-Entered\n", thisFile, __LINE__); usleep(100 * 1000);
+  // syslog(1, "%s@%d-Entered\n", thisFile, __LINE__); usleep(100 * 1000);
 
   _shutting_down = false;
   _trace_ramlog_initialized = false;
@@ -117,11 +116,11 @@ int hcom_ramlog_trace_setup()
   _trace_ramlog_to_uart1 = true;
 
   // p-m Override defaults from battery backed register values
-  // if(hcom_utils_bbreg_is_bit_set(HCOM_BATTERY_BACKED_REG_BIT_FLAGS,
+  // if(hcom_utils_register_is_bit_set(HCOM_BATTERY_BACKED_REG_BIT_FLAGS,
   //         HCOM_BBREG_TRACE_MSG_TO_UART1_BIT_FLAG))
   //   _trace_ramlog_to_uart1 = true;
 
-  // if(hcom_utils_bbreg_is_bit_set(HCOM_BATTERY_BACKED_REG_BIT_FLAGS,
+  // if(hcom_utils_register_is_bit_set(HCOM_BATTERY_BACKED_REG_BIT_FLAGS,
   //         HCOM_BBREG_TRACE_MSG_TO_HOST_BIT_FLAG))
   //   _trace_ramlog_to_host = true;
 
@@ -503,7 +502,7 @@ int hcom_ramlog_trace_route_trace_text(uint8_t *recvBuff, int numbBytes)
     DEBUGASSERT(numbBytes < HCOM_MAX_HOST_STRING_BUFF_LENGTH);
 
     // Send entire message, includes ctrl chararacters
-    // p-m
+// p-m - removed following because sending to host not implemented yet
     return OK;
     // int ret = hcom_comms_send_raw_string_msg(HCOM_HOST_REQUEST_TEXT_TRACE_MSG, 0, (char *) recvBuff,
     //         numbBytes, thisFile, __LINE__);
@@ -558,12 +557,12 @@ void hcom_ramlog_trace_err_logger(int priority, FAR const IPTR char *fmt, ...)
 #endif    // #if defined (CONFIG_RAMLOG_SYSLOG)
 
 // The following functions are always built and used by ramlog and syslog
-// p-m
+// p-m - removed following because sending to host not implemented yet
 // //======================================================================================
 // // Called from Meadow.CLI to enable tracing to host.
 // void hcom_trace_send_trace_to_host(uint32_t userData)
 // {
-//   hcom_utils_bbreg_set_bit(HCOM_BATTERY_BACKED_REG_BIT_FLAGS,
+//   hcom_utils_register_set_bits(HCOM_BATTERY_BACKED_REG_BIT_FLAGS,
 //           HCOM_BBREG_TRACE_MSG_TO_HOST_BIT_FLAG);
 
 //   // If ramlog configured, need to init ramlog now. This insures
@@ -583,7 +582,7 @@ void hcom_ramlog_trace_err_logger(int priority, FAR const IPTR char *fmt, ...)
 // // Called from Meadow.CLI for both ramlog and syslog
 // void hcom_trace_do_not_send_trace_to_host(uint32_t userData)
 // {
-//   hcom_utils_bbreg_clear_bit(HCOM_BATTERY_BACKED_REG_BIT_FLAGS,
+//   hcom_utils_register_clear_bits(HCOM_BATTERY_BACKED_REG_BIT_FLAGS,
 //           HCOM_BBREG_TRACE_MSG_TO_HOST_BIT_FLAG);
 
 // #if defined (CONFIG_RAMLOG_SYSLOG)
@@ -600,7 +599,7 @@ void hcom_ramlog_trace_err_logger(int priority, FAR const IPTR char *fmt, ...)
 // // Called from Meadow.CLI to enable tracing to uart1.
 // void hcom_trace_send_trace_to_uart1(uint32_t userData)
 // {
-//   hcom_utils_bbreg_set_bit(HCOM_BATTERY_BACKED_REG_BIT_FLAGS,
+//   hcom_utils_register_set_bits(HCOM_BATTERY_BACKED_REG_BIT_FLAGS,
 //           HCOM_BBREG_TRACE_MSG_TO_UART1_BIT_FLAG);
 
 //   // If ramlog configured, need to init ramlog now. This insures
@@ -621,7 +620,7 @@ void hcom_ramlog_trace_err_logger(int priority, FAR const IPTR char *fmt, ...)
 // // Called from Meadow.CLI for both ramlog and syslog
 // void hcom_trace_do_not_send_trace_to_uart1(uint32_t userData)
 // {
-//   hcom_utils_bbreg_clear_bit(HCOM_BATTERY_BACKED_REG_BIT_FLAGS,
+//   hcom_utils_register_clear_bits(HCOM_BATTERY_BACKED_REG_BIT_FLAGS,
 //           HCOM_BBREG_TRACE_MSG_TO_UART1_BIT_FLAG);
 
 // #if defined (CONFIG_RAMLOG_SYSLOG)

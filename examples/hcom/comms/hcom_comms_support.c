@@ -1,8 +1,7 @@
 /****************************************************************************
- * configs/stm32f777-zit6-meadow/src/hcom/hcom_comsupport.c
+ * \examples\hcom\comms\hcom_comms_support.c
  * 
  *   Copyright (C) 2019 - 2020 Wilderness Labs. All rights reserved.
- *   Copyright (C) 2017 Gregory Nutt. All rights reserved.
  *   Author:  Wilderness Labs
  *
  * Redistribution and use in source and binary forms, with or without
@@ -177,6 +176,7 @@ int hcom_cirbuf_release_memory(struct host_com_cir_buffer_s *hcbuf)
 }
 
 //==============================================================================
+// Add the bytes requested, if they will fit
 int hcom_cirbuf_add_bytes(struct host_com_cir_buffer_s *hcbuf, uint8_t *newBytes, uint32_t bytesToAdd)
 {
   if (bytesToAdd == 0)

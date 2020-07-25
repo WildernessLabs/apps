@@ -1,8 +1,7 @@
 /****************************************************************************
- * configs/stm32f777-zit6-meadow/src/hcom/hcom_common_utils.c
+ * \examples\hcom\hcom_common_utils.c
  * 
  *   Copyright (C) 2019 - 2020 Wilderness Labs. All rights reserved.
- *   Copyright (C) 2017 Gregory Nutt. All rights reserved.
  *   Author:  Wilderness Labs
  *
  * Redistribution and use in source and binary forms, with or without
@@ -43,14 +42,13 @@
 #include "syslog.h"
 #include <nuttx/userspace.h>
 
-// p-m
-// #include "stm32_gpio.h"
-
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
 
 /* Configuration ************************************************************/
+
+#define HCOM_COMMON_UTILS_USE_HCOM_PROXY 1
 
 /****************************************************************************
  * Private Data
@@ -67,7 +65,7 @@ static char *_f7syslogTextBuf;
  * Private Function Prototypes
  ****************************************************************************/
 
-#if HCOM_COMMON_UTILS_GPIO_D0_D8_DOUT > 0
+#if HCOM_COMMON_UTILS_GPIO_D00_D08_DOUT > 0
 static void hcom_utils_dbg_gpio_init_d0_d8(void);
 #endif
 #if HCOM_COMMON_UTILS_GPIO_A0_MISO_DOUT > 0
@@ -82,7 +80,7 @@ int hcom_utils_setup()
   _f7syslogTextBuf = malloc(HCOM_PROTOCOL_REQUEST_MAX_SIMPLE_DATA_LEN);
   sem_init(&_f7syslogSem, 0, 1);
 
-#if HCOM_COMMON_UTILS_GPIO_D0_D8_DOUT > 0
+#if HCOM_COMMON_UTILS_GPIO_D00_D08_DOUT > 0
   hcom_utils_dbg_gpio_init_d0_d8();
 #endif
 #if HCOM_COMMON_UTILS_GPIO_A0_MISO_DOUT > 0
@@ -99,51 +97,110 @@ void hcom_utils_shutdown()
   sem_destroy(&_f7syslogSem);
 }
 
-// //===================================================================
-// // Reads any of the 32 battery backed registers
-// uint32_t hcom_utils_bbreg_read(uint32_t regNumber)
-// {
-//   return *((uint32_t *) regNumber);
-// }
+//===================================================================
+// Reads any of the 32 battery backed registers
+uint32_t hcom_utils_register_read(uint32_t regAddress)
+{
+#if HCOM_COMMON_UTILS_USE_HCOM_PROXY > 0
+  uint32_t regValue;
+  int ret = hcom_proxy_get_register(regAddress, &regValue);
+  if(ret < 0)
+  {
+    hcom_utils_f7syslog(LOG_ERR, "%s:%s()@%d-%s Failed, errno:%d\n");
+  }
+  return regValue;
+#else
+  return *((uint32_t *) regAddress);
+#endif
+}
 
-// //===================================================================
-// // Writes any of the 32 battery backed registers
-// void hcom_utils_bbreg_write(uint32_t regNumber, uint32_t value)
-// {
-//   *((uint32_t *) regNumber) = value;
-// }
+//===================================================================
+// Writes any of the 32 battery backed registers
+void hcom_utils_register_write(uint32_t regAddress, uint32_t value)
+{
+#if HCOM_COMMON_UTILS_USE_HCOM_PROXY > 0
+  int ret = hcom_proxy_set_register(regAddress, value);
+  if(ret < 0)
+  {
+    hcom_utils_f7syslog(LOG_ERR, "%s:%s()@%d-%s Failed, errno:%d\n");
+  }
+#else
+  *((uint32_t *) regAddress) = value;
+#endif
+}
 
-// //===================================================================
-// // Reads bit(s) in any of the 32 battery backed registers
-// bool hcom_utils_bbreg_is_bit_set_clear(uint32_t regNumber, uint32_t value)
-// {
-//   uint32_t reg = *((uint32_t *) regNumber);
-//   *((uint32_t *) regNumber) = reg & (~value);
-//   return (value & reg) != 0;
-// }
+//===================================================================
+// Reads the state of a bit then clears that bit and returns it's
+// original state.
+bool hcom_utils_register_is_bits_set_n_clear(uint32_t regAddress, uint32_t value)
+{
+  uint32_t regValue;
+#if HCOM_COMMON_UTILS_USE_HCOM_PROXY > 0
+  int ret = hcom_proxy_get_register(regAddress, &regValue);
+  if(ret < 0)
+  {
+    hcom_utils_f7syslog(LOG_ERR, "%s:%s()@%d-%s Failed, errno:%d\n");
+  }
+  ret = hcom_proxy_set_register(regAddress, regValue & (~value));
+  if(ret < 0)
+  {
+    hcom_utils_f7syslog(LOG_ERR, "%s:%s()@%d-%s Failed, errno:%d\n");
+  }
+#else
+  regValue = *((uint32_t *) regAddress);
+  *((uint32_t *) regAddress) = regValue & (~value);
+#endif
+  return (value & regValue) != 0;
+}
 
-// //===================================================================
-// // Reads bit(s) in any of the 32 battery backed registers
-// bool hcom_utils_bbreg_is_bit_set(uint32_t regNumber, uint32_t value)
-// {
-//   uint32_t reg = *((uint32_t *) regNumber);
-//   return (value & reg) != 0;
-// }
+//===================================================================
+// Reads bits in battery backed register and returns their state
+bool hcom_utils_register_is_bit_set(uint32_t regAddress, uint32_t value)
+{
+  uint32_t regValue;
+#if HCOM_COMMON_UTILS_USE_HCOM_PROXY > 0
+  int ret = hcom_proxy_get_register(regAddress, &regValue);
+  if(ret < 0)
+  {
+    hcom_utils_f7syslog(LOG_ERR, "%s:%s()@%d-%s Failed, errno:%d\n");
+  }
+#else
+  regValue = *((uint32_t *) regAddress);
+#endif
 
-// //===================================================================
-// void hcom_utils_bbreg_clear_bit(uint32_t regNumber, uint32_t value)
-// {
-//   uint32_t reg = *((uint32_t *) regNumber);
-//   *((uint32_t *) regNumber) = reg & (~value);
-// }
+  return (value & regValue) != 0;
+}
 
-// //===================================================================
-// // Set bit(s) in any of the 32 battery backed registers
-// void hcom_utils_bbreg_set_bit(uint32_t regNumber, uint32_t value)
-// {
-//   uint32_t reg = *((uint32_t *) regNumber);
-//   *((uint32_t *) regNumber) = reg | value;
-// }
+//===================================================================
+void hcom_utils_register_clear_bits(uint32_t regAddress, uint32_t value)
+{
+#if HCOM_COMMON_UTILS_USE_HCOM_PROXY > 0
+  int ret = hcom_proxy_update_register(regAddress, value, 0);
+  if(ret < 0)
+  {
+    hcom_utils_f7syslog(LOG_ERR, "%s:%s()@%d-%s Failed, errno:%d\n");
+  }
+#else
+  uint32_t regValue = *((uint32_t *) regAddress);
+  *((uint32_t *) regAddress) = regValue & (~value);
+#endif
+}
+
+//===================================================================
+// Set bit(s) in any of the 32 battery backed register
+void hcom_utils_register_set_bits(uint32_t regAddress, uint32_t value)
+{
+#if HCOM_COMMON_UTILS_USE_HCOM_PROXY > 0
+  int ret = hcom_proxy_update_register(regAddress, 0, value);
+  if(ret < 0)
+  {
+    hcom_utils_f7syslog(LOG_ERR, "%s:%s()@%d-%s Failed, errno:%d\n");
+  }
+#else
+  uint32_t regValue = *((uint32_t *) regAddress);
+  *((uint32_t *) regAddress) = regValue | value;
+#endif
+}
 
 // //===================================================================
 // // This is called during startup, before the hcom thread is created,
@@ -152,8 +209,7 @@ void hcom_utils_shutdown()
 
 // #define QEMU_BOOT_INFO_MAGIC 0x12341234
 // #define QEMU_BOOT_INFO_OFFSET_FROM_SDRAM_END 1024
-// #define QEMU_BOOT_INFO_ADDRESS \
-//   (CONFIG_HEAP2_BASE + CONFIG_HEAP2_SIZE - QEMU_BOOT_INFO_OFFSET_FROM_SDRAM_END)
+// #define QEMU_BOOT_INFO_ADDRESS (CONFIG_HEAP2_BASE + CONFIG_HEAP2_SIZE - QEMU_BOOT_INFO_OFFSET_FROM_SDRAM_END)
 
 // bool hcom_utils_boot_time_qemu_check()
 // {
@@ -163,44 +219,6 @@ void hcom_utils_shutdown()
 
 //     uint32_t *addr = (uint32_t *)QEMU_BOOT_INFO_ADDRESS; 
 //     return *addr == QEMU_BOOT_INFO_MAGIC;
-// }
-
-// //===================================================================
-// // This is called during startup, before the hcom thread is created.
-// // Its purpose is to allow inform mono (via mono_main) whether it is
-// // to run or not run.
-// void hcom_utils_boot_time_mono_check()
-// {
-// #ifdef CONFIG_USER_ENTRYPOINT
-//   // Do we need to prepare mono for special behavior?
-//   if(hcom_utils_bbreg_read(HCOM_BATTERY_BACKED_REG_MONO_ACCESS) == HCOM_MONO_MAIN_ACCESS_KEY)
-//   {
-//     char *argv[1];
-//     char buffer[16];
-
-//     // Send the action to mono_main in argv
-//     itoa(hcom_utils_bbreg_read(HCOM_BATTERY_BACKED_REG_MONO_ACTION), buffer, 10);
-//     argv[0] = buffer;
-//     uint32_t argc = HCOM_MONO_MAIN_ACCESS_KEY;
-    
-//     // Call mono_main
-//     (*USERSPACE->us_entrypoint)((int)argc, argv);
-//   }
-// #endif
-// }
-
-// //===================================================================
-// //
-// bool hcom_utils_is_mono_disabled()
-// {
-// #ifdef CONFIG_USER_ENTRYPOINT
-//   if(hcom_utils_bbreg_read(HCOM_BATTERY_BACKED_REG_MONO_ACCESS) == HCOM_MONO_MAIN_ACCESS_KEY)
-//   {
-//     if(hcom_utils_bbreg_read(HCOM_BATTERY_BACKED_REG_MONO_ACTION) != 0)
-//       return true;
-//   }
-// #endif
-//   return false;
 // }
 
 //============================================================================
@@ -437,22 +455,22 @@ void hcom_utils_f7syslog(int priority, FAR const IPTR char *fmt, ...)
 #if defined CONFIG_RAMLOG_SYSLOG
   stringLen = stringLen;    // Keep conpiler from warning (I know there's a better way...)
 #else
-// p-m
-  stringLen = stringLen;    // Keep conpiler from warning (I know there's a better way...)
-  // // syslog - check if these should be routed to host.
-  // // Note: no timestamp for these messages
-  // if(hcom_utils_bbreg_is_bit_set(HCOM_BATTERY_BACKED_REG_BIT_FLAGS,
+// p-m - removed following because BBR not functional
+  stringLen = stringLen;    // p-m - added
+  // syslog - check if these should be routed to host.
+  // Note: no timestamp for these messages
+  // if(hcom_utils_register_is_bit_set(HCOM_BATTERY_BACKED_REG_BIT_FLAGS,
   //         HCOM_BBREG_TRACE_MSG_TO_HOST_BIT_FLAG))
-  // {
-  //   // Strip off cr/lf since Meadow.CLI takes care of this
-  //   if(_f7syslogTextBuf[stringLen - 1] == 0x0a || _f7syslogTextBuf[stringLen - 1] == 0x0d)
-  //     stringLen--;
-  //   if(_f7syslogTextBuf[stringLen - 1] == 0x0a || _f7syslogTextBuf[stringLen - 1] == 0x0d)
-  //     stringLen--;
+  {
+    // Strip off cr/lf since Meadow.CLI takes care of this
+    if(_f7syslogTextBuf[stringLen - 1] == 0x0a || _f7syslogTextBuf[stringLen - 1] == 0x0d)
+      stringLen--;
+    if(_f7syslogTextBuf[stringLen - 1] == 0x0a || _f7syslogTextBuf[stringLen - 1] == 0x0d)
+      stringLen--;
   
-  //   hcom_comms_send_raw_string_msg(HCOM_HOST_REQUEST_TEXT_TRACE_MSG, 0, _f7syslogTextBuf,
-  //           stringLen, thisFile, __LINE__);
-  // }
+    hcom_comms_send_raw_string_msg(HCOM_HOST_REQUEST_TEXT_TRACE_MSG, 0, _f7syslogTextBuf,
+            stringLen, thisFile, __LINE__);
+  }
 #endif
   sem_post(&_f7syslogSem);
 }
@@ -485,7 +503,7 @@ void hcom_utils_safe_ramlog(int priority, FAR const IPTR char *fmt,
   if(_safeRamlogText[stringLen - 1] == 0x0a || _safeRamlogText[stringLen - 1] == 0x0d)
     stringLen--;
 
-// p-m
+// p-m - removed following because sending to host not implemented yet
   // hcom_comms_send_raw_string_msg(HCOM_HOST_REQUEST_TEXT_TRACE_MSG, 0, _safeRamlogText,
   //         stringLen, thisFile, __LINE__);
   free(_safeRamlogText);
@@ -496,41 +514,41 @@ void hcom_utils_safe_ramlog(int priority, FAR const IPTR char *fmt,
 //=================================================================
 void hcom_utils_dbg_gpio_init_a0_miso()
 {
-  stm32_configgpio(MEADOW_DIAG_GPIO_01_OUTPUT);
-  stm32_configgpio(MEADOW_DIAG_GPIO_02_OUTPUT);
-  stm32_configgpio(MEADOW_DIAG_GPIO_03_OUTPUT);
-  stm32_configgpio(MEADOW_DIAG_GPIO_04_OUTPUT);
-  stm32_configgpio(MEADOW_DIAG_GPIO_05_OUTPUT);
-  stm32_configgpio(MEADOW_DIAG_GPIO_06_OUTPUT);
-  stm32_configgpio(MEADOW_DIAG_GPIO_07_OUTPUT);
-  stm32_configgpio(MEADOW_DIAG_GPIO_08_OUTPUT);
-  stm32_configgpio(MEADOW_DIAG_GPIO_09_OUTPUT);
+  stm32_configgpio(MEADOW_DIAG_GPIO_A0___01_OUTPUT);
+  stm32_configgpio(MEADOW_DIAG_GPIO_A1___02_OUTPUT);
+  stm32_configgpio(MEADOW_DIAG_GPIO_A2___03_OUTPUT);
+  stm32_configgpio(MEADOW_DIAG_GPIO_A3___04_OUTPUT);
+  stm32_configgpio(MEADOW_DIAG_GPIO_A4___05_OUTPUT);
+  stm32_configgpio(MEADOW_DIAG_GPIO_A5___06_OUTPUT);
+  stm32_configgpio(MEADOW_DIAG_GPIO_SCK__07_OUTPUT);
+  stm32_configgpio(MEADOW_DIAG_GPIO_MOSI_08_OUTPUT);
+  stm32_configgpio(MEADOW_DIAG_GPIO_MISO_09_OUTPUT);
   usleep(100 * 1000);
-  stm32_gpiowrite(MEADOW_DIAG_GPIO_01_OUTPUT, false);
-  stm32_gpiowrite(MEADOW_DIAG_GPIO_02_OUTPUT, false);
-  stm32_gpiowrite(MEADOW_DIAG_GPIO_03_OUTPUT, false);
-  stm32_gpiowrite(MEADOW_DIAG_GPIO_04_OUTPUT, false);
-  stm32_gpiowrite(MEADOW_DIAG_GPIO_05_OUTPUT, false);
-  stm32_gpiowrite(MEADOW_DIAG_GPIO_06_OUTPUT, false);
-  stm32_gpiowrite(MEADOW_DIAG_GPIO_07_OUTPUT, false);
-  stm32_gpiowrite(MEADOW_DIAG_GPIO_08_OUTPUT, false);
-  stm32_gpiowrite(MEADOW_DIAG_GPIO_09_OUTPUT, false);
+  stm32_gpiowrite(MEADOW_DIAG_GPIO_A0___01_OUTPUT, false);
+  stm32_gpiowrite(MEADOW_DIAG_GPIO_A1___02_OUTPUT, false);
+  stm32_gpiowrite(MEADOW_DIAG_GPIO_A2___03_OUTPUT, false);
+  stm32_gpiowrite(MEADOW_DIAG_GPIO_A3___04_OUTPUT, false);
+  stm32_gpiowrite(MEADOW_DIAG_GPIO_A4___05_OUTPUT, false);
+  stm32_gpiowrite(MEADOW_DIAG_GPIO_A5___06_OUTPUT, false);
+  stm32_gpiowrite(MEADOW_DIAG_GPIO_SCK__07_OUTPUT, false);
+  stm32_gpiowrite(MEADOW_DIAG_GPIO_MOSI_08_OUTPUT, false);
+  stm32_gpiowrite(MEADOW_DIAG_GPIO_MISO_09_OUTPUT, false);
 }
 #endif
 
-#if HCOM_COMMON_UTILS_GPIO_D0_D8_DOUT > 0
+#if HCOM_COMMON_UTILS_GPIO_D00_D08_DOUT > 0
 //=================================================================
 void hcom_utils_dbg_gpio_init_d0_d8()
 {
-  stm32_configgpio(HCOM_MEADOW_GPIO_D00_OUTPUT);
-  stm32_configgpio(HCOM_MEADOW_GPIO_D01_OUTPUT);
-  stm32_configgpio(HCOM_MEADOW_GPIO_D02_OUTPUT);
-  stm32_configgpio(HCOM_MEADOW_GPIO_D03_OUTPUT);
-  stm32_configgpio(HCOM_MEADOW_GPIO_D04_OUTPUT);
-  stm32_configgpio(HCOM_MEADOW_GPIO_D05_OUTPUT);
-  stm32_configgpio(HCOM_MEADOW_GPIO_D06_OUTPUT);
-  stm32_configgpio(HCOM_MEADOW_GPIO_D07_OUTPUT);
-  stm32_configgpio(HCOM_MEADOW_GPIO_D08_OUTPUT);
+  stm32_configgpio(MEADOW_DIAG_GPIO_D00__10_OUTPUT);
+  stm32_configgpio(MEADOW_DIAG_GPIO_D01__11_OUTPUT);
+  stm32_configgpio(MEADOW_DIAG_GPIO_D02__12_OUTPUT);
+  stm32_configgpio(MEADOW_DIAG_GPIO_D03__13_OUTPUT);
+  stm32_configgpio(MEADOW_DIAG_GPIO_D04__14_OUTPUT);
+  stm32_configgpio(MEADOW_DIAG_GPIO_D05__15_OUTPUT);
+  stm32_configgpio(MEADOW_DIAG_GPIO_D06__16_OUTPUT);
+  stm32_configgpio(MEADOW_DIAG_GPIO_D07__17_OUTPUT);
+  stm32_configgpio(MEADOW_DIAG_GPIO_D08__18_OUTPUT);
   usleep(100 * 1000);
 }
 
@@ -538,8 +556,8 @@ void hcom_utils_dbg_gpio_init_d0_d8()
 // Assumes gpio (D8 on meadow) can output as binary
 void hcom_utils_dbg_gpio_1led_update(bool ledOn)
 {
-  // Note: Low (false) turns led on for an open drain
-  stm32_gpiowrite(HCOM_MEADOW_GPIO_D08_OUTPUT, !ledOn);
+  // Note: !ledOn because low (false) turns led on for an open drain
+  stm32_gpiowrite(MEADOW_DIAG_GPIO_D08__18_OUTPUT, !ledOn);
 }
 
 //=================================================================
@@ -547,14 +565,14 @@ void hcom_utils_dbg_gpio_1led_update(bool ledOn)
 void hcom_utils_dbg_gpio_8bit_update(uint8_t newValue, bool ledOn)
 { 
   // Note: Low (false) turns led on for an open drain
-  stm32_gpiowrite(HCOM_MEADOW_GPIO_D00_OUTPUT, (newValue & 0x01) > 0 ?  false : true);
-  stm32_gpiowrite(HCOM_MEADOW_GPIO_D01_OUTPUT, (newValue & 0x02) > 0 ?  false : true);
-  stm32_gpiowrite(HCOM_MEADOW_GPIO_D02_OUTPUT, (newValue & 0x04) > 0 ?  false : true);
-  stm32_gpiowrite(HCOM_MEADOW_GPIO_D03_OUTPUT, (newValue & 0x08) > 0 ?  false : true);
-  stm32_gpiowrite(HCOM_MEADOW_GPIO_D04_OUTPUT, (newValue & 0x10) > 0 ?  false : true);
-  stm32_gpiowrite(HCOM_MEADOW_GPIO_D05_OUTPUT, (newValue & 0x20) > 0 ?  false : true);
-  stm32_gpiowrite(HCOM_MEADOW_GPIO_D06_OUTPUT, (newValue & 0x40) > 0 ?  false : true);
-  stm32_gpiowrite(HCOM_MEADOW_GPIO_D07_OUTPUT, (newValue & 0x80) > 0 ?  false : true);
+  stm32_gpiowrite(MEADOW_DIAG_GPIO_D00__10_OUTPUT, (newValue & 0x01) > 0 ?  false : true);
+  stm32_gpiowrite(MEADOW_DIAG_GPIO_D01__11_OUTPUT, (newValue & 0x02) > 0 ?  false : true);
+  stm32_gpiowrite(MEADOW_DIAG_GPIO_D02__12_OUTPUT, (newValue & 0x04) > 0 ?  false : true);
+  stm32_gpiowrite(MEADOW_DIAG_GPIO_D03__13_OUTPUT, (newValue & 0x08) > 0 ?  false : true);
+  stm32_gpiowrite(MEADOW_DIAG_GPIO_D04__14_OUTPUT, (newValue & 0x10) > 0 ?  false : true);
+  stm32_gpiowrite(MEADOW_DIAG_GPIO_D05__15_OUTPUT, (newValue & 0x20) > 0 ?  false : true);
+  stm32_gpiowrite(MEADOW_DIAG_GPIO_D06__16_OUTPUT, (newValue & 0x40) > 0 ?  false : true);
+  stm32_gpiowrite(MEADOW_DIAG_GPIO_D07__17_OUTPUT, (newValue & 0x80) > 0 ?  false : true);
 
   hcom_utils_dbg_gpio_1led_update(ledOn);
   usleep(50 * 1000);  // Give time to see the results
