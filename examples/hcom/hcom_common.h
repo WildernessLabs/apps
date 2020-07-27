@@ -634,7 +634,7 @@ extern "C"
 
 // Diagnostic aids
 //=================================================================
-#define HCOM_INCLUDE_BBR_TESTS_IN_STARTUP 1
+#define HCOM_INCLUDE_BBR_TESTS_IN_STARTUP 0
 
 #if HCOM_INCLUDE_BBR_TESTS_IN_STARTUP > 0
 void hcom_bbr_tests(void);
