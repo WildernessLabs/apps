@@ -88,8 +88,8 @@ bool hcom_mono_ctrl_is_app_exe()
 }
 
 //===================================================================
-// Has CLI sent command to disable mono?
+// Determine the state of the mono run flag, set by CLI
 bool hcom_mono_ctrl_is_mono_enabled()
 {
-  return hcom_utils_register_is_bit_set(HCOM_BATTERY_BACKED_REG_BIT_FLAGS, HCOM_BBREG_MONO_START_BIT_FLAG);
+  return (hcom_utils_read_bbr_and_right_justify(HCOM_BBREG_MONO_START_BIT_MASK) != 0);
 }

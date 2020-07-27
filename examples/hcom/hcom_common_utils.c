@@ -98,108 +98,144 @@ void hcom_utils_shutdown()
 }
 
 //===================================================================
-// Reads any of the 32 battery backed registers
-uint32_t hcom_utils_register_read(uint32_t regAddress)
+// This function takes a value (0-31) for the battery backed reg,
+// reads the value then based on the mask clears all other bits and
+// right justifies the remaining bit(s).
+uint32_t hcom_utils_read_bbr_and_right_justify(uint32_t bitMask)
 {
-#if HCOM_COMMON_UTILS_USE_HCOM_PROXY > 0
   uint32_t regValue;
-  int ret = hcom_proxy_get_register(regAddress, &regValue);
+ 
+  if(bitMask == 0)
+    return 0;
+
+  // syslog(1, "bitMask:0x%08x\n", bitMask);
+  
+  int ret = hcom_proxy_get_bbr(&regValue);
+  if(ret < 0)
+  {
+    hcom_utils_f7syslog(LOG_ERR, "%s:%s()@%d-%s Failed, errno:%d\n");
+  }
+
+  // syslog(1, ">>>*** bbr reg:0x%08x\n", regValue);
+  // syslog(1, ">>>*** bitMask:0x%08x\n", bitMask);
+
+  if(regValue == 0)
+    return 0;
+
+  regValue &= bitMask;    // Save only bit in mask
+  // syslog(1, ">>>*** regValue &= bitMask:0x%08x\n", regValue);
+
+  // We have the 32-bit value, shift right based on the mask
+  uint32_t tempMask = bitMask;
+  while((tempMask & 0x00000001) == 0)
+  {
+    tempMask >>= 1;
+    regValue >>= 1;
+  }
+
+  // syslog(1, ">>>*** return Value:0x%08x\n", regValue);
+  return regValue;
+}
+
+//===================================================================
+// Reads any of the 32 battery backed registers
+uint32_t hcom_utils_bbr_read()
+{
+  uint32_t regValue;
+  int ret = hcom_proxy_get_bbr(&regValue);
   if(ret < 0)
   {
     hcom_utils_f7syslog(LOG_ERR, "%s:%s()@%d-%s Failed, errno:%d\n");
   }
   return regValue;
-#else
-  return *((uint32_t *) regAddress);
-#endif
 }
 
 //===================================================================
 // Writes any of the 32 battery backed registers
-void hcom_utils_register_write(uint32_t regAddress, uint32_t value)
+void hcom_utils_bbr_write(uint32_t value)
 {
-#if HCOM_COMMON_UTILS_USE_HCOM_PROXY > 0
-  int ret = hcom_proxy_set_register(regAddress, value);
+  int ret = hcom_proxy_set_bbr(value);
   if(ret < 0)
   {
     hcom_utils_f7syslog(LOG_ERR, "%s:%s()@%d-%s Failed, errno:%d\n");
   }
-#else
-  *((uint32_t *) regAddress) = value;
-#endif
+}
+
+//===================================================================
+// This function takes a value consisting of (0-31) bits. And sets them
+// in the the battery backed reg.
+void hcom_utils_set_bits_in_bbr(uint32_t bitMask)
+{
+  int ret = hcom_proxy_update_bbr(0, bitMask);
+  if(ret < 0)
+  {
+    hcom_utils_f7syslog(LOG_ERR, "%s:%s()@%d-%s Failed, errno:%d\n");
+  }
+}
+
+//===================================================================
+// This function takes a value consisting of (0-31) bits. And sets them
+// in the the battery backed reg.
+void hcom_utils_clear_bits_in_bbr(uint32_t bitMask)
+{
+  int ret = hcom_proxy_update_bbr(bitMask, 0);
+  if(ret < 0)
+  {
+    hcom_utils_f7syslog(LOG_ERR, "%s:%s()@%d-%s Failed, errno:%d\n");
+  }
 }
 
 //===================================================================
 // Reads the state of a bit then clears that bit and returns it's
 // original state.
-bool hcom_utils_register_is_bits_set_n_clear(uint32_t regAddress, uint32_t value)
+bool hcom_utils_is_bbr_bits_set_n_clear(uint32_t value)
 {
   uint32_t regValue;
-#if HCOM_COMMON_UTILS_USE_HCOM_PROXY > 0
-  int ret = hcom_proxy_get_register(regAddress, &regValue);
+  int ret = hcom_proxy_get_bbr(&regValue);
   if(ret < 0)
   {
     hcom_utils_f7syslog(LOG_ERR, "%s:%s()@%d-%s Failed, errno:%d\n");
   }
-  ret = hcom_proxy_set_register(regAddress, regValue & (~value));
+  ret = hcom_proxy_set_bbr(regValue & (~value));
   if(ret < 0)
   {
     hcom_utils_f7syslog(LOG_ERR, "%s:%s()@%d-%s Failed, errno:%d\n");
   }
-#else
-  regValue = *((uint32_t *) regAddress);
-  *((uint32_t *) regAddress) = regValue & (~value);
-#endif
   return (value & regValue) != 0;
 }
 
 //===================================================================
-// Reads bits in battery backed register and returns their state
-bool hcom_utils_register_is_bit_set(uint32_t regAddress, uint32_t value)
+// Set bit(s) in any bit in battery backed register
+void hcom_utils_set_bbr_bits(uint32_t value)
 {
-  uint32_t regValue;
-#if HCOM_COMMON_UTILS_USE_HCOM_PROXY > 0
-  int ret = hcom_proxy_get_register(regAddress, &regValue);
+  int ret = hcom_proxy_update_bbr(0, value);
   if(ret < 0)
   {
     hcom_utils_f7syslog(LOG_ERR, "%s:%s()@%d-%s Failed, errno:%d\n");
   }
-#else
-  regValue = *((uint32_t *) regAddress);
-#endif
+}
 
+//===================================================================
+// Reads bits in register and returns their state
+bool hcom_utils_is_bbr_bit_set(uint32_t value)
+{
+  uint32_t regValue;
+  int ret = hcom_proxy_get_bbr(&regValue);
+  if(ret < 0)
+  {
+    hcom_utils_f7syslog(LOG_ERR, "%s:%s()@%d-%s Failed, errno:%d\n");
+  }
   return (value & regValue) != 0;
 }
 
 //===================================================================
-void hcom_utils_register_clear_bits(uint32_t regAddress, uint32_t value)
+void hcom_utils_clear_bbr_bits(uint32_t value)
 {
-#if HCOM_COMMON_UTILS_USE_HCOM_PROXY > 0
-  int ret = hcom_proxy_update_register(regAddress, value, 0);
+  int ret = hcom_proxy_update_bbr(value, 0);
   if(ret < 0)
   {
     hcom_utils_f7syslog(LOG_ERR, "%s:%s()@%d-%s Failed, errno:%d\n");
   }
-#else
-  uint32_t regValue = *((uint32_t *) regAddress);
-  *((uint32_t *) regAddress) = regValue & (~value);
-#endif
-}
-
-//===================================================================
-// Set bit(s) in any of the 32 battery backed register
-void hcom_utils_register_set_bits(uint32_t regAddress, uint32_t value)
-{
-#if HCOM_COMMON_UTILS_USE_HCOM_PROXY > 0
-  int ret = hcom_proxy_update_register(regAddress, 0, value);
-  if(ret < 0)
-  {
-    hcom_utils_f7syslog(LOG_ERR, "%s:%s()@%d-%s Failed, errno:%d\n");
-  }
-#else
-  uint32_t regValue = *((uint32_t *) regAddress);
-  *((uint32_t *) regAddress) = regValue | value;
-#endif
 }
 
 // //===================================================================
@@ -459,8 +495,7 @@ void hcom_utils_f7syslog(int priority, FAR const IPTR char *fmt, ...)
   stringLen = stringLen;    // p-m - added
   // syslog - check if these should be routed to host.
   // Note: no timestamp for these messages
-  // if(hcom_utils_register_is_bit_set(HCOM_BATTERY_BACKED_REG_BIT_FLAGS,
-  //         HCOM_BBREG_TRACE_MSG_TO_HOST_BIT_FLAG))
+  // if(hcom_utils_is_bbr_bit_set(HCOM_BBREG_TRACE_MSG_TO_HOST_BIT_MASK))
   {
     // Strip off cr/lf since Meadow.CLI takes care of this
     if(_f7syslogTextBuf[stringLen - 1] == 0x0a || _f7syslogTextBuf[stringLen - 1] == 0x0d)

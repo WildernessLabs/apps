@@ -237,19 +237,21 @@ enum hcom_current_data_packet_activity
 
 //----------------------------------------------------------------
 // Redefine Battery Backed Registers so we know what's what
-#define HCOM_BATTERY_BACKED_REG_SYSLOG_MASK   STM32_RTC_BK31R
-// p=m move this around
-// #define HCOM_BATTERY_BACKED_REG_MONO_ACCESS   STM32_RTC_BK30R
-// #define HCOM_BATTERY_BACKED_REG_MONO_ACTION   STM32_RTC_BK29R
-#define HCOM_BATTERY_BACKED_REG_BIT_FLAGS     STM32_RTC_BK28R
+// This defines which BBR register to use. There are 32 (0-31) in
+// the stm32f7
+#define HCOM_BATTERY_BACKED_REGISTER_ID   31
+
+#define HCOM_BBREG_RESTART_ALL_32_BITS_MASK 0xffffffff
+#define HCOM_BBREG_RESTART_SYSLOG_CONFIG_VALUE_MASK 0x000000ff
 // This bit indicates if the restart was initiated by hcom command
-#define HCOM_BBREG_RESTART_CONCLUDED_BIT_FLAG 0x00000001
+#define HCOM_BBREG_RESTART_CONCLUDED_BIT_MASK 0x000100
 // This bit indicates if we are to send trace messages to the host PC
-#define HCOM_BBREG_TRACE_MSG_TO_HOST_BIT_FLAG 0x00000002
+#define HCOM_BBREG_TRACE_MSG_TO_HOST_BIT_MASK 0x00000200
 // This bit indicates if we are to send trace messages to the uart1
-#define HCOM_BBREG_TRACE_MSG_TO_UART1_BIT_FLAG 0x00000004
+#define HCOM_BBREG_TRACE_MSG_TO_UART1_BIT_MASK 0x00000400
+#define HCOM_BBREG_TRACE_MSG_TO_EITHER_BIT_MASK (HCOM_BBREG_TRACE_MSG_TO_HOST_BIT_MASK | HCOM_BBREG_TRACE_MSG_TO_UART1_BIT_MASK)
 // This bit indicates if mono should be started during startup
-#define HCOM_BBREG_MONO_START_BIT_FLAG 0x00000008
+#define HCOM_BBREG_MONO_START_BIT_MASK 0x00000800
 
 //--------------------------------------------------------------------
 // HCOM protocol
@@ -565,14 +567,6 @@ extern "C"
                                   size_t packetBufferSize, size_t *packetLength);
   int hcom_cirbuf_release_memory(struct host_com_cir_buffer_s *hcom_cbuf);
 
-// HCOM proxy access allows needed OS level resources to be tunneled to
-// the operating system
-int hcom_proxy_access_setup(void);
-int hcom_proxy_set_register(uint32_t address, uint32_t value);
-int hcom_proxy_get_register(uint32_t address, uint32_t *value);
-int hcom_proxy_update_register(uint32_t address, uint32_t clearBits, uint32_t setBits);
-int hcom_proxy_first_test(uint32_t value);
-
 //   // mono pipe user messages
 //   int hcom_mono_pipe_setup(void);
 //   void hcom_mono_pipe_shutdown(void);
@@ -585,21 +579,38 @@ int hcom_proxy_first_test(uint32_t value);
 //   // Common Utils and persistent (battery backed) storage functions
   int hcom_utils_setup(void);
   void hcom_utils_shutdown(void);
-  void hcom_utils_register_write(uint32_t regNumber, uint32_t value);
-  uint32_t hcom_utils_register_read(uint32_t regNumber);
-  bool hcom_utils_register_is_bits_set_n_clear(uint32_t regNumber, uint32_t value);
-  void hcom_utils_register_set_bits(uint32_t regNumber, uint32_t value);
-  bool hcom_utils_register_is_bit_set(uint32_t regNumber, uint32_t value);
-  void hcom_utils_register_clear_bits(uint32_t regNumber, uint32_t value);
 //   bool hcom_utils_boot_time_qemu_check(void);
-  int hcom_mono_ctrl_start_mono_if_needed(void);
-  bool hcom_mono_ctrl_is_mono_enabled(void);
   void hcom_utils_diag_print_buffer(const uint8_t packetBuffer[], const int bufLen, uint8_t logPriority);
   void hcom_utils_f7syslog(int priority, FAR const IPTR char *fmt, ...);
   void hcom_utils_f7syslog_x(int priority, FAR const IPTR char *fmt, ...);
   void hcom_utils_safe_ramlog(int priority, FAR const IPTR char *fmt, va_list args);
   void hcom_utils_dbg_gpio_1led_update(bool ledOn);
   void hcom_utils_dbg_gpio_8bit_update(uint8_t newValue, bool ledOn);
+
+  uint32_t hcom_utils_read_bbr_and_right_justify(uint32_t bitMask);
+  void hcom_utils_set_bits_in_bbr(uint32_t bitMask);
+  uint32_t hcom_utils_bbr_read(void);
+  void hcom_utils_clear_bits_in_bbr(uint32_t value);
+  bool hcom_utils_is_bbr_bits_set_n_clear(uint32_t value);
+  void hcom_utils_set_bbr_bits(uint32_t value);
+  void hcom_utils_clear_bbr_bits(uint32_t value);
+  void hcom_utils_bbr_write(uint32_t value);
+  bool hcom_utils_is_bbr_bit_set(uint32_t value);
+
+  // hcom_proxy_access.c
+  // HCOM proxy access allows low-level access to the operating system
+  int hcom_proxy_access_setup(void);
+  int hcom_proxy_set_bbr(uint32_t value);
+  int hcom_proxy_get_bbr(uint32_t *value);
+  int hcom_proxy_update_bbr(uint32_t clearBits, uint32_t setBits);
+  // p-m LIKE TO REMOVE THESE GENERIC REGISTER QUERIES
+  // int hcom_proxy_set_register(uint32_t address, uint32_t value);
+  // int hcom_proxy_get_register(uint32_t address, uint32_t *value);
+  // int hcom_proxy_update_register(uint32_t address, uint32_t clearBits, uint32_t setBits);
+
+  // hcom_mono_control.c
+  int hcom_mono_ctrl_start_mono_if_needed(void);
+  bool hcom_mono_ctrl_is_mono_enabled(void);
 
   // Ramlog to host/uart
 #if defined (CONFIG_RAMLOG_SYSLOG)
@@ -621,8 +632,14 @@ int hcom_proxy_first_test(uint32_t value);
 //   void hcom_exec_rqst_testing_developer_3(uint32_t userData);
 //   void hcom_exec_rqst_testing_developer_4(uint32_t userData);
 
-
 // Diagnostic aids
+//=================================================================
+#define HCOM_INCLUDE_BBR_TESTS_IN_STARTUP 1
+
+#if HCOM_INCLUDE_BBR_TESTS_IN_STARTUP > 0
+void hcom_bbr_tests(void);
+#endif
+
 #define HCOM_TASK_SHOW_CREATED_TASK_PID_NAME  0
 #define HCOM_COMMON_UTILS_DIAG_PRINT_BUFFER   1
 #define HCOM_COMMON_UTILS_GPIO_D00_D08_DOUT   0

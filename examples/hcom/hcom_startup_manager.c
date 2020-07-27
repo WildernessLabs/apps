@@ -61,9 +61,6 @@ extern int hcom_main (int argc, char* argv[]);
  * Private Data
  ****************************************************************************/
 static char *thisFile = __FILE__;
-static int _syslog_mask;
-static int _syslog_mask_old;
-static bool _power_on_restart;
 
 /****************************************************************************
  * Private Function Prototypes
@@ -119,46 +116,8 @@ int hcom_main(int argc, char *argv[])
     return ret;
   }
 
-#if defined HCOM_NOT_DEFINED
-// TESTS OF REGISTER ACCESS VIA THE PROXY
-#define BBR_TEST_VALUE_DB (0xdeadbeef)
-#define BBR_TEST_VALUE_0x00010000 (0x00010000)
-#define BBR_TEST_VALUE_0 (0)
-
-// USE THIS BBR STM32_RTC_BK30R
-uint32_t testValue;
-
-// Write and read a register
-hcom_utils_register_write(STM32_RTC_BK30R, 0);
-hcom_utils_register_write(STM32_RTC_BK30R, BBR_TEST_VALUE_DB);
-testValue = hcom_utils_register_read(STM32_RTC_BK30R);
-syslog(1, "Register Tests 1: Expected 0x%08x and got 0x%08x\n", BBR_TEST_VALUE_DB, testValue);
-
-// Set a bit and read value
-hcom_utils_register_write(STM32_RTC_BK30R, 0);
-hcom_utils_register_set_bits(STM32_RTC_BK30R, BBR_TEST_VALUE_0x00010000);
-testValue = hcom_utils_register_read(STM32_RTC_BK30R);
-syslog(1, "Register Tests 2: Expected 0x%08x and got 0x%08x\n", BBR_TEST_VALUE_0x00010000, testValue);
-
-// Test if expected bit is set
-hcom_utils_register_write(STM32_RTC_BK30R, BBR_TEST_VALUE_0x00010000);
-bool bitsettest = hcom_utils_register_is_bit_set(STM32_RTC_BK30R, BBR_TEST_VALUE_0x00010000);
-syslog(1, "Register Tests 3: Expected 1 and got %d\n", bitsettest);
-
-// Clear bit and insure it's clear
-hcom_utils_register_write(STM32_RTC_BK30R, BBR_TEST_VALUE_0x00010000);
-hcom_utils_register_clear_bits(STM32_RTC_BK30R, BBR_TEST_VALUE_0x00010000);
-testValue = hcom_utils_register_read(STM32_RTC_BK30R);
-syslog(1, "Register Tests 4: Expected 0x%08x and got 0x%08x\n", BBR_TEST_VALUE_0, testValue);
-
-// Verify we can read and clear the same bit
-hcom_utils_register_write(STM32_RTC_BK30R, 0);
-hcom_utils_register_set_bits(STM32_RTC_BK30R, BBR_TEST_VALUE_0x00010000);
-bitsettest = hcom_utils_register_is_bits_set_n_clear(STM32_RTC_BK30R, BBR_TEST_VALUE_0x00010000);
-syslog(1, "Register Tests 5: Expected 1 and got %d\n", bitsettest);
-
-testValue = hcom_utils_register_read(STM32_RTC_BK30R);
-syslog(1, "Register Tests 6: Expected 0x%08x and got 0x%08x\n", BBR_TEST_VALUE_0, testValue);
+#if HCOM_INCLUDE_BBR_TESTS_IN_STARTUP > 0
+  hcom_bbr_tests();
 #endif
 
 #if defined(CONFIG_STM32F7_PWR)
@@ -198,47 +157,49 @@ syslog(1, "Register Tests 6: Expected 0x%08x and got 0x%08x\n", BBR_TEST_VALUE_0
 // This function sets up the syslog mask as desired
 int hcom_manager_syslog_mask_init()
 {
-  //p-m - accessing BBRs directly crashes Nuttx
-  return OK; 
+  int syslogMask;
+  int syslogMaskPrev;
+  bool isPowerOnRestart;
 
 #if defined(CONFIG_STM32F7_PWR)
   // Check if this is a reboot or a power-on restart. The MCU on Power-on
   // clears all 32 battery backed registers to 0.
-  if(hcom_utils_register_read(HCOM_BATTERY_BACKED_REG_SYSLOG_MASK) == 0)
+  if(hcom_utils_bbr_read() == 0)
   {
     // Power-on restart
-    _power_on_restart = true;
+    isPowerOnRestart = true;
 
     // Set and save the syslog level to the default value
-    _syslog_mask = LOG_MASK(LOG_EMERG) | LOG_MASK(LOG_ALERT) | LOG_MASK(LOG_CRIT) |
+    syslogMask = LOG_MASK(LOG_EMERG) | LOG_MASK(LOG_ALERT) | LOG_MASK(LOG_CRIT) |
                LOG_MASK(LOG_ERR) | LOG_MASK(LOG_WARNING);
-    hcom_utils_register_write(HCOM_BATTERY_BACKED_REG_SYSLOG_MASK, _syslog_mask);
+    // This works here because we know that the bits are all zeros
+    hcom_utils_set_bits_in_bbr(syslogMask);
   }
   else
   {
-    // Rebooted - it's safe to use the battery backed registers and SRAM values
-    _power_on_restart = false;
-    _syslog_mask = hcom_utils_register_read(HCOM_BATTERY_BACKED_REG_SYSLOG_MASK);
+    // Rebooted - it's safe to use the battery backed registers values
+    isPowerOnRestart = false;
+    syslogMask = hcom_utils_read_bbr_and_right_justify(HCOM_BBREG_RESTART_SYSLOG_CONFIG_VALUE_MASK);
   }
 
   // Save for emergency debugging :-)
-  // _syslog_mask = LOG_MASK(LOG_EMERG) | LOG_MASK(LOG_ALERT) | LOG_MASK(LOG_CRIT) |
+  // syslogMask = LOG_MASK(LOG_EMERG) | LOG_MASK(LOG_ALERT) | LOG_MASK(LOG_CRIT) |
   //             LOG_MASK(LOG_ERR) | LOG_MASK(LOG_WARNING) | LOG_MASK(LOG_NOTICE) | 
   //             LOG_MASK(LOG_INFO);  // | LOG_MASK(LOG_DEBUG);
 
   // Sets new mask and returns the previous syslog_mask
-  _syslog_mask_old = setlogmask(_syslog_mask);
-  if (_syslog_mask_old < 0)
+  syslogMaskPrev = setlogmask(syslogMask);
+  if (syslogMaskPrev < 0)
   {
-    hcom_utils_f7syslog(LOG_CRIT, "%s@%d-setlogmask err:%d\n", thisFile, __LINE__, _syslog_mask_old);
-    return _syslog_mask_old;    // not old mask be error
+    hcom_utils_f7syslog(LOG_CRIT, "%s@%d-setlogmask err:%d\n", thisFile, __LINE__, syslogMaskPrev);
+    return syslogMaskPrev;    // not old mask be error
   }
 #else
   // Without battery backed registers the best we can do is defaults
-  _power_on_restart = true;
-  _syslog_mask = LOG_MASK(LOG_EMERG) | LOG_MASK(LOG_ALERT) | LOG_MASK(LOG_CRIT) |
+  isPowerOnRestart = true;
+  syslogMask = LOG_MASK(LOG_EMERG) | LOG_MASK(LOG_ALERT) | LOG_MASK(LOG_CRIT) |
               LOG_MASK(LOG_ERR) | LOG_MASK(LOG_WARNING);
-  _syslog_mask_old = setlogmask(_syslog_mask);
+  syslogMaskPrev = setlogmask(syslogMask);
 #endif
 
   // This is an informational syslog message
@@ -247,17 +208,16 @@ int hcom_manager_syslog_mask_init()
     "Host",
     "UART1",
     "Host+UART1"};
-  // Assumes host and uart1 are bits 1 & 2
-  uint32_t value = hcom_utils_register_read(HCOM_BATTERY_BACKED_REG_BIT_FLAGS);
-  value >>= 1;
-  char *traceDest = traceCombo[value & 0x00000003];
+  // Check the 2 host and uart1 bits
+  uint32_t toValue = hcom_utils_read_bbr_and_right_justify(HCOM_BBREG_TRACE_MSG_TO_EITHER_BIT_MASK);
+  char *traceDest = traceCombo[toValue];
 
   // Provide some information that may be useful
   hcom_utils_f7syslog(LOG_INFO, "Meadow %s (%s@%s) %s, Mono:%s, Trace level:0x%02x(was 0x%02x), to:%s, type:%s\n",
         HCOM_DEVICE_INFO_MEADOW_OS_VERSION, __DATE__, __TIME__, 
-        _power_on_restart ? "power-on restart" :"rebooted",
+        isPowerOnRestart ? "power-on restart" :"rebooted",
         hcom_mono_ctrl_is_mono_enabled() ? "Enabled" : "Disabled",
-        _syslog_mask, _syslog_mask_old, traceDest,
+        syslogMask, syslogMaskPrev, traceDest,
 #if defined CONFIG_RAMLOG_SYSLOG
         "ramlog");
 #else

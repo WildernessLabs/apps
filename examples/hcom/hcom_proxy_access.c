@@ -1,7 +1,7 @@
 /****************************************************************************
  * \examples\hcom\hcom_proxy_access.c
  * 
- *   Copyright (C) 2019 - 2020 Wilderness Labs. All rights reserved.
+ *   Copyright (C) 2020 Wilderness Labs. All rights reserved.
  *   Author:  Wilderness Labs
  *
  * Redistribution and use in source and binary forms, with or without
@@ -42,7 +42,7 @@
 #include "hcom_common.h"
 #include <sys/ioctl.h>
 
-#include "../../../nuttx/configs/stm32f777zit6-meadow/src/hcom_proxy/hcom_proxy_upd.h"
+#include "../../../nuttx/configs/stm32f777zit6-meadow/src/hcom_proxy/hcom_proxy_shared.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -80,18 +80,17 @@ int hcom_proxy_access_setup()
           thisFile, __LINE__, HCOM_PROXY_UPD_DRIVER_NAME); usleep(50 * 1000);
   return OK;
 }
+
 //=============================================================
-int hcom_proxy_first_test(uint32_t value)
+int hcom_proxy_set_bbr(uint32_t value)
 {
   int ret;
-  struct hcom_proxy_upd_first_test test_value;
+  struct hcom_proxy_upd_bbr_value bbr_value;
 
-  syslog(LOG_ERR, "%s:%s@%d-and PID:%d\n",
-          thisFile, __func__, __LINE__, getpid()); usleep(50 * 1000);
+  bbr_value.bbr_id = HCOM_BATTERY_BACKED_REGISTER_ID;
+  bbr_value.value = value;
 
-  test_value.value = value;
-
-  ret = ioctl(_hcom_proxy_fd, HCOM_PROXY_UPD_FIRST_TEST, (unsigned long)&test_value);
+  ret = ioctl(_hcom_proxy_fd, HCOM_PROXY_UPD_SET_BBR_VALUE, (unsigned long)&bbr_value);
   if (ret < 0)
   {
     syslog(LOG_ERR, "%s:%s()@%d-%s Failed to set reg, errno:%d\n",
@@ -102,33 +101,14 @@ int hcom_proxy_first_test(uint32_t value)
 }
 
 //=============================================================
-int hcom_proxy_set_register(uint32_t address, uint32_t value)
+int hcom_proxy_get_bbr(uint32_t *value)
 {
   int ret;
-  struct hcom_proxy_upd_register_value reg_value;
-
-  reg_value.address = address;
-  reg_value.value = value;
-
-  ret = ioctl(_hcom_proxy_fd, HCOM_PROXY_UPD_SET_REGISTER, (unsigned long)&reg_value);
-  if (ret < 0)
-  {
-    syslog(LOG_ERR, "%s:%s()@%d-%s Failed to set reg, errno:%d\n",
-            thisFile, __func__, __LINE__, HCOM_PROXY_UPD_DRIVER_NAME, errno);
-    return ret;
-  }
-  return OK;
-}
-
-//=============================================================
-int hcom_proxy_get_register(uint32_t address, uint32_t *value)
-{
-  int ret;
-  struct hcom_proxy_upd_register_value reg_value;
+  struct hcom_proxy_upd_bbr_value bbr_value;
   
-  reg_value.address = address;
+  bbr_value.bbr_id = HCOM_BATTERY_BACKED_REGISTER_ID;
 
-  ret = ioctl(_hcom_proxy_fd, HCOM_PROXY_UPD_GET_REGISTER, (unsigned long)&reg_value);
+  ret = ioctl(_hcom_proxy_fd, HCOM_PROXY_UPD_GET_BBR_VALUE, (unsigned long)&bbr_value);
   if (ret < 0)
   {
     syslog(LOG_ERR, "%s:%s()@%d-%s Failed to get reg, errno:%d\n",
@@ -136,21 +116,21 @@ int hcom_proxy_get_register(uint32_t address, uint32_t *value)
     return ret;
   }
 
-  *value = reg_value.value;
+  *value = bbr_value.value;
   return OK;
 }
 
 //=============================================================
-int hcom_proxy_update_register(uint32_t address, uint32_t clearBits, uint32_t setBits)
+int hcom_proxy_update_bbr(uint32_t clearBits, uint32_t setBits)
 {
   int ret;
-  struct hcom_proxy_upd_register_update reg_update;
+  struct hcom_proxy_upd_bbr_update bbr_update;
 
-  reg_update.address = address;
-  reg_update.clearBits = clearBits;
-  reg_update.setBits = setBits;
+  bbr_update.bbr_id = HCOM_BATTERY_BACKED_REGISTER_ID;
+  bbr_update.clearBits = clearBits;
+  bbr_update.setBits = setBits;
   
-  ret = ioctl(_hcom_proxy_fd, HCOM_PROXY_UPD_UPDATE_REGISTER, (unsigned long)&reg_update);
+  ret = ioctl(_hcom_proxy_fd, HCOM_PROXY_UPD_UPDATE_BBR_VALUE, (unsigned long)&bbr_update);
   if (ret < 0)
   {
     syslog(LOG_ERR, "%s:%s()@%d-%s Failed to update reg, errno:%d\n",
@@ -159,4 +139,64 @@ int hcom_proxy_update_register(uint32_t address, uint32_t clearBits, uint32_t se
   }
   return OK;
 }
+
+// NO DIRECT ACCESS TO REGISTERS POSSIBLE
+// //=============================================================
+// int hcom_proxy_set_register(uint32_t address, uint32_t value)
+// {
+//   int ret;
+//   struct hcom_proxy_upd_register_value reg_value;
+
+//   reg_value.address = address;
+//   reg_value.value = value;
+
+//   ret = ioctl(_hcom_proxy_fd, HCOM_PROXY_UPD_SET_REGISTER, (unsigned long)&reg_value);
+//   if (ret < 0)
+//   {
+//     syslog(LOG_ERR, "%s:%s()@%d-%s Failed to set reg, errno:%d\n",
+//             thisFile, __func__, __LINE__, HCOM_PROXY_UPD_DRIVER_NAME, errno);
+//     return ret;
+//   }
+//   return OK;
+// }
+
+// //=============================================================
+// int hcom_proxy_get_register(uint32_t address, uint32_t *value)
+// {
+//   int ret;
+//   struct hcom_proxy_upd_register_value reg_value;
+  
+//   reg_value.address = address;
+
+//   ret = ioctl(_hcom_proxy_fd, HCOM_PROXY_UPD_GET_REGISTER, (unsigned long)&reg_value);
+//   if (ret < 0)
+//   {
+//     syslog(LOG_ERR, "%s:%s()@%d-%s Failed to get reg, errno:%d\n",
+//             thisFile, __func__, __LINE__, HCOM_PROXY_UPD_DRIVER_NAME, errno);
+//     return ret;
+//   }
+
+//   *value = reg_value.value;
+//   return OK;
+// }
+
+// //=============================================================
+// int hcom_proxy_update_register(uint32_t address, uint32_t clearBits, uint32_t setBits)
+// {
+//   int ret;
+//   struct hcom_proxy_upd_register_update reg_update;
+
+//   reg_update.address = address;
+//   reg_update.clearBits = clearBits;
+//   reg_update.setBits = setBits;
+  
+//   ret = ioctl(_hcom_proxy_fd, HCOM_PROXY_UPD_UPDATE_REGISTER, (unsigned long)&reg_update);
+//   if (ret < 0)
+//   {
+//     syslog(LOG_ERR, "%s:%s()@%d-%s Failed to update reg, errno:%d\n",
+//             thisFile, __func__, __LINE__, HCOM_PROXY_UPD_DRIVER_NAME, errno);
+//     return ret;
+//   }
+//   return OK;
+// }
 

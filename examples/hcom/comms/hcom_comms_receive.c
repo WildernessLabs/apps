@@ -165,34 +165,20 @@ int hcom_comms_recv_thread_loop()
 // "Concluded" message type
 int hcom_comms_recv_restart_concluded()
 {
-  // char *monoStartupMsg;
-
   // Check if a CLI command was responsible for this restart, If it was a
   // `Concluded` message must be sent
-  syslog(1, "Entered %s() register addr:%p\n", __func__, HCOM_BATTERY_BACKED_REG_BIT_FLAGS); usleep(50 * 1000);
-
-  if(hcom_utils_register_is_bit_set(HCOM_BATTERY_BACKED_REG_BIT_FLAGS,
-    HCOM_BBREG_TRACE_MSG_TO_UART1_BIT_FLAG))
+  if(hcom_utils_read_bbr_and_right_justify(HCOM_BBREG_RESTART_CONCLUDED_BIT_MASK))
   {
-    syslog(1, "Send to Uart1\n"); usleep(50 * 1000);
+    hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
   }
-  else
-  {
-    syslog(1, "DON'T Send to Uart1\n"); usleep(50 * 1000);
-  }
-  
-  // if(hcom_utils_register_is_bits_set_n_clear(HCOM_BATTERY_BACKED_REG_BIT_FLAGS,
-  //   HCOM_BBREG_RESTART_CONCLUDED_BIT_FLAG))
-  // {
-  //   hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
-  // }
 
   //--------------------------------------------
   // Report to host the status of mono
-  // if(hcom_mono_ctrl_is_mono_enabled())
-  //   monoStartupMsg = "Mono enabled, will run app.exe";
-  // else
-  //   monoStartupMsg = "Mono disabled, will not run app.exe";
+  char *monoStartupMsg;
+  if(hcom_mono_ctrl_is_mono_enabled())
+    monoStartupMsg = "Mono enabled, will run app.exe";
+  else
+    monoStartupMsg = "Mono disabled, will not run app.exe";
 
   // hcom_comms_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0,
   //         monoStartupMsg, thisFile, __LINE__);
