@@ -167,11 +167,6 @@
 
 // "/meadow" is shared by all supported file systems
 #define HCOM_FILE_MOUNT_POINT_TARGET "/meadow"
-#ifdef CONFIG_FS_SMARTFS
-#define HCOM_MIN_EXPECTED_CONFIG_SMARTFS_MAXNAMLEN 32
-#define HCOM_FILE_MOUNT_FILE_SYS_TYPE "smartfs"
-#define HCOM_FILE_MOUNT_POINT_SOURCE "/dev/smart" // assumes partitioning
-#endif
 
 #ifdef CONFIG_FS_LITTLEFS
 #define HCOM_FILE_MOUNT_FILE_SYS_TYPE "littlefs"
@@ -234,24 +229,6 @@ enum hcom_current_data_packet_activity
 #define HCOM_TRACE_LEVEL_NOTICE 1
 #define HCOM_TRACE_LEVEL_NOTICE_INFO 2
 #define HCOM_TRACE_LEVEL_NOTICE_INFO_DEBUG 3
-
-//----------------------------------------------------------------
-// Redefine Battery Backed Registers so we know what's what
-// This defines which BBR register to use. There are 32 (0-31) in
-// the stm32f7
-#define HCOM_BATTERY_BACKED_REGISTER_ID   31
-
-#define HCOM_BBREG_RESTART_ALL_32_BITS_MASK 0xffffffff
-#define HCOM_BBREG_RESTART_SYSLOG_CONFIG_VALUE_MASK 0x000000ff
-// This bit indicates if the restart was initiated by hcom command
-#define HCOM_BBREG_RESTART_CONCLUDED_BIT_MASK 0x000100
-// This bit indicates if we are to send trace messages to the host PC
-#define HCOM_BBREG_TRACE_MSG_TO_HOST_BIT_MASK 0x00000200
-// This bit indicates if we are to send trace messages to the uart1
-#define HCOM_BBREG_TRACE_MSG_TO_UART1_BIT_MASK 0x00000400
-#define HCOM_BBREG_TRACE_MSG_TO_EITHER_BIT_MASK (HCOM_BBREG_TRACE_MSG_TO_HOST_BIT_MASK | HCOM_BBREG_TRACE_MSG_TO_UART1_BIT_MASK)
-// This bit indicates if mono should be started during startup
-#define HCOM_BBREG_MONO_START_BIT_MASK 0x00000800
 
 //--------------------------------------------------------------------
 // HCOM protocol
@@ -452,10 +429,6 @@ extern "C"
   // Startup Manager
   // int hcom_initial_startup(void);
 
-// #if defined(CONFIG_STM32F7_PWR)
-//   int hcom_manager_syslog_mask_init(void);
-// #endif
-
   // // USB CDC/ACM receive host messages
   int hcom_comms_recv_setup(void);
   void hcom_comms_recv_shutdown(void);
@@ -494,23 +467,19 @@ extern "C"
 //   void hcom_exec_flash_fs_initialize(uint32_t partitionId);
 //   void hcom_exec_flash_fs_create(uint32_t userData);
 //   void hcom_exec_flash_fs_return_file_list(uint32_t partitionId);
-//   void hcom_exec_flash_fs_part_renew_file_system(uint32_t partitionId);
 //   void hcom_exec_flash_fs_return_file_list_with_crc(uint32_t partitionId);
 
 //   // Execute Utility Request
-//   int hcom_exec_rqst_misc_setup(FAR struct mtd_dev_s *mtd);
-//   void hcom_exec_flash_fs_flash_bulk_erase(uint32_t user_data);
-//   void hcom_exec_flash_fs_flash_verify_erase(uint32_t user_data);
+  int hcom_exec_rqst_misc_setup(void);
 //   void hcom_exec_rqst_misc_mcu_restart(uint32_t user_data);
-//   void hcom_exec_rqst_misc_enter_dfu_mode(uint32_t user_data);
-//   void hcom_exec_rqst_misc_change_trace_level(uint32_t userData);
-//   void hcom_exec_rqst_misc_enable_disable_nsh(uint32_t userData);
+  void hcom_exec_rqst_misc_enter_dfu_mode(uint32_t user_data);
+  void hcom_exec_rqst_misc_change_trace_level(uint32_t userData);
+  void hcom_proxy_forward_cmd_to_proxy(uint16_t cliCmd, uint32_t proxyCmd, uint32_t userData);
 
-//   void hcom_exec_rqst_misc_mono_disable(uint32_t userData);
-//   void hcom_exec_rqst_misc_mono_enable(uint32_t userData);
+  void hcom_exec_rqst_misc_mono_disable(uint32_t userData);
+  void hcom_exec_rqst_misc_mono_enable(uint32_t userData);
 //   void hcom_exec_rqst_misc_mono_run_state(uint32_t userData);
-//   void hcom_exec_rqst_misc_mono_flash(uint32_t userData);
-//   void hcom_exec_rqst_misc_get_device_info(uint32_t userData);
+  void hcom_exec_rqst_misc_get_device_info(uint32_t userData);
 
 //   // File commands
 //   int hcom_file_commands_setup(void);
@@ -532,19 +501,12 @@ extern "C"
 //                                           const char *fileSystemType, uint32_t partitionId, const char *mountCommand);
 //   bool hcom_fs_is_mounted(uint32_t partitionId);
 //   int hcom_fs_1st_erase_sector_of_partition(uint32_t partitionId);
-//   int hcom_fs_get_list_files_in_partition(uint32_t partitionIdn);
-//   int hcom_fs_get_list_files_in_partition_and_crc(uint32_t partitionId);
+  int hcom_fs_get_list_files_in_partition(uint32_t partitionId);
+  int hcom_fs_get_list_files_in_partition_and_crc(uint32_t partitionId);
+  int hcom_recurse_all_directories(const char *name, int indent);
+
 //   int hcom_fs_initialize_proxy(uint32_t partitionId);
 //   int hcom_fs_format_proxy(uint32_t partitionId);
-
-//   // Support SmartFS
-// #ifdef CONFIG_FS_SMARTFS
-//   int hcom_fs_smartfs_setup(void);
-//   void hcom_fs_smartfs_shutdown(void);
-//   int hcom_fs_smartfs_init_part_fs(uint32_t partitionId, struct mtd_dev_s *partMtd);
-//   int hcom_fs_smartfs_mount_format(uint32_t partitionId);
-//   int hcom_fs_smartfs_format(int partitionId);
-// #endif
 
 //   // Support LittleFS
 // #ifdef CONFIG_FS_LITTLEFS
@@ -576,9 +538,12 @@ extern "C"
 //   void hcom_remote_dbg_shutdown(void);
 //   void hcom_remote_dbg_recv_host_send_to_mono(const uint8_t *recvPayload, size_t recvPayloadSize, uint32_t userData);
 
-//   // Common Utils and persistent (battery backed) storage functions
+  // Common Utils and persistent (battery backed) storage functions
   int hcom_utils_setup(void);
   void hcom_utils_shutdown(void);
+#if defined(CONFIG_STM32F7_PWR)
+  int hcom_utils_syslog_mask_init(void);
+#endif
 //   bool hcom_utils_boot_time_qemu_check(void);
   void hcom_utils_diag_print_buffer(const uint8_t packetBuffer[], const int bufLen, uint8_t logPriority);
   void hcom_utils_f7syslog(int priority, FAR const IPTR char *fmt, ...);
@@ -588,13 +553,12 @@ extern "C"
   void hcom_utils_dbg_gpio_8bit_update(uint8_t newValue, bool ledOn);
 
   uint32_t hcom_utils_read_bbr_and_right_justify(uint32_t bitMask);
-  void hcom_utils_set_bits_in_bbr(uint32_t bitMask);
   uint32_t hcom_utils_bbr_read(void);
-  void hcom_utils_clear_bits_in_bbr(uint32_t value);
-  bool hcom_utils_is_bbr_bits_set_n_clear(uint32_t value);
+  void hcom_utils_bbr_write(uint32_t value);
   void hcom_utils_set_bbr_bits(uint32_t value);
   void hcom_utils_clear_bbr_bits(uint32_t value);
-  void hcom_utils_bbr_write(uint32_t value);
+  void hcom_utils_clear_then_set_bbr_bits(uint32_t clearBits, uint32_t setBits);
+  bool hcom_utils_is_bbr_bits_set_n_clear(uint32_t value);
   bool hcom_utils_is_bbr_bit_set(uint32_t value);
 
   // hcom_proxy_access.c
@@ -603,6 +567,9 @@ extern "C"
   int hcom_proxy_set_bbr(uint32_t value);
   int hcom_proxy_get_bbr(uint32_t *value);
   int hcom_proxy_update_bbr(uint32_t clearBits, uint32_t setBits);
+  int hcom_proxy_restart_meadow(void);
+  int hcom_proxy_get_mcu_id(uint8_t uniqueId[12]);
+
   // p-m LIKE TO REMOVE THESE GENERIC REGISTER QUERIES
   // int hcom_proxy_set_register(uint32_t address, uint32_t value);
   // int hcom_proxy_get_register(uint32_t address, uint32_t *value);
@@ -617,10 +584,10 @@ extern "C"
   int hcom_ramlog_trace_setup(void);
   void hcom_ramlog_trace_shutdown(void);
 #endif
-//   void hcom_trace_send_trace_to_host(uint32_t userData);
-//   void hcom_trace_do_not_send_trace_to_host(uint32_t userData);
-//   void hcom_trace_send_trace_to_uart1(uint32_t userData);
-//   void hcom_trace_do_not_send_trace_to_uart1(uint32_t userData);
+  void hcom_trace_send_trace_to_host(uint32_t userData);
+  void hcom_trace_do_not_send_trace_to_host(uint32_t userData);
+  void hcom_trace_send_trace_to_uart1(uint32_t userData);
+  void hcom_trace_do_not_send_trace_to_uart1(uint32_t userData);
 
 //   // Testing utilities
 //   int hcom_exec_rqst_testing_setup(FAR struct mtd_dev_s *mtd);
@@ -632,12 +599,35 @@ extern "C"
 //   void hcom_exec_rqst_testing_developer_3(uint32_t userData);
 //   void hcom_exec_rqst_testing_developer_4(uint32_t userData);
 
+//----------------------------------------------------------------
+// Redefine Battery Backed Registers so we know what's what
+// This defines which BBR register to use. There are 32 (0-31) in
+// the stm32f7
+#define HCOM_BATTERY_BACKED_REGISTER_ID   31
+
+#define HCOM_BBREG_RESTART_ALL_32_BITS_MASK 0xffffffff
+#define HCOM_BBREG_RESTART_SYSLOG_CONFIG_VALUE_MASK 0x000000ff
+// This bit indicates if the restart was initiated by hcom command
+#define HCOM_BBREG_RESTART_CONCLUDED_BIT_MASK 0x000100
+// This bit indicates if we are to send trace messages to the host PC
+#define HCOM_BBREG_TRACE_MSG_TO_HOST_BIT_MASK 0x00000200
+// This bit indicates if we are to send trace messages to the uart1
+#define HCOM_BBREG_TRACE_MSG_TO_UART1_BIT_MASK 0x00000400
+#define HCOM_BBREG_TRACE_MSG_TO_EITHER_BIT_MASK (HCOM_BBREG_TRACE_MSG_TO_HOST_BIT_MASK | HCOM_BBREG_TRACE_MSG_TO_UART1_BIT_MASK)
+// This bit indicates if mono should be started during startup
+#define HCOM_BBREG_MONO_START_BIT_MASK 0x00000800
+
 // Diagnostic aids
 //=================================================================
-#define HCOM_INCLUDE_BBR_TESTS_IN_STARTUP 0
+#define HCOM_INCLUDE_TESTS_BBR_IN_STARTUP 0
+#define HCOM_INCLUDE_TESTS_NSH_AVAILABLE 1
 
-#if HCOM_INCLUDE_BBR_TESTS_IN_STARTUP > 0
+#if HCOM_INCLUDE_TESTS_BBR_IN_STARTUP > 0
 void hcom_bbr_tests(void);
+#endif
+
+#if HCOM_INCLUDE_TESTS_NSH_AVAILABLE > 0
+void hcom_exec_rqst_misc_enable_disable_nsh(uint32_t userData);
 #endif
 
 #define HCOM_TASK_SHOW_CREATED_TASK_PID_NAME  0

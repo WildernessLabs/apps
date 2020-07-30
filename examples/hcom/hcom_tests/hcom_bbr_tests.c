@@ -4,7 +4,7 @@
 /*******************************************************************
 * TESTS OF REGISTER ACCESS VIA THE PROXY
  *******************************************************************/
-#if HCOM_INCLUDE_BBR_TESTS_IN_STARTUP > 0
+#if HCOM_INCLUDE_TESTS_BBR_IN_STARTUP > 0
 
 void hcom_bbr_tests()
 {
@@ -31,23 +31,23 @@ void hcom_bbr_tests()
   syslog(1, "Register Tests c: Expected 0x%08x and got 0x%08x\n", 0x00000001, returnedValue);
 
   // Verify that value not shifted or modified
-  hcom_utils_set_bits_in_bbr(0x0000000f);
+  hcom_utils_set_bbr_bits(0x0000000f);
   returnedValue = hcom_utils_read_bbr_and_right_justify(0x0000000f);
   syslog(1, "Register Tests d: Expected 0x%08x and got 0x%08x\n", 0x0000000f, returnedValue);
 
   // Verify that value not shifted or modified
-  hcom_utils_set_bits_in_bbr(0x0000f000);
+  hcom_utils_set_bbr_bits(0x0000f000);
   returnedValue = hcom_utils_read_bbr_and_right_justify(0x0000f000);
   syslog(1, "Register Tests e: Expected 0x%08x and got 0x%08x\n", 0x0000000f, returnedValue);
 
   // Verify that a single bit can be set
   hcom_utils_bbr_write(0x0000000f);
-  hcom_utils_set_bits_in_bbr(0x00000100);
+  hcom_utils_set_bbr_bits(0x00000100);
   returnedValue = hcom_utils_bbr_read();
   syslog(1, "Register Tests f: Expected 0x%08x and got 0x%08x\n", 0x0000010f, returnedValue);
 
   hcom_utils_bbr_write(0x0000010f);
-  hcom_utils_clear_bits_in_bbr(0x00000100);
+  hcom_utils_clear_bbr_bits(0x00000100);
   returnedValue = hcom_utils_bbr_read();
   syslog(1, "Register Tests g: Expected 0x%08x and got 0x%08x\n", 0x0000000f, returnedValue);
 

@@ -36,10 +36,12 @@
 /****************************************************************************
  * Included Files
  ****************************************************************************/
+#include <ctype.h>
 #include "hcom_common.h"
 
 #include <nuttx/config.h>
 #include "syslog.h"
+
 #include <nuttx/userspace.h>
 
 /****************************************************************************
@@ -53,11 +55,9 @@
 /****************************************************************************
  * Private Data
  ****************************************************************************/
-
-// The g_syslog_mask is external and set by NuttX. Don't make static
-extern uint8_t g_syslog_mask;
-
 static char *thisFile = __FILE__;
+
+static int _syslogMask;
 static sem_t _f7syslogSem;    /* Implements event waiting */
 static char *_f7syslogTextBuf;
 
@@ -162,30 +162,6 @@ void hcom_utils_bbr_write(uint32_t value)
 }
 
 //===================================================================
-// This function takes a value consisting of (0-31) bits. And sets them
-// in the the battery backed reg.
-void hcom_utils_set_bits_in_bbr(uint32_t bitMask)
-{
-  int ret = hcom_proxy_update_bbr(0, bitMask);
-  if(ret < 0)
-  {
-    hcom_utils_f7syslog(LOG_ERR, "%s:%s()@%d-%s Failed, errno:%d\n");
-  }
-}
-
-//===================================================================
-// This function takes a value consisting of (0-31) bits. And sets them
-// in the the battery backed reg.
-void hcom_utils_clear_bits_in_bbr(uint32_t bitMask)
-{
-  int ret = hcom_proxy_update_bbr(bitMask, 0);
-  if(ret < 0)
-  {
-    hcom_utils_f7syslog(LOG_ERR, "%s:%s()@%d-%s Failed, errno:%d\n");
-  }
-}
-
-//===================================================================
 // Reads the state of a bit then clears that bit and returns it's
 // original state.
 bool hcom_utils_is_bbr_bits_set_n_clear(uint32_t value)
@@ -205,17 +181,6 @@ bool hcom_utils_is_bbr_bits_set_n_clear(uint32_t value)
 }
 
 //===================================================================
-// Set bit(s) in any bit in battery backed register
-void hcom_utils_set_bbr_bits(uint32_t value)
-{
-  int ret = hcom_proxy_update_bbr(0, value);
-  if(ret < 0)
-  {
-    hcom_utils_f7syslog(LOG_ERR, "%s:%s()@%d-%s Failed, errno:%d\n");
-  }
-}
-
-//===================================================================
 // Reads bits in register and returns their state
 bool hcom_utils_is_bbr_bit_set(uint32_t value)
 {
@@ -229,9 +194,32 @@ bool hcom_utils_is_bbr_bit_set(uint32_t value)
 }
 
 //===================================================================
+// Set bit(s) in any bit in battery backed register
+void hcom_utils_set_bbr_bits(uint32_t value)
+{
+  int ret = hcom_proxy_update_bbr(0, value);
+  if(ret < 0)
+  {
+    hcom_utils_f7syslog(LOG_ERR, "%s:%s()@%d-%s Failed, errno:%d\n");
+  }
+}
+
+//===================================================================
+// Clears the specified bits
 void hcom_utils_clear_bbr_bits(uint32_t value)
 {
   int ret = hcom_proxy_update_bbr(value, 0);
+  if(ret < 0)
+  {
+    hcom_utils_f7syslog(LOG_ERR, "%s:%s()@%d-%s Failed, errno:%d\n");
+  }
+}
+
+//===================================================================
+// Clears then sets the specified bits
+void hcom_utils_clear_then_set_bbr_bits(uint32_t clearBits, uint32_t setBits)
+{
+  int ret = hcom_proxy_update_bbr(clearBits, setBits);
   if(ret < 0)
   {
     hcom_utils_f7syslog(LOG_ERR, "%s:%s()@%d-%s Failed, errno:%d\n");
@@ -257,6 +245,82 @@ void hcom_utils_clear_bbr_bits(uint32_t value)
 //     return *addr == QEMU_BOOT_INFO_MAGIC;
 // }
 
+//==========================================================
+// This function sets up the syslog mask as desired
+int hcom_utils_syslog_mask_init()
+{
+  int syslogMaskPrev;
+  bool isPowerOnRestart;
+
+#if defined(CONFIG_STM32F7_PWR)
+  // Check if this is a reboot or a power-on restart. The MCU on Power-on
+  // clears all 32 battery backed registers to 0.
+  if(hcom_utils_bbr_read() == 0)
+  {
+    // Power-on restart
+    isPowerOnRestart = true;
+
+    // Set and save the syslog level to the default value
+    _syslogMask = LOG_MASK(LOG_EMERG) | LOG_MASK(LOG_ALERT) | LOG_MASK(LOG_CRIT) |
+               LOG_MASK(LOG_ERR) | LOG_MASK(LOG_WARNING);
+    // This works here because we know that the bits are all zeros
+    hcom_utils_set_bbr_bits(_syslogMask);
+  }
+  else
+  {
+    // Rebooted - it's safe to use the battery backed registers values
+    isPowerOnRestart = false;
+    _syslogMask = hcom_utils_read_bbr_and_right_justify(HCOM_BBREG_RESTART_SYSLOG_CONFIG_VALUE_MASK);
+  }
+
+  // Save for emergency debugging :-)
+  // _syslogMask = LOG_MASK(LOG_EMERG) | LOG_MASK(LOG_ALERT) | LOG_MASK(LOG_CRIT) |
+  //             LOG_MASK(LOG_ERR) | LOG_MASK(LOG_WARNING) | LOG_MASK(LOG_NOTICE) | 
+  //             LOG_MASK(LOG_INFO);  // | LOG_MASK(LOG_DEBUG);
+
+  // Sets new mask and returns the previous syslog_mask
+  syslogMaskPrev = setlogmask(_syslogMask);
+  if (syslogMaskPrev < 0)
+  {
+    hcom_utils_f7syslog(LOG_CRIT, "%s@%d-setlogmask err:0x%08x\n", thisFile, __LINE__, syslogMaskPrev);
+    return syslogMaskPrev;    // not old mask be error
+  }
+#else
+  syslog(1, "CONFIG_STM32F7_PWR not defined\n");
+  // Without battery backed registers the best we can do is defaults
+  isPowerOnRestart = true;
+  _syslogMask = LOG_MASK(LOG_EMERG) | LOG_MASK(LOG_ALERT) | LOG_MASK(LOG_CRIT) |
+              LOG_MASK(LOG_ERR) | LOG_MASK(LOG_WARNING);
+  syslogMaskPrev = setlogmask(_syslogMask);
+#endif
+
+// p-m the following should have #if defined(CONFIG_STM32F7_PWR) because it access
+// battery backed registers
+  // This is an informational syslog message
+  char *traceCombo[] = {
+    "none",
+    "Host",
+    "UART1",
+    "Host+UART1"};
+  // Check the 2 host and uart1 bits
+  uint32_t toValue = hcom_utils_read_bbr_and_right_justify(HCOM_BBREG_TRACE_MSG_TO_EITHER_BIT_MASK);
+  char *traceDest = traceCombo[toValue];
+
+  // Provide some information that may be useful
+  hcom_utils_f7syslog(LOG_INFO, "Meadow %s (%s@%s) %s, Mono:%s, Trace level:0x%02x(was 0x%02x), to:%s, type:%s\n",
+        HCOM_DEVICE_INFO_MEADOW_OS_VERSION, __DATE__, __TIME__, 
+        isPowerOnRestart ? "power-on restart" :"rebooted",
+        hcom_mono_ctrl_is_mono_enabled() ? "Enabled" : "Disabled",
+        _syslogMask, syslogMaskPrev, traceDest,
+#if defined CONFIG_RAMLOG_SYSLOG
+        "ramlog");
+#else
+        "syslog");
+#endif
+
+  return OK;
+}
+
 //============================================================================
 // For diagnostic use only
 void hcom_utils_diag_print_buffer(const uint8_t buffer[], const int bufLen, uint8_t msgPriority)
@@ -281,7 +345,7 @@ void hcom_utils_diag_print_buffer(const uint8_t buffer[], const int bufLen, uint
     return;
   }
 
-  if ((g_syslog_mask & LOG_MASK(msgPriority)) == 0)
+  if ((_syslogMask & LOG_MASK(msgPriority)) == 0)
     return;
 
   int rowStartOffset, rowByteOffset;
@@ -440,7 +504,7 @@ void hcom_utils_f7syslog_x(int priority, FAR const IPTR char *fmt, ...)
   // directly to the host because this also would be recursive too.
   return;
 #else
-  if ((g_syslog_mask & LOG_MASK(priority)) == 0)
+  if ((_syslogMask & LOG_MASK(priority)) == 0)
   {
     return;   // Nothing to do
   }
@@ -461,7 +525,7 @@ void hcom_utils_f7syslog(int priority, FAR const IPTR char *fmt, ...)
   // Prevent multiple threads from garbling message
   hcom_utils_f7syslog_takesem();
 
-  if ((g_syslog_mask & LOG_MASK(priority)) == 0)
+  if ((_syslogMask & LOG_MASK(priority)) == 0)
   {
     sem_post(&_f7syslogSem);
     return;   // Nothing to do
@@ -522,7 +586,7 @@ void hcom_utils_safe_ramlog(int priority, FAR const IPTR char *fmt,
           va_list args)
 {
   // Check priority but otherwise ignore syslog.
-  if ((g_syslog_mask & LOG_MASK(priority)) == 0)
+  if ((_syslogMask & LOG_MASK(priority)) == 0)
     return;   // Nothing to do
   
   char *_safeRamlogText;

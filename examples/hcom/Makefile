@@ -57,8 +57,13 @@ CSRCS = hcom_common_utils.c \
 	comms/hcom_comms_support.c \
 	commands/hcom_save_parse_request.c \
 	commands/hcom_exec_rqst_download.c \
+	commands/hcom_exec_rqst_misc.c \
+	file_access/delete_file.c \
+	file_access/write_file.c \
+	file_access/list_files.c \
 	hcom_proxy_access.c \
-	hcom_tests/hcom_bbr_tests.c
+	hcom_tests/hcom_bbr_tests.c \
+	hcom_tests/hcom_run_nsh.c
 
 MAINSRC = hcom_startup_manager.c
 

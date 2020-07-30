@@ -39,7 +39,6 @@
 
 #include "hcom_common.h"
 
-//#include <nuttx/kthread.h>
 #include <sys/stat.h>
 #include <ctype.h>
 #include <poll.h>
@@ -555,73 +554,72 @@ void hcom_ramlog_trace_err_logger(int priority, FAR const IPTR char *fmt, ...)
 #endif    // #if defined (CONFIG_RAMLOG_SYSLOG)
 
 // The following functions are always built and used by ramlog and syslog
-// p-m - removed following because sending to host not implemented yet
-// //======================================================================================
-// // Called from Meadow.CLI to enable tracing to host.
-// void hcom_trace_send_trace_to_host(uint32_t userData)
-// {
-//   hcom_utils_set_bits_in_bbr(HCOM_BBREG_TRACE_MSG_TO_HOST_BIT_MASK);
+//======================================================================================
+// Called from Meadow.CLI to enable tracing to host.
+void hcom_trace_send_trace_to_host(uint32_t userData)
+{
+  hcom_utils_set_bbr_bits(HCOM_BBREG_TRACE_MSG_TO_HOST_BIT_MASK);
 
-//   // If ramlog configured, need to init ramlog now. This insures
-//   // that Meadow.CLI is listening
-// #if defined (CONFIG_RAMLOG_SYSLOG)
-//   _trace_ramlog_to_host = true;  // Enable on ramlogs to host
+  // If ramlog configured, need to init ramlog now. This insures
+  // that Meadow.CLI is listening
+#if defined (CONFIG_RAMLOG_SYSLOG)
+  _trace_ramlog_to_host = true;  // Enable on ramlogs to host
 
-//   hcom_ramlog_trace_lazy_initialization();
-// #endif
+  hcom_ramlog_trace_lazy_initialization();
+#endif
 
-//   char *sendMsgToHost = "Trace logs to be sent to CLI";
-//   hcom_comms_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0,
-//           sendMsgToHost, thisFile, __LINE__);
-// }
+  char *sendMsgToHost = "Trace logs to be sent to CLI";
+  hcom_comms_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0,
+          sendMsgToHost, thisFile, __LINE__);
+}
 
-// //======================================================================================
-// // Called from Meadow.CLI for both ramlog and syslog
-// void hcom_trace_do_not_send_trace_to_host(uint32_t userData)
-// {
-//   hcom_utils_clear_bbr_bits(HCOM_BBREG_TRACE_MSG_TO_HOST_BIT_MASK);
+//======================================================================================
+// Called from Meadow.CLI for both ramlog and syslog
+void hcom_trace_do_not_send_trace_to_host(uint32_t userData)
+{
+  hcom_utils_clear_bbr_bits(HCOM_BBREG_TRACE_MSG_TO_HOST_BIT_MASK);
 
-// #if defined (CONFIG_RAMLOG_SYSLOG)
-//   // Turn off ramlogs to host
-//   _trace_ramlog_to_host = false;
-// #endif
+#if defined (CONFIG_RAMLOG_SYSLOG)
+  // Turn off ramlogs to host
+  _trace_ramlog_to_host = false;
+#endif
 
-//   char *sendMsgToHost = "Trace logs no longer sent to CLI";
-//   hcom_comms_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0,
-//           sendMsgToHost, thisFile, __LINE__);
-// }
+  char *sendMsgToHost = "Trace logs no longer sent to CLI";
+  hcom_comms_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0,
+          sendMsgToHost, thisFile, __LINE__);
+}
 
-// //======================================================================================
-// // Called from Meadow.CLI to enable tracing to uart1.
-// void hcom_trace_send_trace_to_uart1(uint32_t userData)
-// {
-//   hcom_utils_set_bits_in_bbr(HCOM_BBREG_TRACE_MSG_TO_UART1_BIT_MASK);
+//======================================================================================
+// Called from Meadow.CLI to enable tracing to uart1.
+void hcom_trace_send_trace_to_uart1(uint32_t userData)
+{
+  hcom_utils_set_bbr_bits(HCOM_BBREG_TRACE_MSG_TO_UART1_BIT_MASK);
 
-//   // If ramlog configured, need to init ramlog now. This insures
-//   // that Meadow.CLI is listening
-// #if defined (CONFIG_RAMLOG_SYSLOG)
-//   _trace_ramlog_to_uart1 = true;  // Enable on ramlogs to uart1
+  // If ramlog configured, need to init ramlog now. This insures
+  // that Meadow.CLI is listening
+#if defined (CONFIG_RAMLOG_SYSLOG)
+  _trace_ramlog_to_uart1 = true;  // Enable on ramlogs to uart1
 
-//   // Initialize if needed
-//   hcom_ramlog_trace_lazy_initialization();
-// #endif
+  // Initialize if needed
+  hcom_ramlog_trace_lazy_initialization();
+#endif
 
-//   char *sendMsgToHost = "Trace logs will be sent to UART1";
-//   hcom_comms_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0,
-//           sendMsgToHost, thisFile, __LINE__);
-// }
+  char *sendMsgToHost = "Trace logs will be sent to UART1";
+  hcom_comms_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0,
+          sendMsgToHost, thisFile, __LINE__);
+}
 
-// //======================================================================================
-// // Called from Meadow.CLI for both ramlog and syslog
-// void hcom_trace_do_not_send_trace_to_uart1(uint32_t userData)
-// {
-//   hcom_utils_clear_bbr_bits(HCOM_BBREG_TRACE_MSG_TO_UART1_BIT_MASK);
+//======================================================================================
+// Called from Meadow.CLI for both ramlog and syslog
+void hcom_trace_do_not_send_trace_to_uart1(uint32_t userData)
+{
+  hcom_utils_clear_bbr_bits(HCOM_BBREG_TRACE_MSG_TO_UART1_BIT_MASK);
 
-// #if defined (CONFIG_RAMLOG_SYSLOG)
-//   _trace_ramlog_to_uart1 = false;
-// #endif
+#if defined (CONFIG_RAMLOG_SYSLOG)
+  _trace_ramlog_to_uart1 = false;
+#endif
 
-//   char *sendMsgToHost = "UART1 usable for .Net Apps";
-//   hcom_comms_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0,
-//           sendMsgToHost, thisFile, __LINE__);
-// }
+  char *sendMsgToHost = "UART1 usable for .Net Apps";
+  hcom_comms_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0,
+          sendMsgToHost, thisFile, __LINE__);
+}

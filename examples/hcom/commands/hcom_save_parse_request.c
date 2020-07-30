@@ -38,6 +38,7 @@
  ****************************************************************************/
 
 #include "../hcom_common.h"
+#include "../../../nuttx/configs/stm32f777zit6-meadow/src/hcom_proxy/hcom_proxy_shared.h"
 
 #if defined (CONFIG_HCOM_ESP32_COMMS)
 #include "../esp32/hcom_esp32_comms.h"
@@ -249,6 +250,7 @@ int hcom_parse_request_and_process(const uint8_t *packet, const size_t packetSiz
     // Data Packet (sequence number > 0) 
     hcom_comms_dbg(LOG_DEBUG, "%s@%d-Data seq:%d, len:%d\n", thisFile, __LINE__, seqNumb, packetSize); 
     // p-m Not ready for this functionality yet!!
+    syslog(1, "%s@%d-Data seq:%d, len:%d\n", thisFile, __LINE__, seqNumb, packetSize); 
     // hcom_exec_rqst_data_packet_recvd(packet, packetSize, seqNumb);
   }
 
@@ -342,7 +344,7 @@ void hcom_execute_host_command_type(const uint8_t *recvOrigData, const size_t re
     //---------------------------------------------------
     case HCOM_MDOW_REQUEST_VERIFY_ERASED_FLASH:
       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-//       hcom_exec_flash_fs_flash_verify_erase(userData);
+      hcom_proxy_forward_cmd_to_proxy(requestType, HCOM_PROXY_CLI_CMD_VERIFY_EX_FLASH, userData);
       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
       break;
 
@@ -379,30 +381,20 @@ void hcom_execute_host_command_type(const uint8_t *recvOrigData, const size_t re
       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
 
     case HCOM_MDOW_REQUEST_CHANGE_TRACE_LEVEL:
-      syslog(1, "Reached 'Change Trace Level'\n");    // p-m
-      hcom_comms_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0, "Reached 'Change Trace Level'",
-              thisFile, __LINE__);    // p-m
-
       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-//       hcom_exec_rqst_misc_change_trace_level(userData);
-      hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
-      break;
-
-    case HCOM_MDOW_REQUEST_ENABLE_DISABLE_NSH:
-      hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-//       hcom_exec_rqst_misc_enable_disable_nsh(userData);
+      hcom_exec_rqst_misc_change_trace_level(userData);
       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
       break;
 
     case HCOM_MDOW_REQUEST_LIST_PARTITION_FILES:
       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-//       hcom_exec_flash_fs_return_file_list(userData);
+      hcom_fs_get_list_files_in_partition(userData);
       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
       break;
 
     case HCOM_MDOW_REQUEST_LIST_PART_FILES_AND_CRC:
       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-//       hcom_exec_flash_fs_return_file_list_with_crc(userData);
+      hcom_fs_get_list_files_in_partition_and_crc(userData);
       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
       break;
 
@@ -414,69 +406,69 @@ void hcom_execute_host_command_type(const uint8_t *recvOrigData, const size_t re
 
     case HCOM_MDOW_REQUEST_GET_DEVICE_INFORMATION:
       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-//       hcom_exec_rqst_misc_get_device_info(userData);
+      hcom_exec_rqst_misc_get_device_info(userData);
       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
       break;
 
     case HCOM_MDOW_REQUEST_BULK_FLASH_ERASE:
       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-//       hcom_exec_flash_fs_flash_bulk_erase(userData);
+      hcom_proxy_forward_cmd_to_proxy(requestType, HCOM_PROXY_CLI_CMD_ERASE_EX_FLASH, userData);
       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
       break;
 
     // The following commands send the HCOM_HOST_REQUEST_TEXT_CONCLUDED message when Meadow restarts
     case HCOM_MDOW_REQUEST_RESET_PRIMARY_MCU:
       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-//       hcom_exec_rqst_misc_mcu_restart(userData);   // Forces restart
+      hcom_proxy_forward_cmd_to_proxy(requestType, HCOM_PROXY_CLI_CMD_RESTART_MEADOW, userData);
       break;
 
     case HCOM_MDOW_REQUEST_PART_RENEW_FILE_SYS:
       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-//       hcom_exec_flash_fs_part_renew_file_system(userData);   // Forces restart
+      hcom_proxy_forward_cmd_to_proxy(requestType, HCOM_PROXY_CLI_CMD_RENEW_FILE_SYS, userData);
       break;
 
 // NOT IMPLEMENTED
     case HCOM_MDOW_REQUEST_ENTER_DFU_MODE:
       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-//       hcom_exec_rqst_misc_enter_dfu_mode(userData);   // Forces restart
+      hcom_exec_rqst_misc_enter_dfu_mode(userData);   // Forces restart
       break;
 
     case HCOM_MDOW_REQUEST_MONO_DISABLE:
       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-//       hcom_exec_rqst_misc_mono_disable(userData);   // Forces restart
+      hcom_exec_rqst_misc_mono_disable(userData);   // Forces restart
       break;
 
     case HCOM_MDOW_REQUEST_MONO_ENABLE:
       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-//       hcom_exec_rqst_misc_mono_enable(userData);   // Forces restart
+      hcom_exec_rqst_misc_mono_enable(userData);   // Forces restart
       break;
 
     case HCOM_MDOW_REQUEST_MONO_FLASH:
       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-//       hcom_exec_rqst_misc_mono_flash(userData);   // Forces restart
+      hcom_proxy_forward_cmd_to_proxy(requestType, HCOM_PROXY_CLI_CMD_MONO_FLASH, userData);
       break;
 
     case HCOM_MDOW_REQUEST_NO_TRACE_TO_HOST:
       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-//       hcom_trace_do_not_send_trace_to_host(userData);
+      hcom_trace_do_not_send_trace_to_host(userData);
       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
       break;
 
     case HCOM_MDOW_REQUEST_SEND_TRACE_TO_HOST:
       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-//       hcom_trace_send_trace_to_host(userData);
+      hcom_trace_send_trace_to_host(userData);
       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
       break;
 
     case HCOM_MDOW_REQUEST_NO_TRACE_TO_UART:
       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-//       hcom_trace_do_not_send_trace_to_uart1(userData);
+      hcom_trace_do_not_send_trace_to_uart1(userData);
       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
       break;
 
     case HCOM_MDOW_REQUEST_SEND_TRACE_TO_UART:
       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-//       hcom_trace_send_trace_to_uart1(userData);
+      hcom_trace_send_trace_to_uart1(userData);
       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
       break;
 
@@ -485,9 +477,18 @@ void hcom_execute_host_command_type(const uint8_t *recvOrigData, const size_t re
 //       hcom_remote_dbg_recv_host_send_to_mono(recvPayload, recvPayloadSize, userData);
       break;
 
+    case HCOM_MDOW_REQUEST_ENABLE_DISABLE_NSH:
+      hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
+#if HCOM_INCLUDE_TESTS_NSH_AVAILABLE > 0
+      hcom_exec_rqst_misc_enable_disable_nsh(userData);
+#endif
+      hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
+      break;
+
     case HCOM_MDOW_REQUEST_DEVELOPER_1:
       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
 //       hcom_exec_rqst_testing_developer_1(userData);
+      hcom_proxy_forward_cmd_to_proxy(requestType, HCOM_PROXY_CLI_CMD_DEVELOPER_1, userData);
       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
       break;
 
@@ -505,6 +506,7 @@ void hcom_execute_host_command_type(const uint8_t *recvOrigData, const size_t re
 
     case HCOM_MDOW_REQUEST_DEVELOPER_4:
       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
+      hcom_recurse_all_directories("", 0);
 //       hcom_exec_rqst_testing_developer_4(userData);
       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
       break;

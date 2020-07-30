@@ -38,10 +38,9 @@
 /****************************************************************************
  * Included Files
  ****************************************************************************/
-
-#include "hcom_common.h"
 #include <sys/ioctl.h>
 
+#include "hcom_common.h"
 #include "../../../nuttx/configs/stm32f777zit6-meadow/src/hcom_proxy/hcom_proxy_shared.h"
 
 /****************************************************************************
@@ -140,7 +139,75 @@ int hcom_proxy_update_bbr(uint32_t clearBits, uint32_t setBits)
   return OK;
 }
 
-// NO DIRECT ACCESS TO REGISTERS POSSIBLE
+//=============================================================
+// This is a stub for getting the mcu unique id
+int hcom_proxy_get_mcu_id(uint8_t uniqueId[12])
+{
+  int ret;
+
+  ret = ioctl(_hcom_proxy_fd, HCOM_PROXY_UPD_GET_MCU_ID, (unsigned long)uniqueId);
+  if (ret < 0)
+  {
+    syslog(LOG_ERR, "%s:%s()@%d-%s Failed to get mcu id, errno:%d\n",
+            thisFile, __func__, __LINE__, HCOM_PROXY_UPD_DRIVER_NAME, errno);
+    return ret;
+  }
+
+  return OK;
+}
+
+//=============================================================
+// This is a stub for restarting meadow
+int hcom_proxy_restart_meadow(void)
+{
+  hcom_proxy_forward_cmd_to_proxy(0, HCOM_PROXY_CLI_CMD_RESTART_MEADOW, 0);
+  return OK;
+}
+
+//=============================================================
+// Those commands that need to be executed on the OS side are
+// routed through here
+void hcom_proxy_forward_cmd_to_proxy(uint16_t cliCmd, uint32_t proxyCmd, uint32_t userData)
+{
+  int ret;
+  struct hcom_proxy_cmd_data cmdData;
+
+  cmdData.proxyCmd = proxyCmd;
+  cmdData.userData = userData;
+
+  cmdData.logLevel = LOG_NONE;
+  cmdData.logLen = 0;
+  cmdData.hostLen = 0;
+
+  // Forward to hcom_proxy to complete command
+  ret = ioctl(_hcom_proxy_fd, HCOM_PROXY_UPD_CLI_COMMAND, (unsigned long)&cmdData);
+  if (ret < 0)
+  {
+    if(cmdData.logLen > 0)
+    {
+      DEBUGASSERT(cmdData.logLevel != LOG_NONE);
+      DEBUGASSERT(cmdData.logLen <= HCOM_PROXY_CMD_LOG_MSG_SIZE);
+      hcom_utils_f7syslog(cmdData.logLevel, "%s [cli cmd:0x%04x]", cmdData.logMsg, cliCmd);
+    }
+    else
+    {
+      hcom_utils_f7syslog(LOG_ERR, "%s:%s()@%d-%s Failed to update reg, errno:%d, cli cmd:0x%04x\n",
+              thisFile, __func__, __LINE__, HCOM_PROXY_UPD_DRIVER_NAME, errno, cliCmd);
+      return;   // Returned data may not be reliable
+    }
+  }
+
+  if(cmdData.hostLen > 0)
+  {
+    DEBUGASSERT(cmdData.hostLen <= HCOM_PROXY_CMD_HOST_MSG_SIZE);
+
+    hcom_comms_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION,
+          cmdData.userData, cmdData.hostMsg, thisFile, __LINE__);
+  }  
+}
+
+
+// NO DIRECT ACCESS TO REGISTERS IF POSSIBLE
 // //=============================================================
 // int hcom_proxy_set_register(uint32_t address, uint32_t value)
 // {

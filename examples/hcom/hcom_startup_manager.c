@@ -66,7 +66,6 @@ static char *thisFile = __FILE__;
  * Private Function Prototypes
  ****************************************************************************/
 
-static int hcom_manager_syslog_mask_init(void);
 static void hcom_manager_shutdown(void);
 static int hcom_manager_setup(void);
 
@@ -85,7 +84,7 @@ int hcom_main(int argc, char *argv[])
   int ret;
 
 // #if HCOM_TASK_SHOW_CREATED_TASK_PID_NAME > 0
-  syslog(1, "MGR-->The HCOM Main thread, \"init\" is running. It's PID:%d\n", getpid()); usleep(50 * 1000);
+  syslog(1, "MGR-->The HCOM Main thread, \"init\" is running. It's PID:%d\n", getpid()); usleep(500 * 1000);
 // #endif
 
  #if defined (CONFIG_RAMLOG_SYSLOG)
@@ -108,6 +107,7 @@ int hcom_main(int argc, char *argv[])
     return ret;
   }
 
+  // Allocates memory for logging buffer
   ret = hcom_utils_setup();
   if (ret < 0)
   {
@@ -116,21 +116,22 @@ int hcom_main(int argc, char *argv[])
     return ret;
   }
 
-#if HCOM_INCLUDE_BBR_TESTS_IN_STARTUP > 0
+#if HCOM_INCLUDE_TESTS_BBR_IN_STARTUP > 0
   hcom_bbr_tests();
 #endif
 
 #if defined(CONFIG_STM32F7_PWR)
   // Restore desired syslog mask from battery backed registers
-  ret = hcom_manager_syslog_mask_init();
+  ret = hcom_utils_syslog_mask_init();
   if(ret < 0)
   {
-    syslog(LOG_CRIT, "%s@%d-hcom_manager_syslog_mask_init failed:%d\n", thisFile, __LINE__, ret);
+    syslog(LOG_CRIT, "%s@%d-hcom_utils_syslog_mask_init failed:%d\n", thisFile, __LINE__, ret);
     return ret; 
   }
 #endif
 
   // General setup
+  syslog(1, "About to call hcom_manager_setup\n");
   ret = hcom_manager_setup();
   if (ret < 0)
   {
@@ -150,80 +151,6 @@ int hcom_main(int argc, char *argv[])
   }
 
   hcom_manager_shutdown();
-  return OK;
-}
-
-//==========================================================
-// This function sets up the syslog mask as desired
-int hcom_manager_syslog_mask_init()
-{
-  int syslogMask;
-  int syslogMaskPrev;
-  bool isPowerOnRestart;
-
-#if defined(CONFIG_STM32F7_PWR)
-  // Check if this is a reboot or a power-on restart. The MCU on Power-on
-  // clears all 32 battery backed registers to 0.
-  if(hcom_utils_bbr_read() == 0)
-  {
-    // Power-on restart
-    isPowerOnRestart = true;
-
-    // Set and save the syslog level to the default value
-    syslogMask = LOG_MASK(LOG_EMERG) | LOG_MASK(LOG_ALERT) | LOG_MASK(LOG_CRIT) |
-               LOG_MASK(LOG_ERR) | LOG_MASK(LOG_WARNING);
-    // This works here because we know that the bits are all zeros
-    hcom_utils_set_bits_in_bbr(syslogMask);
-  }
-  else
-  {
-    // Rebooted - it's safe to use the battery backed registers values
-    isPowerOnRestart = false;
-    syslogMask = hcom_utils_read_bbr_and_right_justify(HCOM_BBREG_RESTART_SYSLOG_CONFIG_VALUE_MASK);
-  }
-
-  // Save for emergency debugging :-)
-  // syslogMask = LOG_MASK(LOG_EMERG) | LOG_MASK(LOG_ALERT) | LOG_MASK(LOG_CRIT) |
-  //             LOG_MASK(LOG_ERR) | LOG_MASK(LOG_WARNING) | LOG_MASK(LOG_NOTICE) | 
-  //             LOG_MASK(LOG_INFO);  // | LOG_MASK(LOG_DEBUG);
-
-  // Sets new mask and returns the previous syslog_mask
-  syslogMaskPrev = setlogmask(syslogMask);
-  if (syslogMaskPrev < 0)
-  {
-    hcom_utils_f7syslog(LOG_CRIT, "%s@%d-setlogmask err:%d\n", thisFile, __LINE__, syslogMaskPrev);
-    return syslogMaskPrev;    // not old mask be error
-  }
-#else
-  // Without battery backed registers the best we can do is defaults
-  isPowerOnRestart = true;
-  syslogMask = LOG_MASK(LOG_EMERG) | LOG_MASK(LOG_ALERT) | LOG_MASK(LOG_CRIT) |
-              LOG_MASK(LOG_ERR) | LOG_MASK(LOG_WARNING);
-  syslogMaskPrev = setlogmask(syslogMask);
-#endif
-
-  // This is an informational syslog message
-  char *traceCombo[] = {
-    "none",
-    "Host",
-    "UART1",
-    "Host+UART1"};
-  // Check the 2 host and uart1 bits
-  uint32_t toValue = hcom_utils_read_bbr_and_right_justify(HCOM_BBREG_TRACE_MSG_TO_EITHER_BIT_MASK);
-  char *traceDest = traceCombo[toValue];
-
-  // Provide some information that may be useful
-  hcom_utils_f7syslog(LOG_INFO, "Meadow %s (%s@%s) %s, Mono:%s, Trace level:0x%02x(was 0x%02x), to:%s, type:%s\n",
-        HCOM_DEVICE_INFO_MEADOW_OS_VERSION, __DATE__, __TIME__, 
-        isPowerOnRestart ? "power-on restart" :"rebooted",
-        hcom_mono_ctrl_is_mono_enabled() ? "Enabled" : "Disabled",
-        syslogMask, syslogMaskPrev, traceDest,
-#if defined CONFIG_RAMLOG_SYSLOG
-        "ramlog");
-#else
-        "syslog");
-#endif
-
   return OK;
 }
 
@@ -247,13 +174,13 @@ int hcom_manager_setup()
 //     return ret;
 //   }
 
-//   // Sets a few internal variable states
-//   ret = hcom_exec_rqst_misc_setup(mtd);
-//   if (ret < 0)
-//   {
-//     hcom_utils_f7syslog(LOG_CRIT, "%s@%d-setup misc %d\n", thisFile, __LINE__, ret);
-//     return ret;
-//   }
+  // p-m Doesn't do anything
+  // ret = hcom_exec_rqst_misc_setup();
+  // if (ret < 0)
+  // {
+  //   hcom_utils_f7syslog(LOG_CRIT, "%s@%d-setup misc %d\n", thisFile, __LINE__, ret);
+  //   return ret;
+  // }
   
 //   // Sets a few internal variable states
 //   ret = hcom_exec_rqst_download_file_rqst_setup();
