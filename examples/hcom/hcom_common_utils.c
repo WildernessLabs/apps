@@ -467,7 +467,7 @@ static int hcom_util_build_syslog_string(int priority, FAR const IPTR char * fmt
   int stringLen = vsnprintf(finalString, maxStringLen - 1, finalFmt, argsList);
 
   // The snprintf return is considered to be written completely if and only if the returned value
-  // is non-negative and less than buf_size.
+  // is non-negative and less than buf_size. Otherwise, the string may be truncated.
   DEBUGASSERT(stringLen < HCOM_PROTOCOL_REQUEST_MAX_SIMPLE_DATA_LEN);
 
   free(finalFmt);

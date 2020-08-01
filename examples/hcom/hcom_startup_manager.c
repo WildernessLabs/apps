@@ -91,7 +91,7 @@ int hcom_main(int argc, char *argv[])
   // Sets up some basic initialization for ramlog, but may not create the
   // ramlog read thread etc. as this is not a commonly needed feature, some
   // setup is postponed until needed.
-  ret = hcom_ramlog_trace_setup();
+  ret = hcom_diag_ramlog_trace_setup();
   if (ret < 0)
   {
     hcom_utils_f7syslog(LOG_CRIT, "%s@%d-setup log tracing %d\n", thisFile, __LINE__, ret);
@@ -174,32 +174,45 @@ int hcom_manager_setup()
 //     return ret;
 //   }
 
-  // p-m Doesn't do anything
-  // ret = hcom_exec_rqst_misc_setup();
-  // if (ret < 0)
-  // {
-  //   hcom_utils_f7syslog(LOG_CRIT, "%s@%d-setup misc %d\n", thisFile, __LINE__, ret);
-  //   return ret;
-  // }
+  // Doesn't do anything
+  ret = hcom_diag_misc_setup();
+  if (ret < 0)
+  {
+    hcom_utils_f7syslog(LOG_CRIT, "%s@%d-setup misc %d\n", thisFile, __LINE__, ret);
+    return ret;
+  }
   
+  ret = hcom_rqst_misc_setup();
+  if (ret < 0)
+  {
+    hcom_utils_f7syslog(LOG_CRIT, "%s@%d-setup misc %d\n", thisFile, __LINE__, ret);
+    return ret;
+  }
 //   // Sets a few internal variable states
-//   ret = hcom_exec_rqst_download_file_rqst_setup();
+  ret = hcom_dnld_proc_setup();
 //   if (ret < 0)
 //   {
 //     hcom_utils_f7syslog(LOG_CRIT, "%s@%d-setup file download %d\n", thisFile, __LINE__, ret);
 //     return ret;
 //   }
 
-//   // Sets a few internal variable states
-//   ret = hcom_file_commands_setup();
-//   if (ret < 0)
-//   {
-//     hcom_utils_f7syslog(LOG_CRIT, "%s@%d-setup file cmds %d\n", thisFile, __LINE__, ret);
-//     return ret;
-//   }
+  // Sets a few internal variable states
+  ret = hcom_dnld_write_del_setup();
+  if (ret < 0)
+  {
+    hcom_utils_f7syslog(LOG_CRIT, "%s@%d-setup file cmds %d\n", thisFile, __LINE__, ret);
+    return ret;
+  }
 
   // Allocates memory for the circular buffer
-  ret = hcom_save_parse_request_setup();
+  ret = hcom_proc_rqst_setup();
+  if (ret < 0)
+  {
+    hcom_utils_f7syslog(LOG_CRIT, "%s@%d-setup host request %d\n", thisFile, __LINE__, ret);
+    return ret;
+  }
+
+  ret = hcom_route_rqst_setup();
   if (ret < 0)
   {
     hcom_utils_f7syslog(LOG_CRIT, "%s@%d-setup host request %d\n", thisFile, __LINE__, ret);
@@ -214,7 +227,7 @@ int hcom_manager_setup()
 //   }
 
 // #if defined(CONFIG_HCOM_MTD_STRESS_TEST)
-//   ret = hcom_exec_rqst_testing_setup(mtd);
+//   ret = proc_dnld_rqst_testing_setup(mtd);
 //   if (ret < 0)
 //   {
 //     hcom_utils_f7syslog(LOG_CRIT, "%s@%d-setup testing %d\n", thisFile, __LINE__, ret);
@@ -321,21 +334,22 @@ int hcom_manager_setup()
 // comms file descriptor which will cause the worker thread to exit.
 void hcom_manager_shutdown()
 {
-  syslog(1, "MGR-->%s@%d-Entered:%s hcom_ramlog_trace_setup\n", thisFile, __LINE__, __func__); usleep(100 * 1000);
+  syslog(1, "MGR-->%s@%d-Entered:%s hcom_diag_ramlog_trace_setup\n", thisFile, __LINE__, __func__); usleep(100 * 1000);
   
   // todo - confirm that all functions that need shutdown are called
   hcom_comms_recv_shutdown();
 //   hcom_mono_pipe_shutdown();
   hcom_utils_shutdown();
-  hcom_save_parse_request_shutdown();
+  hcom_route_rqst_shutdown();  
+  hcom_proc_rqst_shutdown();
   hcom_comms_send_msg_shutdown();
-//   hcom_file_commands_shutdown();
+  hcom_dnld_write_del_shutdown();
 //   hcom_fs_shutdown();
 //   hcom_remote_dbg_shutdown();
 // #if defined (CONFIG_HCOM_ESP32_COMMS)
 //   hcom_esp32_uart_comms_shutdown();
 // #endif
 #if defined (CONFIG_RAMLOG_SYSLOG)
-  hcom_ramlog_trace_shutdown();
+  hcom_diag_ramlog_trace_shutdown();
 #endif
 }

@@ -46,7 +46,7 @@
 /****************************************************************************
  * Private Data
  ****************************************************************************/
-// static char *thisFile = __FILE__;
+static char *thisFile = __FILE__;
 
 /****************************************************************************
  * Private Function Prototypes
@@ -68,6 +68,7 @@ int hcom_mono_ctrl_start_mono_if_needed()
   return OK;
 }
 
+//=======================================================================
 // Check of the file App.exe exists in the files system
 bool hcom_mono_ctrl_is_app_exe()
 {
@@ -93,3 +94,59 @@ bool hcom_mono_ctrl_is_mono_enabled()
 {
   return (hcom_utils_read_bbr_and_right_justify(HCOM_BBREG_MONO_START_BIT_MASK) != 0);
 }
+
+//=======================================================================================
+// Disable Mono from running on next MCU reset
+void hcom_mono_rqst_disable_mono(uint32_t userData)
+{
+  hcom_utils_clear_bbr_bits(HCOM_BBREG_MONO_START_BIT_MASK);
+
+  char *sendMsgToHost = "Mono disabled. Restarting Meadow";
+  hcom_comms_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0,
+          sendMsgToHost, thisFile, __LINE__);
+
+  hcom_utils_set_bbr_bits(HCOM_BBREG_RESTART_CONCLUDED_BIT_MASK);
+
+  // Tell host to begin to reconnect
+  hcom_comms_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_RECONNECT, userData,
+          sendMsgToHost, thisFile, __LINE__);
+
+  usleep(500 * 1000);
+  hcom_proxy_restart_meadow();
+}
+
+//=======================================================================================
+// Enable Mono to run on next MCU reset
+void hcom_mono_rqst_enable_mono(uint32_t userData)
+{
+  hcom_utils_set_bbr_bits(HCOM_BBREG_MONO_START_BIT_MASK);
+
+  char *sendMsgToHost = "Mono being enabled. Restarting F7 Micro";
+  hcom_comms_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0,
+          sendMsgToHost, thisFile, __LINE__);
+
+  hcom_utils_set_bbr_bits(HCOM_BBREG_RESTART_CONCLUDED_BIT_MASK);
+  
+  // Tell host to begin to reconnect
+  hcom_comms_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_RECONNECT, userData,
+          sendMsgToHost, thisFile, __LINE__);
+
+  usleep(500 * 1000);
+  hcom_proxy_restart_meadow();
+}
+
+//======================================================================================
+// The host has ask for the mono startup state
+void hcom_mono_rqst_is_mono_enabled(uint32_t userData)
+{
+  char *monoStartupMsg;
+
+  if(hcom_mono_ctrl_is_mono_enabled())
+    monoStartupMsg = "On reset, mono will run app.exe";
+  else
+    monoStartupMsg = "On reset, mono will not run app.exe";
+
+  hcom_comms_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0,
+          monoStartupMsg, thisFile, __LINE__);
+}
+

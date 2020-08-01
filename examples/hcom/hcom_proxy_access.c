@@ -61,6 +61,8 @@ static int _hcom_proxy_fd;
  * Private Function Prototypes
  ****************************************************************************/
 
+int hcom_proxy_is_mounted(uint32_t partitionId, bool *isMounted);
+
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -157,6 +159,40 @@ int hcom_proxy_get_mcu_id(uint8_t uniqueId[12])
 }
 
 //=============================================================
+// Is this this partition mounted in the file system?
+bool hcom_fs_is_mounted(uint32_t partitionId)
+{
+  int ret;
+  bool isMounted;
+  
+  ret = hcom_proxy_is_mounted(partitionId, &isMounted);
+  if(ret < 0)
+  {
+    return false;
+  }
+  return isMounted;
+}
+
+// The is mounted proxy caller
+int hcom_proxy_is_mounted(uint32_t partitionId, bool *isMounted)
+{
+  int ret;
+  struct hcom_proxy_upd_is_part_mounted is_mounted;
+  is_mounted.partitionId = partitionId;
+
+  ret = ioctl(_hcom_proxy_fd, HCOM_PROXY_UPD_IS_PART_MOUNTED, (unsigned long) &is_mounted);
+  if (ret < 0)
+  {
+    syslog(LOG_ERR, "%s:%s()@%d-%s Failed to get mcu id, errno:%d\n",
+            thisFile, __func__, __LINE__, HCOM_PROXY_UPD_DRIVER_NAME, errno);
+    return ret;
+  }
+
+  *isMounted = is_mounted.isMounted;
+  return OK;
+}
+
+//=============================================================
 // This is a stub for restarting meadow
 int hcom_proxy_restart_meadow(void)
 {
@@ -177,7 +213,7 @@ void hcom_proxy_forward_cmd_to_proxy(uint16_t cliCmd, uint32_t proxyCmd, uint32_
 
   cmdData.logLevel = LOG_NONE;
   cmdData.logLen = 0;
-  cmdData.hostLen = 0;
+  cmdData.send_host_text = hcom_comms_send_simple_text_msg;
 
   // Forward to hcom_proxy to complete command
   ret = ioctl(_hcom_proxy_fd, HCOM_PROXY_UPD_CLI_COMMAND, (unsigned long)&cmdData);
@@ -196,14 +232,6 @@ void hcom_proxy_forward_cmd_to_proxy(uint16_t cliCmd, uint32_t proxyCmd, uint32_
       return;   // Returned data may not be reliable
     }
   }
-
-  if(cmdData.hostLen > 0)
-  {
-    DEBUGASSERT(cmdData.hostLen <= HCOM_PROXY_CMD_HOST_MSG_SIZE);
-
-    hcom_comms_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION,
-          cmdData.userData, cmdData.hostMsg, thisFile, __LINE__);
-  }  
 }
 
 

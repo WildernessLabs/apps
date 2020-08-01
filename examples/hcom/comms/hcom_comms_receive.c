@@ -180,9 +180,9 @@ int hcom_comms_recv_restart_concluded()
   else
     monoStartupMsg = "Mono disabled, will not run app.exe";
 
-  // hcom_comms_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0,
-  //         monoStartupMsg, thisFile, __LINE__);
-  syslog(1, "Exited %s()\n", __func__); usleep(50 * 1000);
+  hcom_comms_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0,
+          monoStartupMsg, thisFile, __LINE__);
+
   return OK;
 }
 
@@ -240,13 +240,9 @@ bool hcom_comms_receive_data()
   // Stay in this loop forever
   while (!_shutting_down)
   {
-    // p-m - hcom_exec_rqst_download_is_download_active() not implemented yet
     ssize_t readResult = hcom_comms_recv_wait_until_change(_tempRecvBuff,
-              false ?
+              hcom_dnld_proc_is_active() ?
                 HCOM_RECV_TIMEOUT_ACTIVE_SECONDS : HCOM_RECV_TIMEOUT_DEFAULT_SECONDS);
-    // ssize_t readResult = hcom_comms_recv_wait_until_change(_tempRecvBuff,
-    //           hcom_exec_rqst_download_is_download_active() ?
-    //             HCOM_RECV_TIMEOUT_ACTIVE_SECONDS : HCOM_RECV_TIMEOUT_DEFAULT_SECONDS);
 
     // Return > 0 valid data received and this is the length
     if (readResult > 0)
@@ -254,7 +250,7 @@ bool hcom_comms_receive_data()
       // We've received some data
       syslog(1, "RCV-->Received %d bytes\n", readResult);
 
-      int result = hcom_comms_recv_process_raw_data(_tempRecvBuff, readResult);
+      int result = hcom_proc_rqst_process_raw_data(_tempRecvBuff, readResult);
       if (result < 0)
       {
         hcom_utils_f7syslog(LOG_WARNING, "%s@%d-%d received\n", thisFile, __LINE__, result);
@@ -272,9 +268,7 @@ bool hcom_comms_receive_data()
     // readResult < 0
     if (readResult == -ETIMEDOUT) // Time out is usually not a problem
     {
-      // p-m - download is not yet implemented
-      // if (hcom_exec_rqst_download_is_download_active())
-      if (false)
+      if (hcom_dnld_proc_is_active())
       {
         hcom_utils_f7syslog(LOG_WARNING, "%s@%d-Comms stopped. Recvd:%d of msg\n", thisFile, __LINE__, readResult);
       }

@@ -53,212 +53,30 @@
 static char *thisFile = __FILE__;
 
 static bool _shutting_down;
-static struct host_com_cir_buffer_s *_hcom_cbuf;
-static size_t _max_packet_size = HCOM_SAFE_PACKET_BUF_SIZE;
 
 /****************************************************************************
  * Private Function Prototypes
  ****************************************************************************/
 
-static void hcom_execute_host_command_type(const uint8_t *recvOrigData, const size_t recvOrigDataSize);
-static int hcom_parse_request_and_process(const uint8_t *packet, const size_t packetSize);
-static int hcom_comms_recvpull_all_packets_from_buffer(void);
-
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
-int hcom_save_parse_request_setup()
+int hcom_route_rqst_setup()
 {
   _shutting_down = false;
-
-  _hcom_cbuf = (struct host_com_cir_buffer_s *)malloc(sizeof(struct host_com_cir_buffer_s));
-  if (_hcom_cbuf == NULL)
-  {
-    hcom_utils_f7syslog(LOG_ERR, "%s@%d-cir buf alloc\n", thisFile, __LINE__);
-    return -1;
-  }
-
-  int result = hcom_cirbuf_init(_hcom_cbuf, HCOM_CIRCULAR_BUF_MEM_SIZE,
-          HCOM_PROTOCOL_PACKET_DELIMITER_VALUE);
-  if (result == HCOM_CIR_BUF_INIT_FAILED)
-  {
-    hcom_utils_f7syslog(LOG_ERR, "%s@%d-hcom_cirbuf_init\n", thisFile, __LINE__);
-    return -1;
-  }
-
   return OK;
 }
 
 //====================================================================
-void hcom_save_parse_request_shutdown()
+void hcom_route_rqst_shutdown()
 {
   _shutting_down = true;
-
-  free(_hcom_cbuf);
-}
-
-//=======================================================================
-// Add the received data to the circular buffer. It can be added byte by byte
-// or several messages at once.
-int hcom_comms_recv_process_raw_data(uint8_t recvBuff[], const ssize_t recvByteCnt)
-{
-  int result;
-
-  if (recvByteCnt == 0)
-    return OK;
-
-  // This loop is used to add raw data to the buffer until no more will fit
-  for (;;)
-  {
-    // p-m
-    // syslog(1, "%s@%d-adding %d bytes to cir buf\n", thisFile, __LINE__, recvByteCnt);
-    // hcom_utils_diag_print_buffer(recvBuff, recvByteCnt, 1);
-
-    result = hcom_cirbuf_add_bytes(_hcom_cbuf, recvBuff, recvByteCnt);
-    if(result == HCOM_CIR_BUF_ADD_SUCCESS)
-    {
-      hcom_comms_dbg(LOG_DEBUG, "%s@%d-%d bytes added to cir buf\n", thisFile, __LINE__, recvByteCnt);
-
-      // In all valid cases pull all full packets and process them
-      break;
-    }
-    else if (result == HCOM_CIR_BUF_ADD_WONT_FIT)
-    {
-      // Wasn't possible to put these bytes in the buffer. We need to
-      // process a few packets and then retry to add this data
-      hcom_utils_f7syslog(LOG_WARNING, "%s@%d-No room in cir buf, pull and retry\n",
-              thisFile, __LINE__);
-      result = hcom_comms_recvpull_all_packets_from_buffer();
-      if (result == HCOM_CIR_BUF_GET_FOUND_MSG)
-        continue;   // There should be room now for the failed add
-
-      if (result == HCOM_CIR_BUF_GET_NONE_FOUND || result == HCOM_CIR_BUF_GET_DEST_NO_ROOM)
-      {
-        hcom_utils_f7syslog(LOG_ERR, "%s@%d-pull packets from cir buf %d\n",
-                 thisFile, __LINE__, result);
-        return OK;    // Report and throw data away.
-      }
-    }
-    else if (result == HCOM_CIR_BUF_ADD_BAD_ARG)
-    {
-      // Bad argument
-      hcom_utils_f7syslog(LOG_ERR, "%s@%d-Bad argument to cir buf\n", thisFile, __LINE__);
-      return OK; // Report and throw data away and keep going
-    }
-    else
-    {
-      hcom_utils_f7syslog(LOG_ERR, "%s@%d-Unknown cir buf add err:%d\n", thisFile, __LINE__, result);
-      return OK; // Report and throw data away and keep going
-    }
-  }
-
-  // This could be on a separate thread
-  result = hcom_comms_recvpull_all_packets_from_buffer();
-  return result;
-}
-
-//====================================================================
-// Pull and process all the complete packets from the circular buffer
-int hcom_comms_recvpull_all_packets_from_buffer()
-{
-  int result;
-  // Todo - the memory allocated for this is never freed.
-  static uint8_t *packet_dest_buf = NULL;
-  static uint8_t *decode_dest_buf = NULL;
-
-  if (packet_dest_buf == NULL)
-  {
-    packet_dest_buf = (uint8_t *)malloc(_max_packet_size);
-    decode_dest_buf = (uint8_t *)malloc(_max_packet_size);
-  }
-
-  for (;;)
-  {
-    size_t packetLength;
-    // If buffer too small packetLength will contain the desired size
-    result = hcom_cirbuf_get_next_packet(_hcom_cbuf, packet_dest_buf, _max_packet_size, &packetLength);
-
-    if (result == HCOM_CIR_BUF_GET_NONE_FOUND)
-      return OK; // Return to receive more data
-
-    DEBUGASSERT(result != HCOM_CIR_BUF_GET_DEST_NO_ROOM);
-    DEBUGASSERT(result == HCOM_CIR_BUF_GET_FOUND_MSG);
-
-    // // p-m
-    // syslog(1, "%s@%d-pulled %d bytes from cir buf\n", thisFile, __LINE__, packetLength);
-    // hcom_utils_diag_print_buffer(packet_dest_buf, packetLength, 1);
-
-    // Drop trailing delimiter of 0x00 (--packetLength) then decode the packet
-    size_t decodedPacketSize = hcom_comms_cobs_decoder(packet_dest_buf, --packetLength, decode_dest_buf);
-
-    // // p-m
-    // syslog(1, "%s@%d-decoded %d bytes from cir buf\n", thisFile, __LINE__, decodedPacketSize);
-    // hcom_utils_diag_print_buffer(decode_dest_buf, decodedPacketSize, 1);
-
-    if(decodedPacketSize == 0)
-      continue;
-      
-    // Process the received data
-    result = hcom_parse_request_and_process(decode_dest_buf, decodedPacketSize);
-    if (result == OK)
-    {
-      continue; // pull next packet
-    }
-    else if (result < 0)
-    {
-      hcom_utils_f7syslog(LOG_ERR, "%s@%d-processing data:%d\n", thisFile, __LINE__, result);
-      return result;
-      // If ever supported NAK to host to resend bad data
-    }
-    else
-    {
-      hcom_utils_f7syslog(LOG_ERR, "%s@%d-unknown value %d\n",
-              thisFile, __LINE__, result);
-      return result;
-    }
-  }
-}
-
-//====================================================================
-// Parse and process received packet as sent by host
-// 1) Grab the sequence number
-// 2) Remove sequence number and process as needed
-int hcom_parse_request_and_process(const uint8_t *packet, const size_t packetSize)
-{
-  int msgOffset = 0;
-
-  // Recover sequence number and "remove" from packet
-  uint16_t seqNumb = packet[msgOffset] + (packet[msgOffset + 1] << 8);
-  msgOffset += sizeof(uint16_t);
-
-  // p-m
-  syslog(1, "%s@%d-%s packet, seq:%d, len:%d\n", thisFile, __LINE__, seqNumb == 0 ? "Non-data" : "Data", seqNumb, packetSize); // p-m
-
-  // The sequence number determines packet type
-  if (seqNumb == HCOM_PROTOCOL_REQUEST_HEADER_SIMPLE_SEQ_NUMBER)
-  {
-    // A non-data packet i.e. command (sequence number == 0)
-    hcom_comms_dbg(LOG_DEBUG, "%s@%d-Non-data seq:%d, len:%d\n", thisFile, __LINE__, seqNumb, packetSize); 
-#if HCOM_COMMS_DEBUG > 0
-    hcom_utils_diag_print_buffer(packet, packetSize, LOG_DEBUG);
-#endif
-    hcom_execute_host_command_type(packet + msgOffset, packetSize - msgOffset);
-  }
-  else
-  {
-    // Data Packet (sequence number > 0) 
-    hcom_comms_dbg(LOG_DEBUG, "%s@%d-Data seq:%d, len:%d\n", thisFile, __LINE__, seqNumb, packetSize); 
-    // p-m Not ready for this functionality yet!!
-    syslog(1, "%s@%d-Data seq:%d, len:%d\n", thisFile, __LINE__, seqNumb, packetSize); 
-    // hcom_exec_rqst_data_packet_recvd(packet, packetSize, seqNumb);
-  }
-
-  return OK;
 }
 
 //========================================================================
-// Parse the manditory header
+// Parse the manditory header. This commands that need other data will
+// parse the individual optional header
 void hcom_execute_host_command_type(const uint8_t *recvOrigData, const size_t recvOrigDataSize)
 {
   int msgOffset = 0;
@@ -297,19 +115,19 @@ void hcom_execute_host_command_type(const uint8_t *recvOrigData, const size_t re
   {
     case HCOM_MDOW_REQUEST_START_FILE_TRANSFER:
       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-      // hcom_exec_rqst_download_file_rqst_start(recvPayload, recvPayloadSize, userData, requestType);
+      hcom_dnld_proc_begin(recvPayload, recvPayloadSize, userData, requestType);
       break;
       
     // Note: Start file transfer provides the 'Accepted' message and
     // end file transfer the 'Concluded' message
     case HCOM_MDOW_REQUEST_END_FILE_TRANSFER:
-//       hcom_exec_rqst_download_file_rqst_end(userData);
+      hcom_dnld_proc_end(userData);
       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
       break;
 
     case HCOM_MDOW_REQUEST_DELETE_FILE_BY_NAME:
       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-//       hcom_exec_flash_fs_delete(recvPayload, recvPayloadSize, userData);
+      hcom_dnld_write_del_remove_file_start(recvPayload, recvPayloadSize, userData);
       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
       break;
 
@@ -317,13 +135,13 @@ void hcom_execute_host_command_type(const uint8_t *recvOrigData, const size_t re
     // ESP32 follow
     case HCOM_MDOW_REQUEST_START_ESP_FILE_TRANSFER:
       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-//       hcom_exec_rqst_download_file_rqst_start(recvPayload, recvPayloadSize, userData, requestType);
+      hcom_dnld_proc_begin(recvPayload, recvPayloadSize, userData, requestType);
       break;
 
     // Note: Start file transfer provides the 'Accepted' message and
     // end file transfer the 'Concluded' message
     case HCOM_MDOW_REQUEST_END_ESP_FILE_TRANSFER:
-//       hcom_exec_rqst_download_file_rqst_end(userData);
+      hcom_dnld_proc_end(userData);
       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
       break;
     
@@ -348,65 +166,66 @@ void hcom_execute_host_command_type(const uint8_t *recvOrigData, const size_t re
       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
       break;
 
-      // Partitions the entire flash chip with the number of partitions that
-      // are defined by userData.
-    case HCOM_MDOW_REQUEST_PARTITION_FLASH_FS:
-      hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-//       hcom_exec_flash_fs_partition(userData);
-      hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
-      break;
+// p-m These are not needed
+//       // Partitions the entire flash chip with the number of partitions that
+//       // are defined by userData.
+//     case HCOM_MDOW_REQUEST_PARTITION_FLASH_FS:
+//       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
+// //       hcom_exec_flash_fs_partition(userData);
+//       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
+//       break;
 
-      // Mount the file system for testing.
-    case HCOM_MDOW_REQUEST_MOUNT_FLASH_FS:
-      hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-//       hcom_exec_flash_fs_mount(userData);
-      hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
-      break;
+//       // Mount the file system for testing.
+//     case HCOM_MDOW_REQUEST_MOUNT_FLASH_FS:
+//       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
+// //       hcom_exec_flash_fs_mount(userData);
+//       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
+//       break;
 
-    case HCOM_MDOW_REQUEST_FORMAT_FLASH_FILE_SYS:
-      hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-//       hcom_exec_flash_fs_format(userData);
-      hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
-      break;
+//     case HCOM_MDOW_REQUEST_FORMAT_FLASH_FILE_SYS:
+//       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
+// //       hcom_exec_flash_fs_format(userData);
+//       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
+//       break;
 
-    case HCOM_MDOW_REQUEST_INITIALIZE_FLASH_FS:
-      hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-//       hcom_exec_flash_fs_initialize(userData);
-      hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
-      break;
+//     case HCOM_MDOW_REQUEST_INITIALIZE_FLASH_FS:
+//       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
+// //       hcom_exec_flash_fs_initialize(userData);
+//       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
+//       break;
 
-    case HCOM_MDOW_REQUEST_CREATE_ENTIRE_FLASH_FS:
-      hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-//       hcom_exec_flash_fs_create(userData);
-      hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
+//     case HCOM_MDOW_REQUEST_CREATE_ENTIRE_FLASH_FS:
+//       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
+// //       hcom_exec_flash_fs_create(userData);
+//       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
 
     case HCOM_MDOW_REQUEST_CHANGE_TRACE_LEVEL:
       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-      hcom_exec_rqst_misc_change_trace_level(userData);
+      hcom_diag_misc_change_trace_level(userData);
       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
       break;
 
     case HCOM_MDOW_REQUEST_LIST_PARTITION_FILES:
       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-      hcom_fs_get_list_files_in_partition(userData);
+      hcom_list_files_in_partition(userData);
       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
       break;
 
     case HCOM_MDOW_REQUEST_LIST_PART_FILES_AND_CRC:
       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-      hcom_fs_get_list_files_in_partition_and_crc(userData);
+      hcom_list_files_and_crc_in_partition(userData);
       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
       break;
 
     case HCOM_MDOW_REQUEST_MONO_RUN_STATE:
       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-//       hcom_exec_rqst_misc_mono_run_state(userData);
+//       hcom_mono_rqst_is_mono_enabled(userData);
       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
       break;
 
     case HCOM_MDOW_REQUEST_GET_DEVICE_INFORMATION:
       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-      hcom_exec_rqst_misc_get_device_info(userData);
+      hcom_rqst_misc_get_device_info(userData);
       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
       break;
 
@@ -430,17 +249,17 @@ void hcom_execute_host_command_type(const uint8_t *recvOrigData, const size_t re
 // NOT IMPLEMENTED
     case HCOM_MDOW_REQUEST_ENTER_DFU_MODE:
       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-      hcom_exec_rqst_misc_enter_dfu_mode(userData);   // Forces restart
+      hcom_rqst_misc_enter_dfu_mode(userData);   // Forces restart
       break;
 
     case HCOM_MDOW_REQUEST_MONO_DISABLE:
       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-      hcom_exec_rqst_misc_mono_disable(userData);   // Forces restart
+      hcom_mono_rqst_disable_mono(userData);   // Forces restart
       break;
 
     case HCOM_MDOW_REQUEST_MONO_ENABLE:
       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-      hcom_exec_rqst_misc_mono_enable(userData);   // Forces restart
+      hcom_mono_rqst_enable_mono(userData);   // Forces restart
       break;
 
     case HCOM_MDOW_REQUEST_MONO_FLASH:
@@ -479,54 +298,52 @@ void hcom_execute_host_command_type(const uint8_t *recvOrigData, const size_t re
 
     case HCOM_MDOW_REQUEST_ENABLE_DISABLE_NSH:
       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-#if HCOM_INCLUDE_TESTS_NSH_AVAILABLE > 0
-      hcom_exec_rqst_misc_enable_disable_nsh(userData);
-#endif
+      hcom_diag_misc_launch_nsh(userData);
       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
       break;
 
     case HCOM_MDOW_REQUEST_DEVELOPER_1:
       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-//       hcom_exec_rqst_testing_developer_1(userData);
+//       proc_dnld_rqst_testing_developer_1(userData);
       hcom_proxy_forward_cmd_to_proxy(requestType, HCOM_PROXY_CLI_CMD_DEVELOPER_1, userData);
       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
       break;
 
     case HCOM_MDOW_REQUEST_DEVELOPER_2:
       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-//       hcom_exec_rqst_testing_developer_2(userData);
+//       proc_dnld_rqst_testing_developer_2(userData);
       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
       break;
 
     case HCOM_MDOW_REQUEST_DEVELOPER_3:
       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-//       hcom_exec_rqst_testing_developer_3(userData);
+//       proc_dnld_rqst_testing_developer_3(userData);
       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
       break;
 
     case HCOM_MDOW_REQUEST_DEVELOPER_4:
       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-      hcom_recurse_all_directories("", 0);
-//       hcom_exec_rqst_testing_developer_4(userData);
+      hcom_list_all_dev_dir_and_files_start();
+//       proc_dnld_rqst_testing_developer_4(userData);
       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
       break;
 
 #if defined(CONFIG_HCOM_MTD_STRESS_TEST)
     case HCOM_MDOW_REQUEST_S25FL_QSPI_INIT:
       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-//       hcom_exec_rqst_testing_flash_qspi_init(userData);
+//       proc_dnld_rqst_testing_flash_qspi_init(userData);
       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
       break;
 
     case HCOM_MDOW_REQUEST_S25FL_QSPI_WRITE:
       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-//       hcom_exec_rqst_testing_flash_qspi_write(userData);
+//       proc_dnld_rqst_testing_flash_qspi_write(userData);
       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
       break;
 
     case HCOM_MDOW_REQUEST_S25FL_QSPI_READ:
       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-//       hcom_exec_rqst_testing_flash_qspi_read(userData);
+//       proc_dnld_rqst_testing_flash_qspi_read(userData);
       hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
       break;
 #endif

@@ -126,6 +126,15 @@ void hcom_comms_send_header_msg(uint16_t requestType, uint32_t userData,
 }
 
 //=====================================================================
+// THIS IS THE FUNCTION TO USED WHEN THE REQUEST TYPE IS NOT AVAILABLE
+void hcom_comms_send_simple_text_msg(char *shortText, uint32_t userData, 
+            char *sourceFileName, int sourceLineNumber)
+{
+  hcom_comms_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, userData,
+            shortText, sourceFileName, sourceLineNumber);
+}
+
+//=====================================================================
 // THIS IS THE FUNCTION THAT SHOULD BE USED
 // Prepare a simple line of text for transmission and output the error message here
 void hcom_comms_send_simple_string_msg(uint16_t requestType, uint32_t userData,
@@ -158,12 +167,12 @@ int hcom_comms_send_raw_string_msg(uint16_t requestType, uint32_t userData, char
 //=====================================================================
 // This function is intended to be the sole entry point to messages
 // that needed to be sent to Meadow.CLI.
-// The following needs to efficiently handler both ramlog and syslog
+// The following needs to efficiently handle both ramlog and syslog
 // configurations in 3 situations: 1) actively communicating with the
 // CLI, 2) connected to host PC and CLI is not communicating and 3) 
 // Meadow is not connected to a host PC, this is the most usually
 // situation.
-int hcom_comms_send_simple_buffer_msg(uint16_t requestType, uint16_t extraData,
+static int hcom_comms_send_simple_buffer_msg(uint16_t requestType, uint16_t extraData,
         uint32_t userData, uint8_t *origMsg, size_t msgLen)
 {
   int ret;

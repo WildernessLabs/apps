@@ -58,12 +58,14 @@ static char *thisFile = __FILE__;
 /****************************************************************************
  * Private Function Prototypes
  ****************************************************************************/
-uint32_t hcom_file_commands_calc_crc_for_file(char *completeFilePath, off_t *fileSize, uint32_t *blockSizeKB);
+uint32_t hcom_calc_crc_for_file(char *completeFilePath, off_t *fileSize,
+          uint32_t *blockSizeKB);
+int hcom_list_all_dev_dir_and_files(const char *name, int indent);
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
-int hcom_fs_get_list_files_in_partition(uint32_t partitionId)
+int hcom_list_files_in_partition(uint32_t partitionId)
 {
   int fileCount = 0;
 
@@ -76,14 +78,15 @@ int hcom_fs_get_list_files_in_partition(uint32_t partitionId)
 
   // Construct file name
 #ifdef CONFIG_MTD_PARTITION
-  int stringLen = snprintf(fullMountPtName, HCOM_MAX_PATH_AND_FILE_BUFF_LENGTH, "%s%s%d", "/dev", HCOM_FILE_MOUNT_POINT_TARGET, partitionId);
+  int stringLen = snprintf(fullMountPtName, HCOM_MAX_PATH_AND_FILE_BUFF_LENGTH, "%s%d",
+            HCOM_FILE_MOUNT_POINT_TARGET, partitionId);
   DEBUGASSERT(stringLen < HCOM_MAX_PATH_AND_FILE_BUFF_LENGTH);
 #else
   DEBUGASSERT(strlen(HCOM_FILE_MOUNT_POINT_TARGET) < HCOM_MAX_PATH_AND_FILE_BUFF_LENGTH);
   strncpy(fullMountPtName, HCOM_FILE_MOUNT_POINT_TARGET, HCOM_MAX_PATH_AND_FILE_BUFF_LENGTH);
 
 #endif
-syslog(1, "Opening directory:'%s'\n", fullMountPtName);
+
   dirp = opendir(fullMountPtName);
   if ( !dirp )
   {
@@ -108,7 +111,6 @@ syslog(1, "Opening directory:'%s'\n", fullMountPtName);
 #endif
       int fileNameLen;
       fileNameLen = snprintf(singleFileFound, HCOM_MAX_PATH_AND_FILE_BUFF_LENGTH, "%s/%s", fullMountPtName, direntry->d_name);
-      
       DEBUGASSERT(fileNameLen < HCOM_MAX_PATH_AND_FILE_BUFF_LENGTH);
       hcom_comms_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_LIST_MEMBER, 0, singleFileFound, thisFile, __LINE__);
     }
@@ -118,6 +120,14 @@ syslog(1, "Opening directory:'%s'\n", fullMountPtName);
   {
     hcom_comms_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_LIST_MEMBER, 0,
                   "No files found", thisFile, __LINE__);
+  }
+  else
+  {
+    char hostMsg[HCOM_SHORT_HOST_STRING_BUFF_LENGTH];
+    snprintf(hostMsg, HCOM_SHORT_HOST_STRING_BUFF_LENGTH,
+              "A total of %d file%s found", fileCount, fileCount == 1 ? "" : "s");
+    hcom_comms_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_LIST_MEMBER, 0,
+                  hostMsg, thisFile, __LINE__);
   }
 
   closedir(dirp);
@@ -129,7 +139,7 @@ syslog(1, "Opening directory:'%s'\n", fullMountPtName);
 }
 
 //=====================================================================
-int hcom_fs_get_list_files_in_partition_and_crc(uint32_t partitionId)
+int hcom_list_files_and_crc_in_partition(uint32_t partitionId)
 {
   int fileCount = 0;
 
@@ -176,7 +186,7 @@ int hcom_fs_get_list_files_in_partition_and_crc(uint32_t partitionId)
       // Find the CRC checksum
       off_t fileSize;
       uint32_t blockSizeKB;
-      uint32_t crcChecksum = hcom_file_commands_calc_crc_for_file(completeNameBuf, &fileSize, &blockSizeKB);
+      uint32_t crcChecksum = hcom_calc_crc_for_file(completeNameBuf, &fileSize, &blockSizeKB);
       totalSizeOfFiles += fileSize;
       totalFlashSizeKB += blockSizeKB;
 
@@ -206,10 +216,10 @@ int hcom_fs_get_list_files_in_partition_and_crc(uint32_t partitionId)
   {
     // Need comma separators for file size? I tried %'d and this didn't work. Here are some DIY ideas:
     // https://stackoverflow.com/questions/1449805/how-to-format-a-number-from-1123456789-to-1-123-456-789-in-c/24795133#24795133
-    int fileNameLen = snprintf(singleFileFound, HCOM_MAX_PATH_AND_FILE_BUFF_LENGTH,
-          "Total of %d files using %d KB (%u bytes)", fileCount, totalFlashSizeKB, totalSizeOfFiles);
+    snprintf(singleFileFound, HCOM_MAX_PATH_AND_FILE_BUFF_LENGTH,
+          "A total of %d file%s using %d KB (%u bytes)", fileCount,
+          fileCount == 1 ? "" : "s", totalFlashSizeKB, totalSizeOfFiles);
 
-    DEBUGASSERT(fileNameLen < HCOM_MAX_PATH_AND_FILE_BUFF_LENGTH);
     hcom_comms_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_CRC_MEMBER, 0,
                   singleFileFound, thisFile, __LINE__);
   }
@@ -223,30 +233,19 @@ int hcom_fs_get_list_files_in_partition_and_crc(uint32_t partitionId)
   return OK;
 }
 
-// Error message
-// hcom_utils_f7syslog(LOG_ERR, "%s@%d-No results:%d\n", thisFile, __LINE__, ret);
-
-// int stringLen = snprintf(hostMsg, HCOM_SHORT_HOST_STRING_BUFF_LENGTH, "No results available");
-// DEBUGASSERT(stringLen < HCOM_SHORT_HOST_STRING_BUFF_LENGTH);
-// hcom_comms_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_ERROR, 0, hostMsg,
-//         thisFile, __LINE__);
-
-
 // ==============================================================
-// THIS IS CALLABLE from Developer 4
-// #include <unistd.h>
-// #include <sys/types.h>
-// //#include <dirent.h>
-// #include <stdio.h>
-// #include <string.h>
+// THIS IS CALLABLE from Developer 4 at this time
+int hcom_list_all_dev_dir_and_files_start()
+{
+  // Changing "/" to "meadow0" will only show files
+  return hcom_list_all_dev_dir_and_files("/", 0);
+}
 
 // WARNING - Recursive function
-int hcom_recurse_all_directories(const char *name, int indent)
+int hcom_list_all_dev_dir_and_files(const char *name, int indent)
 {
-  syslog(1, "Entered directory search\n");
+  char hostMsg[HCOM_SHORT_HOST_STRING_BUFF_LENGTH];
 
-  name = "/dev";
-  indent = 0;
   DIR *dir;
   struct dirent *entry;
 
@@ -260,18 +259,34 @@ int hcom_recurse_all_directories(const char *name, int indent)
   {
     if (DIRENT_ISDIRECTORY(entry->d_type))
     {
-      syslog(1, "Found directory\n");
+      // Directory
       char path[1024];
-      if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
-          continue;
-          
       snprintf(path, sizeof(path), "%s/%s", name, entry->d_name);
-      syslog(1, "%*s[%s]\n", indent, "", entry->d_name);
-      hcom_recurse_all_directories(path, indent + 2);
+      snprintf(hostMsg, HCOM_SHORT_HOST_STRING_BUFF_LENGTH,
+              "%*s%s/\n", indent, "", entry->d_name);
+      hcom_comms_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION,
+                0, hostMsg, thisFile, __LINE__);
+      syslog(1, hostMsg);
+
+      if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
+        continue;
+
+      hcom_list_all_dev_dir_and_files(path, indent + 1);
     }
     else
     {
-      syslog(1, "%*s- %s [type-0x%02x]\n", indent, "", entry->d_name, entry->d_type);
+      // All other entry types
+      char *entryType;
+      if(DIRENT_ISFILE(entry->d_type)) {entryType = "file";}
+      else if(DIRENT_ISCHR(entry->d_type)) {entryType = "char";}
+      else if(DIRENT_ISBLK(entry->d_type)) {entryType = "block";}
+      else if(DIRENT_ISLINK(entry->d_type)) {entryType = "link";}
+      else {entryType = "????";}
+      snprintf(hostMsg, HCOM_SHORT_HOST_STRING_BUFF_LENGTH,
+              "%*s%s [%s]\n",indent, "", entry->d_name, entryType);
+      hcom_comms_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION,
+                0, hostMsg, thisFile, __LINE__);
+      syslog(1, hostMsg);
     }
   }
 
@@ -280,8 +295,9 @@ int hcom_recurse_all_directories(const char *name, int indent)
 }
 
 //==================================================================
-// This call will calculate the crc32 checksum for the active file
-uint32_t hcom_file_commands_calc_crc_for_file(char *completeFilePath, off_t *fileSize, uint32_t *blockSizeKB)
+// This call will calculate the crc32 checksum for the requested file
+uint32_t hcom_calc_crc_for_file(char *completeFilePath,
+          off_t *fileSize, uint32_t *blockSizeKB)
 {
   uint32_t crc32Checksum = 0;
   uint8_t *crcReadBuff;
@@ -301,6 +317,7 @@ uint32_t hcom_file_commands_calc_crc_for_file(char *completeFilePath, off_t *fil
   }
 
   hcom_comms_dbg(LOG_DEBUG, "Opened %s for CRC\n", completeFilePath);
+
   // from nuttx stat.h
   // struct stat
   // {

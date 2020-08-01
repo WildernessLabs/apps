@@ -37,7 +37,7 @@ typedef struct {
 #include "mappings-meadow.h"
 #include "mappings-system-native.h"
 
-#include "../../../nuttx/configs/stm32f777zit6-meadow/src/hcom/hcom_mono_main.h"
+//#include "../../../nuttx/configs/stm32f777zit6-meadow/src/hcom/hcom_mono_main.h"
 
 #ifdef BUILD_MONO_DEBUGGING_TEST_CODE
 // For TCP Testing
@@ -231,48 +231,48 @@ static int MonoDebugTestExecute(void)
   exit(1);
 }
 #endif
-//==================================================================
-static int RedirectStdout(void)
-{
-  int ret;
-  int errcode = 0;
+// //==================================================================
+// static int RedirectStdout(void)
+// {
+//   int ret;
+//   int errcode = 0;
 
-  if(!_shutting_down && _pipe_fd < 0)
-  {
-    set_errno(0);
+//   if(!_shutting_down && _pipe_fd < 0)
+//   {
+//     set_errno(0);
 
-    // Open loop
-    do
-    {
-      // Opening with O_NONBLOCK seems like the right thing to do but
-      // it is NOT. It causes the mono app to halt.
-      _pipe_fd = open(HCOM_MONO_MAIN_STDOUT_PIPE, O_WRONLY);
-      if(_pipe_fd > 0)
-        break;
+//     // Open loop
+//     do
+//     {
+//       // Opening with O_NONBLOCK seems like the right thing to do but
+//       // it is NOT. It causes the mono app to halt.
+//       _pipe_fd = open(HCOM_MONO_MAIN_STDOUT_PIPE, O_WRONLY);
+//       if(_pipe_fd > 0)
+//         break;
 
-      errcode = errno;
-      if(errcode != ENOENT)   // ENOENT = Error No Entity -> No such file or directory
-      {
-        syslog(LOG_ERR, "%s() Error: open() of %s failed with errno=%d\n",
-          __func__, HCOM_MONO_MAIN_STDOUT_PIPE, errcode);
-        _pipe_fd = -1;
-        return 1;
-      }
+//       errcode = errno;
+//       if(errcode != ENOENT)   // ENOENT = Error No Entity -> No such file or directory
+//       {
+//         syslog(LOG_ERR, "%s() Error: open() of %s failed with errno=%d\n",
+//           __func__, HCOM_MONO_MAIN_STDOUT_PIPE, errcode);
+//         _pipe_fd = -1;
+//         return 1;
+//       }
       
-      usleep(500 * 1000);
-    } while (errcode == ENOENT);
+//       usleep(500 * 1000);
+//     } while (errcode == ENOENT);
 
-    // Assign the pipe's input to what has been stdout
-    // ret should be 1 the stdout fd
-    ret = dup2(_pipe_fd, STDOUT_FILENO);
-    if (ret < 0)
-    {
-      syslog(LOG_ERR, "redirect_writer: dup2 failed ret:%d errno:%d\n", ret, errno);
-      return 2;
-    }
-  }
-  return OK;
-}
+//     // Assign the pipe's input to what has been stdout
+//     // ret should be 1 the stdout fd
+//     ret = dup2(_pipe_fd, STDOUT_FILENO);
+//     if (ret < 0)
+//     {
+//       syslog(LOG_ERR, "redirect_writer: dup2 failed ret:%d errno:%d\n", ret, errno);
+//       return 2;
+//     }
+//   }
+//   return OK;
+// }
 
 /****************************************************************************
  * mono_main
@@ -291,42 +291,43 @@ int main(int argc, FAR char *argv[])
 int mono_main(int argc, char *argv[])
 #endif
 {
-  // When nuttx launches the user defined entry point (CONFIG_USER_ENTRYPOINT) 
-  // argc == 1 and argv[0] = "init" this is the name NuttX always gives the
-  // task it internally launches.
-  if(argc != 1 || strcmp(argv[0], "init") != 0)
-  {
-    // This is NOT THE NORMAL NUTTX STARTUP via 'init' task
-    // Maybe there's a work request to be acted upon for the next MCU reset.
-    if(argc == (int)HCOM_MONO_MAIN_ACCESS_KEY)
-    {
-      // Save the numberic value until NuttX re-starts mono. It will then be tested
-      // and if a match is found take some special action.
-      _startupAction = atoi(argv[0]);
-      return OK;
-    }
+// p-m removed 
+//   // When nuttx launches the user defined entry point (CONFIG_USER_ENTRYPOINT) 
+//   // argc == 1 and argv[0] = "init" this is the name NuttX always gives the
+//   // task it internally launches.
+//   if(argc != 1 || strcmp(argv[0], "init") != 0)
+//   {
+//     // This is NOT THE NORMAL NUTTX STARTUP via 'init' task
+//     // Maybe there's a work request to be acted upon for the next MCU reset.
+//     if(argc == (int)HCOM_MONO_MAIN_ACCESS_KEY)
+//     {
+//       // Save the numberic value until NuttX re-starts mono. It will then be tested
+//       // and if a match is found take some special action.
+//       _startupAction = atoi(argv[0]);
+//       return OK;
+//     }
 
-#ifdef CONFIG_SYSTEM_NSH
-    // Note: there's always 1 argument, it's the name of the task. For the one
-    // defined by CONFIG_USER_ENTRYPOINT it's "init". So using a different task
-    // name (e.g. "nshTask") allows the mono_main entry point to launch NuttShell.
-    if(argc == 1 && strcmp(argv[0], "nshTask") == 0)
-    {
-      nsh_main(argc, argv);
-      return OK;
-    }
-#endif
+// #ifdef CONFIG_SYSTEM_NSH
+//     // Note: there's always 1 argument, it's the name of the task. For the one
+//     // defined by CONFIG_USER_ENTRYPOINT it's "init". So using a different task
+//     // name (e.g. "nshTask") allows the mono_main entry point to launch NuttShell.
+//     if(argc == 1 && strcmp(argv[0], "nshTask") == 0)
+//     {
+//       nsh_main(argc, argv);
+//       return OK;
+//     }
+// #endif
 
-    return OK;
-    //-------------------------------------------------
-  }
+//     return OK;
+//     //-------------------------------------------------
+//   }
   
-  // Check if it should be started
-  if(_startupAction == HCOM_MONO_MAIN_ACTION_ENABLE_KEY)
-    return OK;    // Disable mono by returning the thread that was to run it
+//   // Check if it should be started
+//   if(_startupAction == HCOM_MONO_MAIN_ACTION_ENABLE_KEY)
+//     return OK;    // Disable mono by returning the thread that was to run it
 
-  if (!mono_should_run)
-    return OK;
+//   if (!mono_should_run)
+//     return OK;
 
   // Normal mono startup follows
   symtab_initialize();
@@ -348,6 +349,7 @@ int mono_main(int argc, char *argv[])
 
   boardctl(BIOC_EXIT_MEMMAP, 0);
 
+// p-m MOVE THIS TO HCOM
 #ifdef CONFIG_MTD_PARTITION
   const char app_path[] = "/meadow0/App.exe";
 #else
@@ -361,13 +363,13 @@ int mono_main(int argc, char *argv[])
     return 0;
   }
 
-#if defined(CONFIG_HCOM_MONO_OUTPUT_PIPE)
-  RedirectStdout();
-#endif
+// #if defined(CONFIG_HCOM_MONO_OUTPUT_PIPE)
+//   RedirectStdout();
+// #endif
 
-#ifdef BUILD_MONO_DEBUGGING_TEST_CODE
-  MonoDebugTestExecute();
-#endif
+// #ifdef BUILD_MONO_DEBUGGING_TEST_CODE
+//   MonoDebugTestExecute();
+// #endif
 
   usleep(300 * 1000);
 

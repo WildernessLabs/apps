@@ -50,20 +50,20 @@ STACKSIZE = $(CONFIG_EXAMPLES_HCOM_STACKSIZE)
 HCOM_DIR = ../../../hcom/
 ASRCS =
 CSRCS = hcom_common_utils.c \
-	hcom_host_trace_ramlog.c \
 	hcom_mono_control.c \
+	hcom_proxy_access.c \
 	comms/hcom_comms_receive.c \
 	comms/hcom_comms_send.c \
 	comms/hcom_comms_support.c \
-	commands/hcom_save_parse_request.c \
-	commands/hcom_exec_rqst_download.c \
-	commands/hcom_exec_rqst_misc.c \
-	file_access/delete_file.c \
-	file_access/write_file.c \
-	file_access/list_files.c \
-	hcom_proxy_access.c \
+	diag/hcom_diag_misc.c \
+	diag/hcom_diag_trace_ramlog.c \
+	file_access/hcom_dnld_process_file.c \
+	file_access/hcom_dnld_write_and_del.c \
+	file_access/hcom_list_files.c \
 	hcom_tests/hcom_bbr_tests.c \
-	hcom_tests/hcom_run_nsh.c
+	host_rqsts/hcom_misc_requests.c \
+	host_rqsts/hcom_proc_requests.c \
+	host_rqsts/hcom_route_requests.c
 
 MAINSRC = hcom_startup_manager.c
 

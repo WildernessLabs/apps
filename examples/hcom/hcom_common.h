@@ -135,7 +135,6 @@
 #define HCOM_THREAD_NAME_TRACE_RAMLOG "RamlogxRead"
 
 //---------------------------------------------------------------------
-
 // These define how long the receive thread waits before "waking up"
 // p-m DON'T FORGET
 #define HCOM_RECV_TIMEOUT_DEFAULT_SECONDS 60
@@ -222,6 +221,9 @@ enum hcom_current_data_packet_activity
   CurrentHcomDataPacketActionF7FileXfer, // Could be expanded to specify file type (e.g. mscorlib.dll)
   CurrentHcomDataPacketActionEsp32FileXfer,
 };
+
+// Used for writing and deleting files
+#define HCOM_INVALID_PARTITION_ID_VALUE 0xffffffff
 
 //----------------------------------------------------------------
 // Trace level constants
@@ -440,27 +442,33 @@ extern "C"
   void hcom_comms_send_msg_shutdown(void);
   void hcom_comms_send_header_msg(uint16_t requestType, uint32_t userData,
           char *sourceFileName, int sourceLineNumber);
+  void hcom_comms_send_simple_text_msg(char *shortText, uint32_t userData, 
+          char *sourceFileName, int sourceLineNumber);
   void hcom_comms_send_simple_string_msg(uint16_t requestType, uint32_t userData, char *shortText,
           char *sourceFileName, int sourceLineNumber);
   int hcom_comms_send_raw_string_msg(uint16_t requestType, uint32_t userData, char *shortText,
           size_t msgLength, char *sourceFileName, int sourceLineNumber);
 
-//   // Save and Parse request
-  int hcom_save_parse_request_setup(void);
-  void hcom_save_parse_request_shutdown(void);
-  int hcom_comms_recv_process_raw_data(uint8_t recvBuff[], const ssize_t recvByteCnt);
+  // Save and Parse request
+  int hcom_proc_rqst_setup(void);
+  void hcom_proc_rqst_shutdown(void);
+  int hcom_proc_rqst_process_raw_data(uint8_t recvBuff[], const ssize_t recvByteCnt);
+  void hcom_execute_host_command_type(const uint8_t *recvOrigData, const size_t recvOrigDataSize);
+
+  int hcom_route_rqst_setup(void);
+  void hcom_route_rqst_shutdown(void);
 
 //   // Execute Request for downloaded file
-//   int hcom_exec_rqst_download_file_rqst_setup(void);
-//   bool hcom_exec_rqst_download_is_download_active(void);
-//   void hcom_exec_rqst_download_file_rqst_start(const uint8_t *recvPacketData,
-//       const size_t recvPacketDataSize,uint32_t partitionId, uint16_t requestType);
-//   void hcom_exec_rqst_download_file_rqst_end(uint32_t user_data);
-  void hcom_exec_rqst_data_packet_recvd(const uint8_t *packet, const size_t packetSize, uint16_t seqNumb);
+  int hcom_dnld_proc_setup(void);
+  bool hcom_dnld_proc_is_active(void);
+  void hcom_dnld_proc_begin(const uint8_t *recvPacketData,
+      const size_t recvPacketDataSize,uint32_t partitionId, uint16_t requestType);
+  void hcom_dnld_proc_end(uint32_t user_data);
+  void hcom_dnld_proc_recvd_file_data(const uint8_t *packet, const size_t packetSize, uint16_t seqNumb);
 
-//   // Execute Flash file system related request
+  // Execute Flash file system related request
 //   int hcom_exec_flash_fs_setup(FAR struct mtd_dev_s *mtd);
-//   void hcom_exec_flash_fs_delete(const uint8_t *recvPacketData, const size_t recvPacketDataSize, uint32_t user_data);
+  void hcom_dnld_write_del_remove_file_start(const uint8_t *recvPacketData, const size_t recvPacketDataSize, uint32_t user_data);
 //   void hcom_exec_flash_fs_format(uint32_t partitionId);
 //   void hcom_exec_flash_fs_partition(uint32_t numbOfPartitions);
 //   void hcom_exec_flash_fs_mount(uint32_t user_data);
@@ -468,28 +476,29 @@ extern "C"
 //   void hcom_exec_flash_fs_create(uint32_t userData);
 //   void hcom_exec_flash_fs_return_file_list(uint32_t partitionId);
 //   void hcom_exec_flash_fs_return_file_list_with_crc(uint32_t partitionId);
+  
+  // 
+  int hcom_diag_misc_setup(void);
 
-//   // Execute Utility Request
-  int hcom_exec_rqst_misc_setup(void);
-//   void hcom_exec_rqst_misc_mcu_restart(uint32_t user_data);
-  void hcom_exec_rqst_misc_enter_dfu_mode(uint32_t user_data);
-  void hcom_exec_rqst_misc_change_trace_level(uint32_t userData);
+  // Execute Utility Request
+  int hcom_rqst_misc_setup(void);
+  void hcom_rqst_misc_enter_dfu_mode(uint32_t user_data);
+  void hcom_diag_misc_change_trace_level(uint32_t userData);
   void hcom_proxy_forward_cmd_to_proxy(uint16_t cliCmd, uint32_t proxyCmd, uint32_t userData);
 
-  void hcom_exec_rqst_misc_mono_disable(uint32_t userData);
-  void hcom_exec_rqst_misc_mono_enable(uint32_t userData);
-//   void hcom_exec_rqst_misc_mono_run_state(uint32_t userData);
-  void hcom_exec_rqst_misc_get_device_info(uint32_t userData);
+  void hcom_mono_rqst_disable_mono(uint32_t userData);
+  void hcom_mono_rqst_enable_mono(uint32_t userData);
+//   void hcom_mono_rqst_is_mono_enabled(uint32_t userData);
+  void hcom_rqst_misc_get_device_info(uint32_t userData);
+  void hcom_diag_misc_launch_nsh(uint32_t userData);
 
 //   // File commands
-//   int hcom_file_commands_setup(void);
-//   void hcom_file_commands_shutdown(void);
-//   bool hcom_file_commands_is_active_file(void);
-//   int hcom_file_commands_open_active_file(const uint32_t partitionId, const char *mountPoint, const char *fileName);
-//   int hcom_file_commands_write_to_active_file(const uint8_t *fileWriteData, const size_t fileWriteSize);
-//   int hcom_file_commands_close_active_file(void);
-//   uint32_t hcom_file_commands_calc_crc_for_file(char *completeFilePath);
-//   int hcom_file_commands_delete_by_name(const uint32_t partitionId, const char *mountPoint, const char *fileName);
+  int hcom_dnld_write_del_setup(void);
+  void hcom_dnld_write_del_shutdown(void);
+  // bool hcom_dnld_write_del_is_active_file(void);
+  int hcom_dnld_write_del_open_active_file(const uint32_t partitionId, const char *mountPoint, const char *fileName);
+  int hcom_dnld_write_del_add_to_active_file(const uint8_t *fileWriteData, const size_t fileWriteSize);
+  int hcom_dnld_write_del_close_active_file(void);
 
 //   // File system helper
 //   int hcom_fs_setup(FAR struct mtd_dev_s *mtd);
@@ -499,11 +508,11 @@ extern "C"
 //   int hcom_fs_init_partitions(FAR struct mtd_dev_s *master_flash_mtd, uint32_t partitionCount);
 //   int hcom_fs_mount_file_system(const char *sourceDevice, const char *targetDevice,
 //                                           const char *fileSystemType, uint32_t partitionId, const char *mountCommand);
-//   bool hcom_fs_is_mounted(uint32_t partitionId);
+  bool hcom_fs_is_mounted(uint32_t partitionId);
 //   int hcom_fs_1st_erase_sector_of_partition(uint32_t partitionId);
-  int hcom_fs_get_list_files_in_partition(uint32_t partitionId);
-  int hcom_fs_get_list_files_in_partition_and_crc(uint32_t partitionId);
-  int hcom_recurse_all_directories(const char *name, int indent);
+  int hcom_list_files_in_partition(uint32_t partitionId);
+  int hcom_list_files_and_crc_in_partition(uint32_t partitionId);
+  int hcom_list_all_dev_dir_and_files_start(void);
 
 //   int hcom_fs_initialize_proxy(uint32_t partitionId);
 //   int hcom_fs_format_proxy(uint32_t partitionId);
@@ -581,8 +590,8 @@ extern "C"
 
   // Ramlog to host/uart
 #if defined (CONFIG_RAMLOG_SYSLOG)
-  int hcom_ramlog_trace_setup(void);
-  void hcom_ramlog_trace_shutdown(void);
+  int hcom_diag_ramlog_trace_setup(void);
+  void hcom_diag_ramlog_trace_shutdown(void);
 #endif
   void hcom_trace_send_trace_to_host(uint32_t userData);
   void hcom_trace_do_not_send_trace_to_host(uint32_t userData);
@@ -590,14 +599,14 @@ extern "C"
   void hcom_trace_do_not_send_trace_to_uart1(uint32_t userData);
 
 //   // Testing utilities
-//   int hcom_exec_rqst_testing_setup(FAR struct mtd_dev_s *mtd);
-//   void hcom_exec_rqst_testing_flash_qspi_init(uint32_t userData);
-//   void hcom_exec_rqst_testing_flash_qspi_write(uint32_t userData);
-//   void hcom_exec_rqst_testing_flash_qspi_read(uint32_t userData);
-//   void hcom_exec_rqst_testing_developer_1(uint32_t userData);
-//   void hcom_exec_rqst_testing_developer_2(uint32_t userData);
-//   void hcom_exec_rqst_testing_developer_3(uint32_t userData);
-//   void hcom_exec_rqst_testing_developer_4(uint32_t userData);
+//   int proc_dnld_rqst_testing_setup(FAR struct mtd_dev_s *mtd);
+//   void proc_dnld_rqst_testing_flash_qspi_init(uint32_t userData);
+//   void proc_dnld_rqst_testing_flash_qspi_write(uint32_t userData);
+//   void proc_dnld_rqst_testing_flash_qspi_read(uint32_t userData);
+//   void proc_dnld_rqst_testing_developer_1(uint32_t userData);
+//   void proc_dnld_rqst_testing_developer_2(uint32_t userData);
+//   void proc_dnld_rqst_testing_developer_3(uint32_t userData);
+//   void proc_dnld_rqst_testing_developer_4(uint32_t userData);
 
 //----------------------------------------------------------------
 // Redefine Battery Backed Registers so we know what's what
@@ -620,15 +629,11 @@ extern "C"
 // Diagnostic aids
 //=================================================================
 #define HCOM_INCLUDE_TESTS_BBR_IN_STARTUP 0
-#define HCOM_INCLUDE_TESTS_NSH_AVAILABLE 1
 
 #if HCOM_INCLUDE_TESTS_BBR_IN_STARTUP > 0
 void hcom_bbr_tests(void);
 #endif
 
-#if HCOM_INCLUDE_TESTS_NSH_AVAILABLE > 0
-void hcom_exec_rqst_misc_enable_disable_nsh(uint32_t userData);
-#endif
 
 #define HCOM_TASK_SHOW_CREATED_TASK_PID_NAME  0
 #define HCOM_COMMON_UTILS_DIAG_PRINT_BUFFER   1

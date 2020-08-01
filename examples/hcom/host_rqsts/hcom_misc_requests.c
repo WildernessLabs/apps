@@ -2,8 +2,6 @@
  * configs/stm32f777-zit6-meadow/src/hcom/hcom_exec_utility_request.c
  * 
  *   Copyright (C) 2019 - 2020 Wilderness Labs. All rights reserved.
- *   Copyright (C) 2017 Gregory Nutt. All rights reserved.
- *   Copyright (C) 2017 Alan Carvalho de Assis. All rights reserved.
  *   Author:  Wilderness Labs
  *
  * Redistribution and use in source and binary forms, with or without
@@ -67,130 +65,13 @@ static char *thisFile = __FILE__;
  * Public Functions
  ****************************************************************************/
 
-int hcom_exec_rqst_misc_setup()
+int hcom_rqst_misc_setup()
 {
   return OK;
 }
 
-//=======================================================================================
-void hcom_exec_rqst_misc_change_trace_level(uint32_t userData)
-{
-  char hostMsg[HCOM_SHORT_HOST_STRING_BUFF_LENGTH];
-  int stringLen;
-
-  int syslogmask = LOG_MASK(LOG_EMERG) | LOG_MASK(LOG_ALERT) | LOG_MASK(LOG_CRIT) | LOG_MASK(LOG_ERR) |
-                   LOG_MASK(LOG_WARNING);
-
-  switch (userData)
-  {
-    case HCOM_TRACE_LEVEL_NOTICE:
-      syslogmask |= LOG_MASK(LOG_NOTICE);
-      break;
-
-    case HCOM_TRACE_LEVEL_NOTICE_INFO:
-      syslogmask |= LOG_MASK(LOG_NOTICE) | LOG_MASK(LOG_INFO);
-      break;
-
-    case HCOM_TRACE_LEVEL_NOTICE_INFO_DEBUG:
-      syslogmask |= LOG_MASK(LOG_NOTICE) | LOG_MASK(LOG_INFO) | LOG_MASK(LOG_DEBUG);
-      break;
-    
-    case HCOM_TRACE_LEVEL_DEFAULT:
-    default:    // use already calculated syslogmask
-      break;
-  }
-
-  hcom_utils_clear_then_set_bbr_bits(HCOM_BBREG_RESTART_SYSLOG_CONFIG_VALUE_MASK, syslogmask);
-
-  // Does the user care about the old trace level returned as a mask?
-  int newTraceLevel = setlogmask(syslogmask);
-
-  stringLen = snprintf(hostMsg, HCOM_SHORT_HOST_STRING_BUFF_LENGTH,
-          "Trace level changed from 0x%02x to 0x%02x",
-          newTraceLevel, syslogmask);
-
-  DEBUGASSERT(stringLen < HCOM_SHORT_HOST_STRING_BUFF_LENGTH);
-  hcom_comms_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0, hostMsg,
-          thisFile, __LINE__);
-
-  hcom_utils_f7syslog(LOG_NOTICE, "Trace from 0x%02x to 0x%02x\n\n", newTraceLevel, syslogmask);
-}
-
-//=======================================================================================
-void hcom_exec_rqst_misc_mcu_restart(uint32_t userData)
-{
-  // Set flag for testing on restart
-  hcom_utils_set_bbr_bits(HCOM_BBREG_RESTART_CONCLUDED_BIT_MASK);
-
-  char *sendMsgToHost = "Restarting F7 Micro"; 
-  hcom_comms_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, userData,
-          sendMsgToHost, thisFile, __LINE__);
-
-  // Tell host to begin to reconnect
-  hcom_comms_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_RECONNECT, userData,
-          sendMsgToHost, thisFile, __LINE__);
-
-  usleep(500 * 1000);
-  hcom_proxy_restart_meadow();
-}
-
-//=======================================================================================
-// Disable Mono from running on next MCU reset
-void hcom_exec_rqst_misc_mono_disable(uint32_t userData)
-{
-  hcom_utils_clear_bbr_bits(HCOM_BBREG_MONO_START_BIT_MASK);
-
-  char *sendMsgToHost = "Mono disabled. Restarting Meadow";
-  hcom_comms_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0,
-          sendMsgToHost, thisFile, __LINE__);
-
-  hcom_utils_set_bbr_bits(HCOM_BBREG_RESTART_CONCLUDED_BIT_MASK);
-
-  // Tell host to begin to reconnect
-  hcom_comms_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_RECONNECT, userData,
-          sendMsgToHost, thisFile, __LINE__);
-
-  usleep(500 * 1000);
-  hcom_proxy_restart_meadow();
-}
-
-//=======================================================================================
-// Enable Mono to run on next MCU reset
-void hcom_exec_rqst_misc_mono_enable(uint32_t userData)
-{
-  hcom_utils_set_bbr_bits(HCOM_BBREG_MONO_START_BIT_MASK);
-
-  char *sendMsgToHost = "Mono being enabled. Restarting F7 Micro";
-  hcom_comms_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0,
-          sendMsgToHost, thisFile, __LINE__);
-
-  hcom_utils_set_bbr_bits(HCOM_BBREG_RESTART_CONCLUDED_BIT_MASK);
-  
-  // Tell host to begin to reconnect
-  hcom_comms_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_RECONNECT, userData,
-          sendMsgToHost, thisFile, __LINE__);
-
-  usleep(500 * 1000);
-  hcom_proxy_restart_meadow();
-}
-
 //======================================================================================
-// The host has ask for the mono startup state
-void hcom_exec_rqst_misc_mono_run_state(uint32_t userData)
-{
-  char *monoStartupMsg;
-
-  if(hcom_mono_ctrl_is_mono_enabled())
-    monoStartupMsg = "On reset, mono will run app.exe";
-  else
-    monoStartupMsg = "On reset, mono will not run app.exe";
-
-  hcom_comms_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0,
-          monoStartupMsg, thisFile, __LINE__);
-}
-
-//======================================================================================
-void hcom_exec_rqst_misc_get_device_info(uint32_t userData)
+void hcom_rqst_misc_get_device_info(uint32_t userData)
 {
   char *csvDevInfo;
   int stringLen;
@@ -261,9 +142,8 @@ void hcom_exec_rqst_misc_get_device_info(uint32_t userData)
 
 //======================================================================================
 // Enter the dfu mode so the user can flash the internal flash with the OS
-void hcom_exec_rqst_misc_enter_dfu_mode(uint32_t userData)
+void hcom_rqst_misc_enter_dfu_mode(uint32_t userData)
 {
   hcom_comms_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_DEVICE_INFO, 0,
           "DFU mode not implemented", thisFile, __LINE__);
 }
-
