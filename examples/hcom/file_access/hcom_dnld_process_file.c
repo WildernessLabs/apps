@@ -164,7 +164,7 @@ void hcom_dnld_proc_begin(const uint8_t *recvPacketData, const size_t recvPacket
       memcpy(fileNameBuffer, recvPacketData + msgOffset + HCOM_PROTOCOL_REQUEST_MD5_HASH_LENGTH,
               fileNameLength);
       fileNameBuffer[fileNameLength] = '\0';
-      hcom_utils_f7syslog(LOG_INFO, "Meadow download (Size:%d, Crc:0x%08x, Name:%s)\n",
+      hcom_logging_syslog(LOG_INFO, "Meadow download (Size:%d, Crc:0x%08x, Name:%s)\n",
               _xferRecvFullFileSize, _xferRecvFullFileCrc, fileNameBuffer);
       
       // Adding file to F7 file system
@@ -172,7 +172,7 @@ void hcom_dnld_proc_begin(const uint8_t *recvPacketData, const size_t recvPacket
       if (ret < 0)
       {
         _fileSystemOpenFailed = true;
-        hcom_utils_f7syslog(LOG_ERR, "%s@%d-from call to open file in flash:%d\n", thisFile, __LINE__, ret);
+        hcom_logging_syslog(LOG_ERR, "%s@%d-from call to open file in flash:%d\n", thisFile, __LINE__, ret);
       }
       free(fileNameBuffer);
       break;
@@ -184,7 +184,7 @@ void hcom_dnld_proc_begin(const uint8_t *recvPacketData, const size_t recvPacket
       memcpy(_md5FileHash, recvPacketData + msgOffset, HCOM_PROTOCOL_REQUEST_MD5_HASH_LENGTH);
       _md5FileHash[HCOM_PROTOCOL_REQUEST_MD5_HASH_LENGTH] = '\0';
 
-      hcom_utils_f7syslog(LOG_INFO, "ESP32 download (Size:%d, Crc:0x%08x, MCUAddr:0x%08x, MD5Hash:%s)\n",
+      hcom_logging_syslog(LOG_INFO, "ESP32 download (Size:%d, Crc:0x%08x, MCUAddr:0x%08x, MD5Hash:%s)\n",
               _xferRecvFullFileSize, _xferRecvFullFileCrc, _xferTargetMcuAddr, _md5FileHash);
 
       // Adding file to ESP32-pico-d4 flash
@@ -193,7 +193,7 @@ void hcom_dnld_proc_begin(const uint8_t *recvPacketData, const size_t recvPacket
       {
         _fileSystemOpenFailed = true;
         _currentHcomDataPacketAction = CurrentHcomDataPacketActionNone;
-        hcom_utils_f7syslog(LOG_ERR, "%s@%d-from call for ESP32 start transfer:%d\n", thisFile, __LINE__, ret);
+        hcom_logging_syslog(LOG_ERR, "%s@%d-from call for ESP32 start transfer:%d\n", thisFile, __LINE__, ret);
       }
 #endif
       break;
@@ -209,7 +209,7 @@ void hcom_dnld_proc_begin(const uint8_t *recvPacketData, const size_t recvPacket
   else
     sendStartMsg = "File transfer has begun";
 
-  hcom_comms_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0, sendStartMsg,
+  hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0, sendStartMsg,
           thisFile, __LINE__);
 }
 
@@ -227,7 +227,7 @@ void hcom_dnld_proc_recvd_file_data(const uint8_t *packet, const size_t packetSi
     if(!_fileDownloadFailedNoted)
     {
       // ToDo - Someday when nothing else to do - This should send a message to host to stop sending
-      hcom_utils_f7syslog(LOG_ERR, "%s@%d-Data packets ignored, previous error.\n", thisFile, __LINE__);
+      hcom_logging_syslog(LOG_ERR, "%s@%d-Data packets ignored, previous error.\n", thisFile, __LINE__);
       _fileDownloadFailedNoted = true;
     }
     return;
@@ -255,7 +255,7 @@ void hcom_dnld_proc_recvd_file_data(const uint8_t *packet, const size_t packetSi
     int stringLen = snprintf(hostMsg, HCOM_SHORT_HOST_STRING_BUFF_LENGTH, "File %d%% downloaded", percentDone);
 
     DEBUGASSERT(stringLen < HCOM_SHORT_HOST_STRING_BUFF_LENGTH);
-    hcom_comms_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0, hostMsg,
+    hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0, hostMsg,
             thisFile, __LINE__);
   }
 
@@ -278,14 +278,14 @@ void hcom_dnld_proc_recvd_file_data(const uint8_t *packet, const size_t packetSi
       
     default:
       ret = -1;
-      hcom_utils_f7syslog(LOG_ERR, "%s@%d-Data Packet (SeqNumb=%d), unknown data packet action\n",
+      hcom_logging_syslog(LOG_ERR, "%s@%d-Data Packet (SeqNumb=%d), unknown data packet action\n",
               thisFile, __LINE__, seqNumb);
       break;
   }
 
   if (ret < 0)
   {
-    hcom_utils_f7syslog(LOG_ERR, "%s@%d-Data packet file write failed:%d seq:%d\n",
+    hcom_logging_syslog(LOG_ERR, "%s@%d-Data packet file write failed:%d seq:%d\n",
              thisFile, __LINE__, ret, seqNumb); usleep(10 * 1000);
   }
 }
@@ -303,14 +303,14 @@ void hcom_dnld_proc_end(uint32_t userData)
   int stringLen;
   uint16_t requestType;
 
-  hcom_utils_f7syslog(LOG_NOTICE, "End of %s transfer\n", _currentHcomDataPacketAction ? "Meadow" : "ESP32");
+  hcom_logging_syslog(LOG_NOTICE, "End of %s transfer\n", _currentHcomDataPacketAction ? "Meadow" : "ESP32");
   switch(_currentHcomDataPacketAction)
   {
     case CurrentHcomDataPacketActionF7FileXfer:
       ret = hcom_dnld_write_del_close_active_file();
       if (ret < 0)
       {
-        hcom_utils_f7syslog(LOG_ERR, "%s@%d-File close:%d\n", thisFile, __LINE__, ret);
+        hcom_logging_syslog(LOG_ERR, "%s@%d-File close:%d\n", thisFile, __LINE__, ret);
       }
 
       // Compare results and report to host
@@ -353,12 +353,12 @@ void hcom_dnld_proc_end(uint32_t userData)
       ret = hcom_esp32_exec_add_flash_end(userData);
       if (ret < 0)
       {
-        hcom_utils_f7syslog(LOG_ERR, "%s@%d-ESP32 File end error:%d\n", thisFile, __LINE__, ret);
+        hcom_logging_syslog(LOG_ERR, "%s@%d-ESP32 File end error:%d\n", thisFile, __LINE__, ret);
       }
       // Compare the two MD5 hashs
       espCalculatedMd5 = hcom_esp32_exec_get_md5_file_hash();
       int cmpResult = strcmp(espCalculatedMd5, _md5FileHash);
-      hcom_utils_f7syslog(LOG_INFO, "Esp32 MD5 hash:'%s', CLI MD5 hash:'%s', %s\n", espCalculatedMd5, _md5FileHash,
+      hcom_logging_syslog(LOG_INFO, "Esp32 MD5 hash:'%s', CLI MD5 hash:'%s', %s\n", espCalculatedMd5, _md5FileHash,
               cmpResult == 0 ? "Success" : "Error");
       if(cmpResult == 0)
       {
@@ -378,14 +378,14 @@ void hcom_dnld_proc_end(uint32_t userData)
       break;
 
       default:
-        hcom_utils_f7syslog(LOG_ERR, "%s@%d-unknown end data packet action:%d \n", thisFile, __LINE__, _currentHcomDataPacketAction);
+        hcom_logging_syslog(LOG_ERR, "%s@%d-unknown end data packet action:%d \n", thisFile, __LINE__, _currentHcomDataPacketAction);
         //DEBUGASSERT(false); //Unknown file download request
         break;
   }
 
   // Send text message to host
   DEBUGASSERT(stringLen < HCOM_SHORT_HOST_STRING_BUFF_LENGTH);
-  hcom_comms_send_simple_string_msg(requestType, 0, sendMsgToHost, thisFile, __LINE__);
+  hcom_host_send_simple_string_msg(requestType, 0, sendMsgToHost, thisFile, __LINE__);
 
 #if HCOM_RECV_DEBUG_TIMING
   _dbgReceptionEndedAt = get_current_time64();

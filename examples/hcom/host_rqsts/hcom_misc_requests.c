@@ -65,13 +65,13 @@ static char *thisFile = __FILE__;
  * Public Functions
  ****************************************************************************/
 
-int hcom_rqst_misc_setup()
+int hcom_misc_rqst_setup()
 {
   return OK;
 }
 
 //======================================================================================
-void hcom_rqst_misc_get_device_info(uint32_t userData)
+void hcom_misc_rqst_get_device_info(uint32_t userData)
 {
   char *csvDevInfo;
   int stringLen;
@@ -79,15 +79,15 @@ void hcom_rqst_misc_get_device_info(uint32_t userData)
   csvDevInfo = malloc(HCOM_MAX_HOST_STRING_BUFF_LENGTH);
   if(csvDevInfo == NULL)
   {
-    hcom_utils_f7syslog(LOG_ERR, "%s@%d-Alloc failed\n", thisFile, __LINE__);
+    hcom_logging_syslog(LOG_ERR, "%s@%d-Alloc failed\n", thisFile, __LINE__);
     stringLen = snprintf(csvDevInfo, HCOM_SHORT_HOST_STRING_BUFF_LENGTH,
             "Memory allocation error. No results will be sent");
     
     DEBUGASSERT(stringLen < HCOM_SHORT_HOST_STRING_BUFF_LENGTH);
-    hcom_comms_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_ERROR, 0,
+    hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_ERROR, 0,
             csvDevInfo, thisFile, __LINE__);
 
-    hcom_utils_f7syslog(LOG_NOTICE, "Get device info error\n");
+    hcom_logging_syslog(LOG_NOTICE, "Get device info error\n");
     return;
   }
 
@@ -97,7 +97,7 @@ void hcom_rqst_misc_get_device_info(uint32_t userData)
   int ret = hcom_proxy_get_mcu_id(uniqueId);
   if(ret < 0)
   {
-    hcom_utils_f7syslog(LOG_NOTICE, "Get device info error\n");
+    hcom_logging_syslog(LOG_NOTICE, "Get device info error\n");
   }
 
   char strChipId[128];
@@ -134,16 +134,60 @@ void hcom_rqst_misc_get_device_info(uint32_t userData)
     HCOM_DEVICE_INFO_COPROCESSOR_TYPE, HCOM_DEVICE_INFO_COPROCESSOR_OS_VERSION);
 
   DEBUGASSERT(stringLen < HCOM_MAX_HOST_STRING_BUFF_LENGTH);
-  hcom_comms_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_DEVICE_INFO, 0,
+  hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_DEVICE_INFO, 0,
           csvDevInfo, thisFile, __LINE__);
     
   free(csvDevInfo);
 }
 
+//=======================================================================================
+void hcom_misc_rqst_change_trace_level(uint32_t userData)
+{
+  char hostMsg[HCOM_SHORT_HOST_STRING_BUFF_LENGTH];
+  int stringLen;
+
+  int syslogmask = LOG_MASK(LOG_EMERG) | LOG_MASK(LOG_ALERT) | LOG_MASK(LOG_CRIT) | LOG_MASK(LOG_ERR) |
+                   LOG_MASK(LOG_WARNING);
+
+  switch (userData)
+  {
+    case HCOM_TRACE_LEVEL_NOTICE:
+      syslogmask |= LOG_MASK(LOG_NOTICE);
+      break;
+
+    case HCOM_TRACE_LEVEL_NOTICE_INFO:
+      syslogmask |= LOG_MASK(LOG_NOTICE) | LOG_MASK(LOG_INFO);
+      break;
+
+    case HCOM_TRACE_LEVEL_NOTICE_INFO_DEBUG:
+      syslogmask |= LOG_MASK(LOG_NOTICE) | LOG_MASK(LOG_INFO) | LOG_MASK(LOG_DEBUG);
+      break;
+    
+    case HCOM_TRACE_LEVEL_DEFAULT:
+    default:    // use already calculated syslogmask
+      break;
+  }
+
+  hcom_utils_clear_then_set_bbr_bits(HCOM_BBREG_RESTART_SYSLOG_CONFIG_VALUE_MASK, syslogmask);
+
+  // Does the user care about the old trace level returned as a mask?
+  int newTraceLevel = setlogmask(syslogmask);
+
+  stringLen = snprintf(hostMsg, HCOM_SHORT_HOST_STRING_BUFF_LENGTH,
+          "Trace level changed from 0x%02x to 0x%02x",
+          newTraceLevel, syslogmask);
+
+  DEBUGASSERT(stringLen < HCOM_SHORT_HOST_STRING_BUFF_LENGTH);
+  hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0, hostMsg,
+          thisFile, __LINE__);
+
+  hcom_logging_syslog(LOG_NOTICE, "Trace from 0x%02x to 0x%02x\n\n", newTraceLevel, syslogmask);
+}
+
 //======================================================================================
 // Enter the dfu mode so the user can flash the internal flash with the OS
-void hcom_rqst_misc_enter_dfu_mode(uint32_t userData)
+void hcom_misc_rqst_enter_dfu_mode(uint32_t userData)
 {
-  hcom_comms_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_DEVICE_INFO, 0,
+  hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_DEVICE_INFO, 0,
           "DFU mode not implemented", thisFile, __LINE__);
 }

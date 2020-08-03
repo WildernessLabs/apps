@@ -94,7 +94,7 @@ int hcom_main(int argc, char *argv[])
   ret = hcom_diag_ramlog_trace_setup();
   if (ret < 0)
   {
-    hcom_utils_f7syslog(LOG_CRIT, "%s@%d-setup log tracing %d\n", thisFile, __LINE__, ret);
+    hcom_logging_syslog(LOG_CRIT, "%s@%d-setup log tracing %d\n", thisFile, __LINE__, ret);
     return ret;
   }
 #endif
@@ -103,16 +103,24 @@ int hcom_main(int argc, char *argv[])
   if (ret < 0)
   {
     syslog(LOG_CRIT, "%s@%d-setup hcom proxy access:%d\n", thisFile, __LINE__, ret);
-    // hcom_utils_f7syslog(LOG_CRIT, "%s@%d-setup hcom utils:%d\n", thisFile, __LINE__, ret);
+    // hcom_logging_syslog(LOG_CRIT, "%s@%d-setup hcom utils:%d\n", thisFile, __LINE__, ret);
     return ret;
   }
 
   // Allocates memory for logging buffer
-  ret = hcom_utils_setup();
+  ret = hcom_common_utils_setup();
   if (ret < 0)
   {
     syslog(LOG_CRIT, "%s@%d-setup hcom utils:%d\n", thisFile, __LINE__, ret);
-    // hcom_utils_f7syslog(LOG_CRIT, "%s@%d-setup hcom utils:%d\n", thisFile, __LINE__, ret);
+    // hcom_logging_syslog(LOG_CRIT, "%s@%d-setup hcom utils:%d\n", thisFile, __LINE__, ret);
+    return ret;
+  }
+
+  ret = hcom_logging_utils_setup();
+  if (ret < 0)
+  {
+    syslog(LOG_CRIT, "%s@%d-setup logging utils:%d\n", thisFile, __LINE__, ret);
+    // hcom_logging_syslog(LOG_CRIT, "%s@%d-setup hcom utils:%d\n", thisFile, __LINE__, ret);
     return ret;
   }
 
@@ -122,10 +130,10 @@ int hcom_main(int argc, char *argv[])
 
 #if defined(CONFIG_STM32F7_PWR)
   // Restore desired syslog mask from battery backed registers
-  ret = hcom_utils_syslog_mask_init();
+  ret = hcom_logging_syslog_mask_init();
   if(ret < 0)
   {
-    syslog(LOG_CRIT, "%s@%d-hcom_utils_syslog_mask_init failed:%d\n", thisFile, __LINE__, ret);
+    syslog(LOG_CRIT, "%s@%d-hcom_logging_syslog_mask_init failed:%d\n", thisFile, __LINE__, ret);
     return ret; 
   }
 #endif
@@ -143,10 +151,10 @@ int hcom_main(int argc, char *argv[])
   // This main thread will now run hcom CLI receive. It only
   // returns on shutdown or serious error
   //-------------------------------------------------------  
-  ret = hcom_comms_recv_thread_loop();
+  ret = hcom_host_recv_receiving_loop();
   if (ret < 0)
   {
-    hcom_utils_f7syslog(LOG_CRIT, "%s@%d-%s main-thread exited:%d\n",
+    hcom_logging_syslog(LOG_CRIT, "%s@%d-%s main-thread exited:%d\n",
             thisFile, __LINE__, HCOM_THREAD_NAME_HCOM_RECEIVE, ret);
   }
 
@@ -170,7 +178,7 @@ int hcom_manager_setup()
 //   ret = hcom_exec_flash_fs_setup(mtd);
 //   if (ret < 0)
 //   {
-//     hcom_utils_f7syslog(LOG_CRIT, "%s@%d-setup F/S %d\n", thisFile, __LINE__, ret);
+//     hcom_logging_syslog(LOG_CRIT, "%s@%d-setup F/S %d\n", thisFile, __LINE__, ret);
 //     return ret;
 //   }
 
@@ -178,21 +186,21 @@ int hcom_manager_setup()
   ret = hcom_diag_misc_setup();
   if (ret < 0)
   {
-    hcom_utils_f7syslog(LOG_CRIT, "%s@%d-setup misc %d\n", thisFile, __LINE__, ret);
+    hcom_logging_syslog(LOG_CRIT, "%s@%d-setup misc %d\n", thisFile, __LINE__, ret);
     return ret;
   }
   
-  ret = hcom_rqst_misc_setup();
+  ret = hcom_misc_rqst_setup();
   if (ret < 0)
   {
-    hcom_utils_f7syslog(LOG_CRIT, "%s@%d-setup misc %d\n", thisFile, __LINE__, ret);
+    hcom_logging_syslog(LOG_CRIT, "%s@%d-setup misc %d\n", thisFile, __LINE__, ret);
     return ret;
   }
 //   // Sets a few internal variable states
   ret = hcom_dnld_proc_setup();
 //   if (ret < 0)
 //   {
-//     hcom_utils_f7syslog(LOG_CRIT, "%s@%d-setup file download %d\n", thisFile, __LINE__, ret);
+//     hcom_logging_syslog(LOG_CRIT, "%s@%d-setup file download %d\n", thisFile, __LINE__, ret);
 //     return ret;
 //   }
 
@@ -200,29 +208,29 @@ int hcom_manager_setup()
   ret = hcom_dnld_write_del_setup();
   if (ret < 0)
   {
-    hcom_utils_f7syslog(LOG_CRIT, "%s@%d-setup file cmds %d\n", thisFile, __LINE__, ret);
+    hcom_logging_syslog(LOG_CRIT, "%s@%d-setup file cmds %d\n", thisFile, __LINE__, ret);
     return ret;
   }
 
   // Allocates memory for the circular buffer
-  ret = hcom_proc_rqst_setup();
+  ret = hcom_host_parse_setup();
   if (ret < 0)
   {
-    hcom_utils_f7syslog(LOG_CRIT, "%s@%d-setup host request %d\n", thisFile, __LINE__, ret);
+    hcom_logging_syslog(LOG_CRIT, "%s@%d-setup host request %d\n", thisFile, __LINE__, ret);
     return ret;
   }
 
-  ret = hcom_route_rqst_setup();
+  ret = hcom_host_route_setup();
   if (ret < 0)
   {
-    hcom_utils_f7syslog(LOG_CRIT, "%s@%d-setup host request %d\n", thisFile, __LINE__, ret);
+    hcom_logging_syslog(LOG_CRIT, "%s@%d-setup host request %d\n", thisFile, __LINE__, ret);
     return ret;
   }
 
 //   ret = hcom_fs_setup(mtd);
 //   if (ret < 0)
 //   {
-//     hcom_utils_f7syslog(LOG_CRIT, "%s@%d-setup F/S helper %d\n", thisFile, __LINE__, ret);
+//     hcom_logging_syslog(LOG_CRIT, "%s@%d-setup F/S helper %d\n", thisFile, __LINE__, ret);
 //     return ret;
 //   }
 
@@ -230,22 +238,22 @@ int hcom_manager_setup()
 //   ret = proc_dnld_rqst_testing_setup(mtd);
 //   if (ret < 0)
 //   {
-//     hcom_utils_f7syslog(LOG_CRIT, "%s@%d-setup testing %d\n", thisFile, __LINE__, ret);
+//     hcom_logging_syslog(LOG_CRIT, "%s@%d-setup testing %d\n", thisFile, __LINE__, ret);
 //     return ret;
 //   }
 // #endif
 
-  ret = hcom_comms_recv_setup();
+  ret = hcom_host_recv_setup();
   if (ret < 0)
   {
-    hcom_utils_f7syslog(LOG_CRIT, "%s@%d-setup Host comms %d\n", thisFile, __LINE__, ret);
+    hcom_logging_syslog(LOG_CRIT, "%s@%d-setup Host comms %d\n", thisFile, __LINE__, ret);
     return ret;
   }
 
-  ret = hcom_comms_send_setup();
+  ret = hcom_host_send_setup();
   if (ret < 0)
   {
-    hcom_utils_f7syslog(LOG_CRIT, "%s@%d-setup host msg builder:%d\n", thisFile, __LINE__, ret);
+    hcom_logging_syslog(LOG_CRIT, "%s@%d-setup host msg builder:%d\n", thisFile, __LINE__, ret);
     return ret;
   }
 
@@ -257,7 +265,7 @@ int hcom_manager_setup()
 //   ret = hcom_fs_init_file_system();
 //   if (ret < 0)
 //   {
-//     hcom_utils_f7syslog(LOG_CRIT, "%s@%d-setup F/S helper %d\n", thisFile, __LINE__, ret);
+//     hcom_logging_syslog(LOG_CRIT, "%s@%d-setup F/S helper %d\n", thisFile, __LINE__, ret);
 //     return ret;
 //   }
 // #endif
@@ -267,7 +275,7 @@ int hcom_manager_setup()
 //   ret = hcom_mono_pipe_setup();
 //   if (ret < 0)
 //   {
-//     hcom_utils_f7syslog(LOG_CRIT, "%s@%d-setup mono pipe %d\n", thisFile, __LINE__, ret);
+//     hcom_logging_syslog(LOG_CRIT, "%s@%d-setup mono pipe %d\n", thisFile, __LINE__, ret);
 //     return ret;
 //   }
 // #endif
@@ -277,7 +285,7 @@ int hcom_manager_setup()
 //   ret = hcom_remote_dbg_setup();
 //   if (ret < 0)
 //   {
-//     hcom_utils_f7syslog(LOG_CRIT, "%s@%d-setup remote dbg %d\n", thisFile, __LINE__, ret);
+//     hcom_logging_syslog(LOG_CRIT, "%s@%d-setup remote dbg %d\n", thisFile, __LINE__, ret);
 //     return ret;
 //   }
 // #endif
@@ -286,7 +294,7 @@ int hcom_manager_setup()
 //   ret = hcom_esp32_uart_comms_setup();
 //   if (ret < 0)
 //   {
-//     hcom_utils_f7syslog(LOG_CRIT, "%s@%d-setup esp32 comms %d\n", thisFile, __LINE__, ret);
+//     hcom_logging_syslog(LOG_CRIT, "%s@%d-setup esp32 comms %d\n", thisFile, __LINE__, ret);
 //     return ret;
 //   }
 // #endif
@@ -295,7 +303,7 @@ int hcom_manager_setup()
   // ret = hcom_manager_create_worker_thread();
   // if (ret < 0)
   // {
-  //   hcom_utils_f7syslog(LOG_CRIT, "%s@%d-create hcom thread %s\n", thisFile, __LINE__, ret);
+  //   hcom_logging_syslog(LOG_CRIT, "%s@%d-create hcom thread %s\n", thisFile, __LINE__, ret);
   //   return ret;
   // }
 
@@ -310,21 +318,21 @@ int hcom_manager_setup()
 
 // // #if HCOM_TASK_SHOW_CREATED_TASK_PID_NAME > 0
 // //   struct tcb_s *rtcb = this_task();
-// //   hcom_utils_f7syslog(LOG_NOTICE, "PID:%d is '%s'\n", getpid(), rtcb->name);
+// //   hcom_logging_syslog(LOG_NOTICE, "PID:%d is '%s'\n", getpid(), rtcb->name);
 // // #endif
 
 //   // //-------------------------------------------------------
 //   // // Main thread only returns on shutdown or serious error
 //   // //-------------------------------------------------------  
-//   // ret = hcom_comms_recv_thread_loop();
+//   // ret = hcom_host_recv_receiving_loop();
 //   // if (ret < 0)
 //   // {
-//   //   hcom_utils_f7syslog(LOG_CRIT, "%s@%d-%s thread exit:%d\n", thisFile, __LINE__, HCOM_THREAD_NAME_HCOM_RECEIVE, ret);
+//   //   hcom_logging_syslog(LOG_CRIT, "%s@%d-%s thread exit:%d\n", thisFile, __LINE__, HCOM_THREAD_NAME_HCOM_RECEIVE, ret);
 //   // }
 
 //   // hcom_manager_shutdown();
 
-//   // hcom_utils_f7syslog(LOG_INFO, "%s thread exit'\n", HCOM_THREAD_NAME_HCOM_RECEIVE);
+//   // hcom_logging_syslog(LOG_INFO, "%s thread exit'\n", HCOM_THREAD_NAME_HCOM_RECEIVE);
 
 //  return OK;      // Thread exit
 // }
@@ -337,12 +345,12 @@ void hcom_manager_shutdown()
   syslog(1, "MGR-->%s@%d-Entered:%s hcom_diag_ramlog_trace_setup\n", thisFile, __LINE__, __func__); usleep(100 * 1000);
   
   // todo - confirm that all functions that need shutdown are called
-  hcom_comms_recv_shutdown();
+  hcom_host_recv_shutdown();
 //   hcom_mono_pipe_shutdown();
-  hcom_utils_shutdown();
-  hcom_route_rqst_shutdown();  
-  hcom_proc_rqst_shutdown();
-  hcom_comms_send_msg_shutdown();
+  hcom_common_utils_shutdown();
+  hcom_host_route_shutdown();  
+  hcom_host_parse_shutdown();
+  hcom_host_send_shutdown();
   hcom_dnld_write_del_shutdown();
 //   hcom_fs_shutdown();
 //   hcom_remote_dbg_shutdown();

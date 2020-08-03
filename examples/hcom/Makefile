@@ -49,23 +49,35 @@ STACKSIZE = $(CONFIG_EXAMPLES_HCOM_STACKSIZE)
 
 HCOM_DIR = ../../../hcom/
 ASRCS =
-CSRCS = hcom_common_utils.c \
-	hcom_mono_control.c \
+HCOM_SRCS = hcom_mono_control.c \
 	hcom_proxy_access.c \
-	comms/hcom_comms_receive.c \
-	comms/hcom_comms_send.c \
-	comms/hcom_comms_support.c \
+	comms/hcom_host_encode.c \
+	comms/hcom_host_parse.c \
+	comms/hcom_host_receive.c \
+	comms/hcom_host_route.c \
+	comms/hcom_host_send.c \
 	diag/hcom_diag_misc.c \
 	diag/hcom_diag_trace_ramlog.c \
 	file_access/hcom_dnld_process_file.c \
-	file_access/hcom_dnld_write_and_del.c \
+	file_access/hcom_dnld_write_delete.c \
 	file_access/hcom_list_files.c \
 	hcom_tests/hcom_bbr_tests.c \
 	host_rqsts/hcom_misc_requests.c \
-	host_rqsts/hcom_proc_requests.c \
-	host_rqsts/hcom_route_requests.c
+	misc/hcom_circular_buffer.c \
+	misc/hcom_common_utils.c \
+	misc/hcom_logging_utils.c
+
+ifeq ($(CONFIG_HCOM_ESP32_COMMS),y)
+ HCOM_SRCS += esp32/hcom_esp32_uart_comms.c \
+ esp32/hcom_esp32_proc_xmit.c \
+ esp32/hcom_esp32_proc_recv.c \
+ esp32/hcom_esp32_execute.c \
+ esp32/hcom_esp32_proc_util.c
+endif
 
 MAINSRC = hcom_startup_manager.c
+
+CSRCS += $(HCOM_SRCS) 
 
 CONFIG_EXAMPLES_HCOM_PROGNAME ?= hcom$(EXEEXT)
 PROGNAME = $(CONFIG_EXAMPLES_HCOM_PROGNAME)

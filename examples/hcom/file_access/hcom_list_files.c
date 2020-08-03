@@ -74,7 +74,7 @@ int hcom_list_files_in_partition(uint32_t partitionId)
   DIR *dirp;
   struct dirent *direntry;
 
-  hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_LIST_HEADER, 0, thisFile, __LINE__);
+  hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_LIST_HEADER, 0, thisFile, __LINE__);
 
   // Construct file name
 #ifdef CONFIG_MTD_PARTITION
@@ -90,7 +90,7 @@ int hcom_list_files_in_partition(uint32_t partitionId)
   dirp = opendir(fullMountPtName);
   if ( !dirp )
   {
-    hcom_utils_f7syslog(LOG_ERR, "%s@%d-opendir(\"%s\") errno:%d\n",
+    hcom_logging_syslog(LOG_ERR, "%s@%d-opendir(\"%s\") errno:%d\n",
               thisFile, __LINE__, fullMountPtName, errno);
     free(fullMountPtName);
     free(singleFileFound);
@@ -105,20 +105,20 @@ int hcom_list_files_in_partition(uint32_t partitionId)
 
       // Get the next file name
 #ifdef CONFIG_MTD_PARTITION
-      hcom_utils_f7syslog(LOG_INFO, "Found file '%s' in part %d\n", direntry->d_name, partitionId);
+      hcom_logging_syslog(LOG_INFO, "Found file '%s' in part %d\n", direntry->d_name, partitionId);
 #else
-      hcom_utils_f7syslog(LOG_INFO, "Found file '%s'\n", direntry->d_name);
+      hcom_logging_syslog(LOG_INFO, "Found file '%s'\n", direntry->d_name);
 #endif
       int fileNameLen;
       fileNameLen = snprintf(singleFileFound, HCOM_MAX_PATH_AND_FILE_BUFF_LENGTH, "%s/%s", fullMountPtName, direntry->d_name);
       DEBUGASSERT(fileNameLen < HCOM_MAX_PATH_AND_FILE_BUFF_LENGTH);
-      hcom_comms_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_LIST_MEMBER, 0, singleFileFound, thisFile, __LINE__);
+      hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_LIST_MEMBER, 0, singleFileFound, thisFile, __LINE__);
     }
   }
 
   if(fileCount == 0)
   {
-    hcom_comms_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_LIST_MEMBER, 0,
+    hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_LIST_MEMBER, 0,
                   "No files found", thisFile, __LINE__);
   }
   else
@@ -126,7 +126,7 @@ int hcom_list_files_in_partition(uint32_t partitionId)
     char hostMsg[HCOM_SHORT_HOST_STRING_BUFF_LENGTH];
     snprintf(hostMsg, HCOM_SHORT_HOST_STRING_BUFF_LENGTH,
               "A total of %d file%s found", fileCount, fileCount == 1 ? "" : "s");
-    hcom_comms_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_LIST_MEMBER, 0,
+    hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_LIST_MEMBER, 0,
                   hostMsg, thisFile, __LINE__);
   }
 
@@ -150,7 +150,7 @@ int hcom_list_files_and_crc_in_partition(uint32_t partitionId)
   DIR *dirp;
   struct dirent *direntry;
 
-  hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_LIST_HEADER, 0, thisFile, __LINE__);
+  hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_LIST_HEADER, 0, thisFile, __LINE__);
 
   // Construct file name
 #ifdef CONFIG_MTD_PARTITION
@@ -163,7 +163,7 @@ int hcom_list_files_and_crc_in_partition(uint32_t partitionId)
   dirp = opendir(fullMountPtName);
   if ( !dirp )
   {
-    hcom_utils_f7syslog(LOG_ERR, "%s@%d-opendir '%s' errno:%d\n",
+    hcom_logging_syslog(LOG_ERR, "%s@%d-opendir '%s' errno:%d\n",
             thisFile, __LINE__, fullMountPtName, errno);
 
     free(fullMountPtName);
@@ -191,9 +191,9 @@ int hcom_list_files_and_crc_in_partition(uint32_t partitionId)
       totalFlashSizeKB += blockSizeKB;
 
 #ifdef CONFIG_MTD_PARTITION
-      hcom_utils_f7syslog(LOG_INFO, "'%s' in part %d checksum 0x%08x\n", direntry->d_name, partitionId, crcChecksum);
+      hcom_logging_syslog(LOG_INFO, "'%s' in part %d checksum 0x%08x\n", direntry->d_name, partitionId, crcChecksum);
 #else
-      hcom_utils_f7syslog(LOG_INFO, "'%s' checksum 0x%08x\n", direntry->d_name, crcChecksum);
+      hcom_logging_syslog(LOG_INFO, "'%s' checksum 0x%08x\n", direntry->d_name, crcChecksum);
 #endif
 
       // Add this file to the csv list 
@@ -202,14 +202,14 @@ int hcom_list_files_and_crc_in_partition(uint32_t partitionId)
             fullMountPtName, direntry->d_name, crcChecksum, blockSizeKB, fileSize);
 
       DEBUGASSERT(fileNameLen < HCOM_MAX_PATH_AND_FILE_BUFF_LENGTH);
-      hcom_comms_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_CRC_MEMBER, 0,
+      hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_CRC_MEMBER, 0,
                     singleFileFound, thisFile, __LINE__);
     }
   }
 
   if(fileCount == 0)
   {
-    hcom_comms_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_CRC_MEMBER, 0,
+    hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_CRC_MEMBER, 0,
                   "No files found", thisFile, __LINE__);
   }
   else
@@ -220,7 +220,7 @@ int hcom_list_files_and_crc_in_partition(uint32_t partitionId)
           "A total of %d file%s using %d KB (%u bytes)", fileCount,
           fileCount == 1 ? "" : "s", totalFlashSizeKB, totalSizeOfFiles);
 
-    hcom_comms_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_CRC_MEMBER, 0,
+    hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_CRC_MEMBER, 0,
                   singleFileFound, thisFile, __LINE__);
   }
 
@@ -264,7 +264,7 @@ int hcom_list_all_dev_dir_and_files(const char *name, int indent)
       snprintf(path, sizeof(path), "%s/%s", name, entry->d_name);
       snprintf(hostMsg, HCOM_SHORT_HOST_STRING_BUFF_LENGTH,
               "%*s%s/\n", indent, "", entry->d_name);
-      hcom_comms_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION,
+      hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION,
                 0, hostMsg, thisFile, __LINE__);
       syslog(1, hostMsg);
 
@@ -284,7 +284,7 @@ int hcom_list_all_dev_dir_and_files(const char *name, int indent)
       else {entryType = "????";}
       snprintf(hostMsg, HCOM_SHORT_HOST_STRING_BUFF_LENGTH,
               "%*s%s [%s]\n",indent, "", entry->d_name, entryType);
-      hcom_comms_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION,
+      hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION,
                 0, hostMsg, thisFile, __LINE__);
       syslog(1, hostMsg);
     }
@@ -311,7 +311,7 @@ uint32_t hcom_calc_crc_for_file(char *completeFilePath,
   if (fd == -1)
   {
     int Errno = get_errno();
-    hcom_utils_f7syslog(LOG_ERR, "%s@%d-open '%s', errno: %d\n",
+    hcom_logging_syslog(LOG_ERR, "%s@%d-open '%s', errno: %d\n",
                 thisFile, __LINE__, completeFilePath, Errno);
     return -errno;
   }
@@ -343,7 +343,7 @@ uint32_t hcom_calc_crc_for_file(char *completeFilePath,
   ret = fstat(fd, &fileStatus);
   if (ret < 0)
   {
-    hcom_utils_f7syslog(LOG_ERR, "%s@%d-fstat of %s failed:%s errno:%d\n",
+    hcom_logging_syslog(LOG_ERR, "%s@%d-fstat of %s failed:%s errno:%d\n",
            thisFile, __LINE__, completeFilePath, errno);
     return -errno;
   }
@@ -355,7 +355,7 @@ uint32_t hcom_calc_crc_for_file(char *completeFilePath,
   off_t offset = lseek(fd, 0, SEEK_SET);
   if (offset == (off_t)-1)
   {
-    hcom_utils_f7syslog(LOG_ERR, "%s@%d-lseek failed %s, errno:%d\n", thisFile, __LINE__, completeFilePath, errno);
+    hcom_logging_syslog(LOG_ERR, "%s@%d-lseek failed %s, errno:%d\n", thisFile, __LINE__, completeFilePath, errno);
     return -errno;
   }
 
@@ -369,7 +369,7 @@ uint32_t hcom_calc_crc_for_file(char *completeFilePath,
     nbytes = read(fd, crcReadBuff, HCOM_FILE_READ_BUFF_SIZE_FOR_CRC);
     if (nbytes < 0)
     {
-      hcom_utils_f7syslog(LOG_ERR, "%s@%d-read %s, errno:%d\n", thisFile, __LINE__, completeFilePath, errno);
+      hcom_logging_syslog(LOG_ERR, "%s@%d-read %s, errno:%d\n", thisFile, __LINE__, completeFilePath, errno);
       free(crcReadBuff);
       return -errno;
     }
@@ -385,7 +385,7 @@ uint32_t hcom_calc_crc_for_file(char *completeFilePath,
   if (ret < 0)
   {
     int Errno = get_errno();
-    hcom_utils_f7syslog(LOG_ERR, "%s@%d-close %s, errno:%d\n",
+    hcom_logging_syslog(LOG_ERR, "%s@%d-close %s, errno:%d\n",
              thisFile, __LINE__, completeFilePath, Errno);
     return -Errno;
   }

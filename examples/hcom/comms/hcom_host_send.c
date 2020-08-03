@@ -62,17 +62,17 @@ static bool _lastXmitBlocked;
  * Private Function Prototypes
  ****************************************************************************/
 
-static void hcom_comms_build_msg_header(uint16_t requestType, uint16_t extraData,
+static void hcom_host_send_build_msg_header(uint16_t requestType, uint16_t extraData,
         uint32_t userData, uint8_t *xmitBuffer);
-static int hcom_comms_send_simple_buffer_msg(uint16_t requestType, uint16_t extraData,
+static int hcom_host_send_buffered_msg(uint16_t requestType, uint16_t extraData,
         uint32_t userData, uint8_t *msgBuffer, size_t msgLen);
-static int hcom_comms_transmit_to_host(FAR uint8_t xmitBuffer[], size_t xmitLength);
-static bool hcom_comms_is_host_xmit_blocked(void);
+static int hcom_host_send_transmit_to_host(FAR uint8_t xmitBuffer[], size_t xmitLength);
+static bool hcom_host_send_is_host_xmit_blocked(void);
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
-int hcom_comms_send_setup()
+int hcom_host_send_setup()
 {
   _is_comms_write_open = false;
   _lastXmitBlocked = true; // Assume blocked DON'T CHANGE TO false!
@@ -83,7 +83,7 @@ int hcom_comms_send_setup()
 }
 
 //--------------------------------------------------------------------
-void hcom_comms_send_msg_shutdown()
+void hcom_host_send_shutdown()
 {
   _shutting_down = true;
 
@@ -97,7 +97,7 @@ void hcom_comms_send_msg_shutdown()
 
 //=====================================================================
 // Wait for the thread writing to exit
-static void hcom_comms_transmit_takesem(void)
+static void hcom_host_send_transmit_takesem(void)
 {
   int ret;
 
@@ -117,49 +117,49 @@ static void hcom_comms_transmit_takesem(void)
 //=====================================================================
 // THIS IS THE FUNCTION THAT SHOULD BE USED WHEN JUST SENDING A HEADER
 // Just sends a header message and report the error here
-void hcom_comms_send_header_msg(uint16_t requestType, uint32_t userData,
+void hcom_host_send_header_msg(uint16_t requestType, uint32_t userData,
       char *sourceFileName, int sourceLineNumber)
 {
-  int ret = hcom_comms_send_simple_buffer_msg(requestType, 0, userData, NULL, 0);
+  int ret = hcom_host_send_buffered_msg(requestType, 0, userData, NULL, 0);
   if (ret < 0 && ret != -EAGAIN) // EAGAIN is not an error it means the message was blocked
-    hcom_utils_f7syslog_x(LOG_ERR, "%s@%d-Host xmit err:%d\n", sourceFileName, sourceLineNumber, ret);
+    hcom_logging_syslog_x(LOG_ERR, "%s@%d-Host xmit err:%d\n", sourceFileName, sourceLineNumber, ret);
 }
 
 //=====================================================================
 // THIS IS THE FUNCTION TO USED WHEN THE REQUEST TYPE IS NOT AVAILABLE
-void hcom_comms_send_simple_text_msg(char *shortText, uint32_t userData, 
+void hcom_host_send_simple_msg_no_rqst_type(char *shortText, uint32_t userData, 
             char *sourceFileName, int sourceLineNumber)
 {
-  hcom_comms_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, userData,
+  hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, userData,
             shortText, sourceFileName, sourceLineNumber);
 }
 
 //=====================================================================
 // THIS IS THE FUNCTION THAT SHOULD BE USED
 // Prepare a simple line of text for transmission and output the error message here
-void hcom_comms_send_simple_string_msg(uint16_t requestType, uint32_t userData,
+void hcom_host_send_simple_string_msg(uint16_t requestType, uint32_t userData,
            char *shortText, char *sourceFileName, int sourceLineNumber)
 {
   // Need to remove any trailing cr/lf. If none found strcspn() finds terminating '\0'
   // returning its offset.
   size_t trueStrLen = strcspn(shortText, "\r\n");
 
-  int ret = hcom_comms_send_simple_buffer_msg(requestType, 0, userData, (uint8_t*) shortText, trueStrLen);
+  int ret = hcom_host_send_buffered_msg(requestType, 0, userData, (uint8_t*) shortText, trueStrLen);
   if (ret < 0 && ret != -EAGAIN) // EAGAIN is not an error it means the message was blocked
-    hcom_utils_f7syslog_x(LOG_ERR, "%s@%d-Host xmit err:%d\n", sourceFileName, sourceLineNumber, ret);
+    hcom_logging_syslog_x(LOG_ERR, "%s@%d-Host xmit err:%d\n", sourceFileName, sourceLineNumber, ret);
 }
 
 //=====================================================================
 // THIS IS THE FUNCTION THAT SHOULD BE USED WHEN SPECIAL CIRCUMSTANCES EXIST
 // Prepare a string for transmission, allowing any character
 // This is called for various internal needs (e.g. mono, diagnostic).
-int hcom_comms_send_raw_string_msg(uint16_t requestType, uint32_t userData, char *shortText, size_t msgLength,
+int hcom_host_send_raw_string_msg(uint16_t requestType, uint32_t userData, char *shortText, size_t msgLength,
         char *sourceFileName, int sourceLineNumber)
 {
-  int ret = hcom_comms_send_simple_buffer_msg(requestType, 0, userData, (uint8_t*) shortText, msgLength);
+  int ret = hcom_host_send_buffered_msg(requestType, 0, userData, (uint8_t*) shortText, msgLength);
   if (ret < 0 && ret != -EAGAIN) // EAGAIN is not an error it means the message was blocked
   {
-      hcom_utils_f7syslog_x(LOG_ERR, "%s@%d-Host xmit err:%d\n", thisFile, __LINE__, ret);
+      hcom_logging_syslog_x(LOG_ERR, "%s@%d-Host xmit err:%d\n", thisFile, __LINE__, ret);
   }
   return ret;
 }
@@ -172,22 +172,22 @@ int hcom_comms_send_raw_string_msg(uint16_t requestType, uint32_t userData, char
 // CLI, 2) connected to host PC and CLI is not communicating and 3) 
 // Meadow is not connected to a host PC, this is the most usually
 // situation.
-static int hcom_comms_send_simple_buffer_msg(uint16_t requestType, uint16_t extraData,
+static int hcom_host_send_buffered_msg(uint16_t requestType, uint16_t extraData,
         uint32_t userData, uint8_t *origMsg, size_t msgLen)
 {
   int ret;
 
   // Only one thread / message at a time can be sent to host
-  hcom_comms_transmit_takesem();
+  hcom_host_send_transmit_takesem();
 
-  // hcom_comms_is_host_xmit_blocked() MUST be called before calling
-  // hcom_comms_transmit_to_host() to send a message to the host.
-  // hcom_comms_is_host_xmit_blocked() verifies that transmission is
+  // hcom_host_send_is_host_xmit_blocked() MUST be called before calling
+  // hcom_host_send_transmit_to_host() to send a message to the host.
+  // hcom_host_send_is_host_xmit_blocked() verifies that transmission is
   // possible. That is, the host PC can be connected to and that message
   // are being received (not blocked). If it returns true (blocked)
   // then transmission is not possible at this time. If it return false
   // (not blocked) then it's okay to attempt to send.
-  if(hcom_comms_is_host_xmit_blocked())
+  if(hcom_host_send_is_host_xmit_blocked())
   {
     // This is a normal occurance since the host is usually not connected
     sem_post(&_hostXmitSem);
@@ -211,13 +211,13 @@ static int hcom_comms_send_simple_buffer_msg(uint16_t requestType, uint16_t extr
     uint8_t *xmitBuffer = malloc(fullMsgLen);
 
     // Uses the first part of message buffer for header
-    hcom_comms_build_msg_header(requestType, extraData, userData, xmitBuffer);
+    hcom_host_send_build_msg_header(requestType, extraData, userData, xmitBuffer);
 
     // Copy the body of the message
     memcpy(xmitBuffer + HCOM_PROTOCOL_REQUEST_HEADER_LENGTH, origMsg, fullMsgLen - HCOM_PROTOCOL_REQUEST_HEADER_LENGTH);
     
     // Send the message without a body, just the header
-    ret = hcom_comms_transmit_to_host(xmitBuffer, fullMsgLen);
+    ret = hcom_host_send_transmit_to_host(xmitBuffer, fullMsgLen);
     free(xmitBuffer);
   }
   else
@@ -226,10 +226,10 @@ static int hcom_comms_send_simple_buffer_msg(uint16_t requestType, uint16_t extr
     uint8_t headerOnlyMsg[HCOM_PROTOCOL_REQUEST_HEADER_LENGTH];
 
     // Uses the first part of message buffer for header
-    hcom_comms_build_msg_header(requestType, extraData, userData, headerOnlyMsg);
+    hcom_host_send_build_msg_header(requestType, extraData, userData, headerOnlyMsg);
 
     // Send the message
-    ret = hcom_comms_transmit_to_host(headerOnlyMsg, fullMsgLen);
+    ret = hcom_host_send_transmit_to_host(headerOnlyMsg, fullMsgLen);
   }
 
   sem_post(&_hostXmitSem);
@@ -238,7 +238,7 @@ static int hcom_comms_send_simple_buffer_msg(uint16_t requestType, uint16_t extr
 
 //=====================================================================
 // Build the header
-void hcom_comms_build_msg_header(uint16_t requestType,
+void hcom_host_send_build_msg_header(uint16_t requestType,
         uint16_t extraData, uint32_t userData, uint8_t *xmitBuffer)
 {
   // Populate the header
@@ -253,7 +253,7 @@ void hcom_comms_build_msg_header(uint16_t requestType,
 
 //==========================================================================
 // Attempt to open the connection to the host PC
-static int hcom_comms_open_xmit_connection(void)
+static int hcom_host_send_open_transmit_connection(void)
 {
   if(_is_comms_write_open)
     return OK;
@@ -265,7 +265,7 @@ static int hcom_comms_open_xmit_connection(void)
   _comms_write_fd = -1;
   for(openAttempts = 0; openAttempts < HCOM_COMMS_MAX_XMIT_OPEN_ATTEMPTS; openAttempts++)
   {
-    _comms_write_fd = open(hcom_comms_recv_get_device_name(), O_WRONLY | O_NONBLOCK);
+    _comms_write_fd = open(hcom_host_recv_get_device_name(), O_WRONLY | O_NONBLOCK);
     if(_comms_write_fd >= 0)
     {
       // * If there's no CLI or equal running file_open will still be successful,
@@ -292,7 +292,7 @@ static int hcom_comms_open_xmit_connection(void)
 // The partially sent (corrupted) messages will be thrown away by the Meadow.CLI
 // after it reports an error.
 //
-bool hcom_comms_is_host_xmit_blocked()
+bool hcom_host_send_is_host_xmit_blocked()
 {
   int ret;
 
@@ -304,7 +304,7 @@ bool hcom_comms_is_host_xmit_blocked()
 
   if(! _is_comms_write_open)
   {
-    ret = hcom_comms_open_xmit_connection();
+    ret = hcom_host_send_open_transmit_connection();
     if(ret < 0)
     {
       // * This is where message are ignored if there's no PC
@@ -335,7 +335,7 @@ bool hcom_comms_is_host_xmit_blocked()
 //===================================================================================
 // All messages sent to host pass through here.
 // At this time 2 threads use this method
-int hcom_comms_transmit_to_host(FAR uint8_t xmitBuffer[], size_t xmitLength)
+int hcom_host_send_transmit_to_host(FAR uint8_t xmitBuffer[], size_t xmitLength)
 {
   #define HCOM_XMIT_MAX_BLOCKED_TIME_DELAY  (50 * 1000)
   #define HCOM_XMIT_MAX_BLOCKED_COUNT_VALUE 30 // .05 * 30 = 1.5 seconds
@@ -350,7 +350,7 @@ int hcom_comms_transmit_to_host(FAR uint8_t xmitBuffer[], size_t xmitLength)
   }
 
   // Encode
-  size_t encodedLength = hcom_comms_cobs_encoder(xmitBuffer, 0, xmitLength, _encodedXmitBuff);
+  size_t encodedLength = host_comms_cobs_encoder(xmitBuffer, 0, xmitLength, _encodedXmitBuff);
 
   // Encoded message needs a terminating delimiter for COBS
   DEBUGASSERT(encodedLength < HCOM_SAFE_PACKET_BUF_SIZE - 1);

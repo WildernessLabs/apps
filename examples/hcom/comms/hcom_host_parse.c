@@ -64,21 +64,21 @@ static size_t _max_packet_size = HCOM_SAFE_PACKET_BUF_SIZE;
  * Private Function Prototypes
  ****************************************************************************/
 
-static int hcom_parse_request_and_process(const uint8_t *packet, const size_t packetSize);
-static int hcom_comms_recvpull_all_packets_from_buffer(void);
+static int hcom_host_parse_process_packet(const uint8_t *packet, const size_t packetSize);
+static int hcom_host_parse_pull_all_packets_from_buffer(void);
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
-int hcom_proc_rqst_setup()
+int hcom_host_parse_setup()
 {
   _shutting_down = false;
 
   _hcom_cbuf = (struct host_com_cir_buffer_s *)malloc(sizeof(struct host_com_cir_buffer_s));
   if (_hcom_cbuf == NULL)
   {
-    hcom_utils_f7syslog(LOG_ERR, "%s@%d-cir buf alloc\n", thisFile, __LINE__);
+    hcom_logging_syslog(LOG_ERR, "%s@%d-cir buf alloc\n", thisFile, __LINE__);
     return -1;
   }
 
@@ -86,7 +86,7 @@ int hcom_proc_rqst_setup()
           HCOM_PROTOCOL_PACKET_DELIMITER_VALUE);
   if (result == HCOM_CIR_BUF_INIT_FAILED)
   {
-    hcom_utils_f7syslog(LOG_ERR, "%s@%d-hcom_cirbuf_init\n", thisFile, __LINE__);
+    hcom_logging_syslog(LOG_ERR, "%s@%d-hcom_cirbuf_init\n", thisFile, __LINE__);
     return -1;
   }
 
@@ -94,7 +94,7 @@ int hcom_proc_rqst_setup()
 }
 
 //====================================================================
-void hcom_proc_rqst_shutdown()
+void hcom_host_parse_shutdown()
 {
   _shutting_down = true;
 
@@ -104,7 +104,7 @@ void hcom_proc_rqst_shutdown()
 //=======================================================================
 // Add the received data to the circular buffer. It can be added byte by byte
 // or several messages at once.
-int hcom_proc_rqst_process_raw_data(uint8_t recvBuff[], const ssize_t recvByteCnt)
+int hcom_host_parse_process_raw_data(uint8_t recvBuff[], const ssize_t recvByteCnt)
 {
   int result;
 
@@ -126,15 +126,15 @@ int hcom_proc_rqst_process_raw_data(uint8_t recvBuff[], const ssize_t recvByteCn
     {
       // Wasn't possible to put these bytes in the buffer. We need to
       // process a few packets and then retry to add this data
-      hcom_utils_f7syslog(LOG_WARNING, "%s@%d-No room in cir buf, pull and retry\n",
+      hcom_logging_syslog(LOG_WARNING, "%s@%d-No room in cir buf, pull and retry\n",
               thisFile, __LINE__);
-      result = hcom_comms_recvpull_all_packets_from_buffer();
+      result = hcom_host_parse_pull_all_packets_from_buffer();
       if (result == HCOM_CIR_BUF_GET_FOUND_MSG)
         continue;   // There should be room now for the failed add
 
       if (result == HCOM_CIR_BUF_GET_NONE_FOUND || result == HCOM_CIR_BUF_GET_DEST_NO_ROOM)
       {
-        hcom_utils_f7syslog(LOG_ERR, "%s@%d-pull packets from cir buf %d\n",
+        hcom_logging_syslog(LOG_ERR, "%s@%d-pull packets from cir buf %d\n",
                  thisFile, __LINE__, result);
         return OK;    // Report and throw data away.
       }
@@ -142,24 +142,24 @@ int hcom_proc_rqst_process_raw_data(uint8_t recvBuff[], const ssize_t recvByteCn
     else if (result == HCOM_CIR_BUF_ADD_BAD_ARG)
     {
       // Bad argument
-      hcom_utils_f7syslog(LOG_ERR, "%s@%d-Bad argument to cir buf\n", thisFile, __LINE__);
+      hcom_logging_syslog(LOG_ERR, "%s@%d-Bad argument to cir buf\n", thisFile, __LINE__);
       return OK; // Report and throw data away and keep going
     }
     else
     {
-      hcom_utils_f7syslog(LOG_ERR, "%s@%d-Unknown cir buf add err:%d\n", thisFile, __LINE__, result);
+      hcom_logging_syslog(LOG_ERR, "%s@%d-Unknown cir buf add err:%d\n", thisFile, __LINE__, result);
       return OK; // Report and throw data away and keep going
     }
   }
 
   // This could be on a separate thread
-  result = hcom_comms_recvpull_all_packets_from_buffer();
+  result = hcom_host_parse_pull_all_packets_from_buffer();
   return result;
 }
 
 //====================================================================
 // Pull and process all the complete packets from the circular buffer
-int hcom_comms_recvpull_all_packets_from_buffer()
+int hcom_host_parse_pull_all_packets_from_buffer()
 {
   int result;
   // Todo - the memory allocated for this is never freed.
@@ -186,33 +186,33 @@ int hcom_comms_recvpull_all_packets_from_buffer()
 
     // // p-m
     // syslog(1, "%s@%d-pulled %d bytes from cir buf\n", thisFile, __LINE__, packetLength);
-    // hcom_utils_diag_print_buffer(packet_dest_buf, packetLength, 1);
+    // hcom_logging_utils_print_buffer(packet_dest_buf, packetLength, 1);
 
     // Drop trailing delimiter of 0x00 (--packetLength) then decode the packet
-    size_t decodedPacketSize = hcom_comms_cobs_decoder(packet_dest_buf, --packetLength, decode_dest_buf);
+    size_t decodedPacketSize = host_comms_cobs_decoder(packet_dest_buf, --packetLength, decode_dest_buf);
 
     // // p-m
     // syslog(1, "%s@%d-decoded %d bytes from cir buf\n", thisFile, __LINE__, decodedPacketSize);
-    // hcom_utils_diag_print_buffer(decode_dest_buf, decodedPacketSize, 1);
+    // hcom_logging_utils_print_buffer(decode_dest_buf, decodedPacketSize, 1);
 
     if(decodedPacketSize == 0)
       continue;
       
     // Process the received data
-    result = hcom_parse_request_and_process(decode_dest_buf, decodedPacketSize);
+    result = hcom_host_parse_process_packet(decode_dest_buf, decodedPacketSize);
     if (result == OK)
     {
       continue; // pull next packet
     }
     else if (result < 0)
     {
-      hcom_utils_f7syslog(LOG_ERR, "%s@%d-processing data:%d\n", thisFile, __LINE__, result);
+      hcom_logging_syslog(LOG_ERR, "%s@%d-processing data:%d\n", thisFile, __LINE__, result);
       return result;
       // If ever supported NAK to host to resend bad data
     }
     else
     {
-      hcom_utils_f7syslog(LOG_ERR, "%s@%d-unknown value %d\n",
+      hcom_logging_syslog(LOG_ERR, "%s@%d-unknown value %d\n",
               thisFile, __LINE__, result);
       return result;
     }
@@ -223,7 +223,7 @@ int hcom_comms_recvpull_all_packets_from_buffer()
 // Parse and process received packet as sent by host
 // 1) Grab the sequence number
 // 2) Remove sequence number and process as needed
-int hcom_parse_request_and_process(const uint8_t *packet, const size_t packetSize)
+int hcom_host_parse_process_packet(const uint8_t *packet, const size_t packetSize)
 {
   int msgOffset = 0;
 
@@ -240,9 +240,9 @@ int hcom_parse_request_and_process(const uint8_t *packet, const size_t packetSiz
     // A non-data packet i.e. command (sequence number == 0)
     hcom_comms_dbg(LOG_DEBUG, "%s@%d-Non-data seq:%d, len:%d\n", thisFile, __LINE__, seqNumb, packetSize); 
 #if HCOM_COMMS_DEBUG > 0
-    hcom_utils_diag_print_buffer(packet, packetSize, LOG_DEBUG);
+    hcom_logging_utils_print_buffer(packet, packetSize, LOG_DEBUG);
 #endif
-    hcom_execute_host_command_type(packet + msgOffset, packetSize - msgOffset);
+    hcom_host_route_request_by_type(packet + msgOffset, packetSize - msgOffset);
   }
   else
   {

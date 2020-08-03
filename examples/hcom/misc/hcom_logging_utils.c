@@ -42,15 +42,13 @@
 #include <nuttx/config.h>
 #include "syslog.h"
 
-#include <nuttx/userspace.h>
+//#include <nuttx/userspace.h>
 
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
 
 /* Configuration ************************************************************/
-
-#define HCOM_COMMON_UTILS_USE_HCOM_PROXY 1
 
 /****************************************************************************
  * Private Data
@@ -65,189 +63,19 @@ static char *_f7syslogTextBuf;
  * Private Function Prototypes
  ****************************************************************************/
 
-#if HCOM_COMMON_UTILS_GPIO_D00_D08_DOUT > 0
-static void hcom_utils_dbg_gpio_init_d0_d8(void);
-#endif
-#if HCOM_COMMON_UTILS_GPIO_A0_MISO_DOUT > 0
-static void hcom_utils_dbg_gpio_init_a0_miso(void);
-#endif
-
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
-int hcom_utils_setup()
+int hcom_logging_utils_setup()
 {
   _f7syslogTextBuf = malloc(HCOM_PROTOCOL_REQUEST_MAX_SIMPLE_DATA_LEN);
   sem_init(&_f7syslogSem, 0, 1);
-
-#if HCOM_COMMON_UTILS_GPIO_D00_D08_DOUT > 0
-  hcom_utils_dbg_gpio_init_d0_d8();
-#endif
-#if HCOM_COMMON_UTILS_GPIO_A0_MISO_DOUT > 0
-  hcom_utils_dbg_gpio_init_a0_miso();
-#endif
-
   return OK;
 }
 
-//============================================================================
-void hcom_utils_shutdown()
-{
-  free(_f7syslogTextBuf);
-  sem_destroy(&_f7syslogSem);
-}
-
-//===================================================================
-// This function takes a value (0-31) for the battery backed reg,
-// reads the value then based on the mask clears all other bits and
-// right justifies the remaining bit(s).
-uint32_t hcom_utils_read_bbr_and_right_justify(uint32_t bitMask)
-{
-  uint32_t regValue;
- 
-  if(bitMask == 0)
-    return 0;
-
-  // syslog(1, "bitMask:0x%08x\n", bitMask);
-  
-  int ret = hcom_proxy_get_bbr(&regValue);
-  if(ret < 0)
-  {
-    hcom_utils_f7syslog(LOG_ERR, "%s:%s()@%d-%s Failed, errno:%d\n");
-  }
-
-  // syslog(1, ">>>*** bbr reg:0x%08x\n", regValue);
-  // syslog(1, ">>>*** bitMask:0x%08x\n", bitMask);
-
-  if(regValue == 0)
-    return 0;
-
-  regValue &= bitMask;    // Save only bit in mask
-  // syslog(1, ">>>*** regValue &= bitMask:0x%08x\n", regValue);
-
-  // We have the 32-bit value, shift right based on the mask
-  uint32_t tempMask = bitMask;
-  while((tempMask & 0x00000001) == 0)
-  {
-    tempMask >>= 1;
-    regValue >>= 1;
-  }
-
-  // syslog(1, ">>>*** return Value:0x%08x\n", regValue);
-  return regValue;
-}
-
-//===================================================================
-// Reads any of the 32 battery backed registers
-uint32_t hcom_utils_bbr_read()
-{
-  uint32_t regValue;
-  int ret = hcom_proxy_get_bbr(&regValue);
-  if(ret < 0)
-  {
-    hcom_utils_f7syslog(LOG_ERR, "%s:%s()@%d-%s Failed, errno:%d\n");
-  }
-  return regValue;
-}
-
-//===================================================================
-// Writes any of the 32 battery backed registers
-void hcom_utils_bbr_write(uint32_t value)
-{
-  int ret = hcom_proxy_set_bbr(value);
-  if(ret < 0)
-  {
-    hcom_utils_f7syslog(LOG_ERR, "%s:%s()@%d-%s Failed, errno:%d\n");
-  }
-}
-
-//===================================================================
-// Reads the state of a bit then clears that bit and returns it's
-// original state.
-bool hcom_utils_is_bbr_bits_set_n_clear(uint32_t value)
-{
-  uint32_t regValue;
-  int ret = hcom_proxy_get_bbr(&regValue);
-  if(ret < 0)
-  {
-    hcom_utils_f7syslog(LOG_ERR, "%s:%s()@%d-%s Failed, errno:%d\n");
-  }
-  ret = hcom_proxy_set_bbr(regValue & (~value));
-  if(ret < 0)
-  {
-    hcom_utils_f7syslog(LOG_ERR, "%s:%s()@%d-%s Failed, errno:%d\n");
-  }
-  return (value & regValue) != 0;
-}
-
-//===================================================================
-// Reads bits in register and returns their state
-bool hcom_utils_is_bbr_bit_set(uint32_t value)
-{
-  uint32_t regValue;
-  int ret = hcom_proxy_get_bbr(&regValue);
-  if(ret < 0)
-  {
-    hcom_utils_f7syslog(LOG_ERR, "%s:%s()@%d-%s Failed, errno:%d\n");
-  }
-  return (value & regValue) != 0;
-}
-
-//===================================================================
-// Set bit(s) in any bit in battery backed register
-void hcom_utils_set_bbr_bits(uint32_t value)
-{
-  int ret = hcom_proxy_update_bbr(0, value);
-  if(ret < 0)
-  {
-    hcom_utils_f7syslog(LOG_ERR, "%s:%s()@%d-%s Failed, errno:%d\n");
-  }
-}
-
-//===================================================================
-// Clears the specified bits
-void hcom_utils_clear_bbr_bits(uint32_t value)
-{
-  int ret = hcom_proxy_update_bbr(value, 0);
-  if(ret < 0)
-  {
-    hcom_utils_f7syslog(LOG_ERR, "%s:%s()@%d-%s Failed, errno:%d\n");
-  }
-}
-
-//===================================================================
-// Clears then sets the specified bits
-void hcom_utils_clear_then_set_bbr_bits(uint32_t clearBits, uint32_t setBits)
-{
-  int ret = hcom_proxy_update_bbr(clearBits, setBits);
-  if(ret < 0)
-  {
-    hcom_utils_f7syslog(LOG_ERR, "%s:%s()@%d-%s Failed, errno:%d\n");
-  }
-}
-
-// //===================================================================
-// // This is called during startup, before the hcom thread is created,
-// // to check if we are running under the QEMU virtualization model.
-// // 
-
-// #define QEMU_BOOT_INFO_MAGIC 0x12341234
-// #define QEMU_BOOT_INFO_OFFSET_FROM_SDRAM_END 1024
-// #define QEMU_BOOT_INFO_ADDRESS (CONFIG_HEAP2_BASE + CONFIG_HEAP2_SIZE - QEMU_BOOT_INFO_OFFSET_FROM_SDRAM_END)
-
-// bool hcom_utils_boot_time_qemu_check()
-// {
-//     // As part of the booting process, QEMU writes a token value
-//     // to the first page of SDRAM. This logic is implemented at
-//     // qemu/hw/arm/meadow.c:meadow_machine_reset.
-
-//     uint32_t *addr = (uint32_t *)QEMU_BOOT_INFO_ADDRESS; 
-//     return *addr == QEMU_BOOT_INFO_MAGIC;
-// }
-
-//==========================================================
+//============================================================
 // This function sets up the syslog mask as desired
-int hcom_utils_syslog_mask_init()
+int hcom_logging_syslog_mask_init()
 {
   int syslogMaskPrev;
   bool isPowerOnRestart;
@@ -282,11 +110,12 @@ int hcom_utils_syslog_mask_init()
   syslogMaskPrev = setlogmask(_syslogMask);
   if (syslogMaskPrev < 0)
   {
-    hcom_utils_f7syslog(LOG_CRIT, "%s@%d-setlogmask err:0x%08x\n", thisFile, __LINE__, syslogMaskPrev);
+    hcom_logging_syslog(LOG_CRIT, "%s@%d-setlogmask err:0x%08x\n", thisFile, __LINE__, syslogMaskPrev);
     return syslogMaskPrev;    // not old mask be error
   }
 #else
-  syslog(1, "CONFIG_STM32F7_PWR not defined\n");
+#warning "CONFIG_STM32F7_PWR not defined\n"
+
   // Without battery backed registers the best we can do is defaults
   isPowerOnRestart = true;
   _syslogMask = LOG_MASK(LOG_EMERG) | LOG_MASK(LOG_ALERT) | LOG_MASK(LOG_CRIT) |
@@ -307,7 +136,7 @@ int hcom_utils_syslog_mask_init()
   char *traceDest = traceCombo[toValue];
 
   // Provide some information that may be useful
-  hcom_utils_f7syslog(LOG_INFO, "Meadow %s (%s@%s) %s, Mono:%s, Trace level:0x%02x(was 0x%02x), to:%s, type:%s\n",
+  hcom_logging_syslog(LOG_INFO, "Meadow %s (%s@%s) %s, Mono:%s, Trace level:0x%02x(was 0x%02x), to:%s, type:%s\n",
         HCOM_DEVICE_INFO_MEADOW_OS_VERSION, __DATE__, __TIME__, 
         isPowerOnRestart ? "power-on restart" :"rebooted",
         hcom_mono_ctrl_is_mono_enabled() ? "Enabled" : "Disabled",
@@ -323,7 +152,7 @@ int hcom_utils_syslog_mask_init()
 
 //============================================================================
 // For diagnostic use only
-void hcom_utils_diag_print_buffer(const uint8_t buffer[], const int bufLen, uint8_t msgPriority)
+void hcom_logging_utils_print_buffer(const uint8_t buffer[], const int bufLen, uint8_t msgPriority)
 {
 #if HCOM_COMMON_UTILS_DIAG_PRINT_BUFFER > 0
 
@@ -335,13 +164,13 @@ void hcom_utils_diag_print_buffer(const uint8_t buffer[], const int bufLen, uint
 
   if(bufLen <= 0)
   {
-    hcom_utils_f7syslog(msgPriority, "hcom_utils_diag_print_buffer() called with 'bufLen:%d'\n", bufLen);
+    hcom_logging_syslog(msgPriority, "hcom_logging_utils_print_buffer() called with 'bufLen:%d'\n", bufLen);
     return;
   }
 
   if(buffer == NULL)
   {
-    hcom_utils_f7syslog(msgPriority, "hcom_utils_diag_print_buffer() called with 'buffer == NULL'\n");
+    hcom_logging_syslog(msgPriority, "hcom_logging_utils_print_buffer() called with 'buffer == NULL'\n");
     return;
   }
 
@@ -400,7 +229,7 @@ void hcom_utils_diag_print_buffer(const uint8_t buffer[], const int bufLen, uint
     lineBuff[asciiOffset] = 0x00; // null terminator
 
   // Output one row at a time
-  hcom_utils_f7syslog(msgPriority, lineBuff);
+  hcom_logging_syslog(msgPriority, lineBuff);
   }
 
 #endif
@@ -410,7 +239,7 @@ void hcom_utils_diag_print_buffer(const uint8_t buffer[], const int bufLen, uint
 // This is part of memory saving effort to remove from all the syslog
 // messages the need to identify the type of log. It's done here and
 // not in 100+ places.
-static int hcom_utils_syslog_priority_to_text(int priority, char *textPri)
+static int hcom_logging_utils_log_priority_to_text(int priority, char *textPri)
 {
   switch (priority)
   {
@@ -448,13 +277,13 @@ static int hcom_utils_syslog_priority_to_text(int priority, char *textPri)
 
 //===================================================================
 // Builds the string for syslogs
-static int hcom_util_build_syslog_string(int priority, FAR const IPTR char * fmtStr, va_list argsList,
+static int hcom_logging_utils_build_syslog_string(int priority, FAR const IPTR char * fmtStr, va_list argsList,
         char* finalString, int maxStringLen)
 {
   // Adding the prefix here saves memory by removing
   // the text at the start of each message
   char labelPrefix[16];
-  int prefixLen = hcom_utils_syslog_priority_to_text(priority, labelPrefix);
+  int prefixLen = hcom_logging_utils_log_priority_to_text(priority, labelPrefix);
   int fmtLength = strlen(fmtStr);
 
   char *finalFmt = malloc(prefixLen + fmtLength + 1); // room for '\0'
@@ -495,9 +324,9 @@ static void hcom_utils_f7syslog_takesem(void)
 
 //===================================================================
 // This function is for those places where hcom is processing text to
-// send to the host PC. If hcom_utils_f7syslog had been used these calls
+// send to the host PC. If hcom_logging_syslog had been used these calls
 // will introduce recursion as each syslog will create another syslog.
-void hcom_utils_f7syslog_x(int priority, FAR const IPTR char *fmt, ...)
+void hcom_logging_syslog_x(int priority, FAR const IPTR char *fmt, ...)
 {
 #if defined CONFIG_RAMLOG_SYSLOG
   // Can't send to syslog because this will be a recursive. Can't send
@@ -520,7 +349,7 @@ void hcom_utils_f7syslog_x(int priority, FAR const IPTR char *fmt, ...)
 
 //===================================================================
 // Use this for syslogs writes that can be routed to host.
-void hcom_utils_f7syslog(int priority, FAR const IPTR char *fmt, ...)
+void hcom_logging_syslog(int priority, FAR const IPTR char *fmt, ...)
 {
   // Prevent multiple threads from garbling message
   hcom_utils_f7syslog_takesem();
@@ -533,7 +362,7 @@ void hcom_utils_f7syslog(int priority, FAR const IPTR char *fmt, ...)
 
   va_list args;
   va_start(args, fmt);
-  int stringLen = hcom_util_build_syslog_string(priority, fmt, args, _f7syslogTextBuf,
+  int stringLen = hcom_logging_utils_build_syslog_string(priority, fmt, args, _f7syslogTextBuf,
             HCOM_PROTOCOL_REQUEST_MAX_SIMPLE_DATA_LEN);
   va_end(args);  
 
@@ -567,7 +396,7 @@ void hcom_utils_f7syslog(int priority, FAR const IPTR char *fmt, ...)
     if(_f7syslogTextBuf[stringLen - 1] == 0x0a || _f7syslogTextBuf[stringLen - 1] == 0x0d)
       stringLen--;
   
-    hcom_comms_send_raw_string_msg(HCOM_HOST_REQUEST_TEXT_TRACE_MSG, 0, _f7syslogTextBuf,
+    hcom_host_send_raw_string_msg(HCOM_HOST_REQUEST_TEXT_TRACE_MSG, 0, _f7syslogTextBuf,
             stringLen, thisFile, __LINE__);
   }
 #endif
@@ -593,7 +422,7 @@ void hcom_utils_safe_ramlog(int priority, FAR const IPTR char *fmt,
   _safeRamlogText = malloc(HCOM_PROTOCOL_REQUEST_MAX_SIMPLE_DATA_LEN);
   DEBUGASSERT(_safeRamlogText != NULL);
 
-  int stringLen = hcom_util_build_syslog_string(priority, fmt, args, _safeRamlogText,
+  int stringLen = hcom_logging_utils_build_syslog_string(priority, fmt, args, _safeRamlogText,
             HCOM_PROTOCOL_REQUEST_MAX_SIMPLE_DATA_LEN);
 
   // Note: no time stamp to these messages
@@ -603,93 +432,8 @@ void hcom_utils_safe_ramlog(int priority, FAR const IPTR char *fmt,
     stringLen--;
 
 // p-m - removed following because sending to host not implemented yet
-  // hcom_comms_send_raw_string_msg(HCOM_HOST_REQUEST_TEXT_TRACE_MSG, 0, _safeRamlogText,
+  // hcom_host_send_raw_string_msg(HCOM_HOST_REQUEST_TEXT_TRACE_MSG, 0, _safeRamlogText,
   //         stringLen, thisFile, __LINE__);
   free(_safeRamlogText);
-}
-#endif
-
-#if HCOM_COMMON_UTILS_GPIO_A0_MISO_DOUT > 0
-//=================================================================
-void hcom_utils_dbg_gpio_init_a0_miso()
-{
-  stm32_configgpio(MEADOW_DIAG_GPIO_A0___01_OUTPUT);
-  stm32_configgpio(MEADOW_DIAG_GPIO_A1___02_OUTPUT);
-  stm32_configgpio(MEADOW_DIAG_GPIO_A2___03_OUTPUT);
-  stm32_configgpio(MEADOW_DIAG_GPIO_A3___04_OUTPUT);
-  stm32_configgpio(MEADOW_DIAG_GPIO_A4___05_OUTPUT);
-  stm32_configgpio(MEADOW_DIAG_GPIO_A5___06_OUTPUT);
-  stm32_configgpio(MEADOW_DIAG_GPIO_SCK__07_OUTPUT);
-  stm32_configgpio(MEADOW_DIAG_GPIO_MOSI_08_OUTPUT);
-  stm32_configgpio(MEADOW_DIAG_GPIO_MISO_09_OUTPUT);
-  usleep(100 * 1000);
-  stm32_gpiowrite(MEADOW_DIAG_GPIO_A0___01_OUTPUT, false);
-  stm32_gpiowrite(MEADOW_DIAG_GPIO_A1___02_OUTPUT, false);
-  stm32_gpiowrite(MEADOW_DIAG_GPIO_A2___03_OUTPUT, false);
-  stm32_gpiowrite(MEADOW_DIAG_GPIO_A3___04_OUTPUT, false);
-  stm32_gpiowrite(MEADOW_DIAG_GPIO_A4___05_OUTPUT, false);
-  stm32_gpiowrite(MEADOW_DIAG_GPIO_A5___06_OUTPUT, false);
-  stm32_gpiowrite(MEADOW_DIAG_GPIO_SCK__07_OUTPUT, false);
-  stm32_gpiowrite(MEADOW_DIAG_GPIO_MOSI_08_OUTPUT, false);
-  stm32_gpiowrite(MEADOW_DIAG_GPIO_MISO_09_OUTPUT, false);
-}
-#endif
-
-#if HCOM_COMMON_UTILS_GPIO_D00_D08_DOUT > 0
-//=================================================================
-void hcom_utils_dbg_gpio_init_d0_d8()
-{
-  stm32_configgpio(MEADOW_DIAG_GPIO_D00__10_OUTPUT);
-  stm32_configgpio(MEADOW_DIAG_GPIO_D01__11_OUTPUT);
-  stm32_configgpio(MEADOW_DIAG_GPIO_D02__12_OUTPUT);
-  stm32_configgpio(MEADOW_DIAG_GPIO_D03__13_OUTPUT);
-  stm32_configgpio(MEADOW_DIAG_GPIO_D04__14_OUTPUT);
-  stm32_configgpio(MEADOW_DIAG_GPIO_D05__15_OUTPUT);
-  stm32_configgpio(MEADOW_DIAG_GPIO_D06__16_OUTPUT);
-  stm32_configgpio(MEADOW_DIAG_GPIO_D07__17_OUTPUT);
-  stm32_configgpio(MEADOW_DIAG_GPIO_D08__18_OUTPUT);
-  usleep(100 * 1000);
-}
-
-//=================================================================
-// Assumes gpio (D8 on meadow) can output as binary
-void hcom_utils_dbg_gpio_1led_update(bool ledOn)
-{
-  // Note: !ledOn because low (false) turns led on for an open drain
-  stm32_gpiowrite(MEADOW_DIAG_GPIO_D08__18_OUTPUT, !ledOn);
-}
-
-//=================================================================
-// Assumes gpio (D0-D7 on meadow) can output 8-bit as binary
-void hcom_utils_dbg_gpio_8bit_update(uint8_t newValue, bool ledOn)
-{ 
-  // Note: Low (false) turns led on for an open drain
-  stm32_gpiowrite(MEADOW_DIAG_GPIO_D00__10_OUTPUT, (newValue & 0x01) > 0 ?  false : true);
-  stm32_gpiowrite(MEADOW_DIAG_GPIO_D01__11_OUTPUT, (newValue & 0x02) > 0 ?  false : true);
-  stm32_gpiowrite(MEADOW_DIAG_GPIO_D02__12_OUTPUT, (newValue & 0x04) > 0 ?  false : true);
-  stm32_gpiowrite(MEADOW_DIAG_GPIO_D03__13_OUTPUT, (newValue & 0x08) > 0 ?  false : true);
-  stm32_gpiowrite(MEADOW_DIAG_GPIO_D04__14_OUTPUT, (newValue & 0x10) > 0 ?  false : true);
-  stm32_gpiowrite(MEADOW_DIAG_GPIO_D05__15_OUTPUT, (newValue & 0x20) > 0 ?  false : true);
-  stm32_gpiowrite(MEADOW_DIAG_GPIO_D06__16_OUTPUT, (newValue & 0x40) > 0 ?  false : true);
-  stm32_gpiowrite(MEADOW_DIAG_GPIO_D07__17_OUTPUT, (newValue & 0x80) > 0 ?  false : true);
-
-  hcom_utils_dbg_gpio_1led_update(ledOn);
-  usleep(50 * 1000);  // Give time to see the results
-
-  // if(ledOn)
-  // {
-  //   for(int i = 0; i < 5; i++)
-  //   {
-  //     // flash
-  //     hcom_utils_dbg_gpio_1led_update(i % 2 == 0 ? true : false);
-  //     usleep(100 * 1000);
-  //   }
-  //   hcom_utils_dbg_gpio_1led_update(false);
-  // }
-  // else
-  // {
-  //   hcom_utils_dbg_gpio_1led_update(false);
-  //   usleep(50 * 1000);
-  // }
 }
 #endif

@@ -102,13 +102,13 @@ void hcom_mono_rqst_disable_mono(uint32_t userData)
   hcom_utils_clear_bbr_bits(HCOM_BBREG_MONO_START_BIT_MASK);
 
   char *sendMsgToHost = "Mono disabled. Restarting Meadow";
-  hcom_comms_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0,
+  hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0,
           sendMsgToHost, thisFile, __LINE__);
 
   hcom_utils_set_bbr_bits(HCOM_BBREG_RESTART_CONCLUDED_BIT_MASK);
 
   // Tell host to begin to reconnect
-  hcom_comms_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_RECONNECT, userData,
+  hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_RECONNECT, userData,
           sendMsgToHost, thisFile, __LINE__);
 
   usleep(500 * 1000);
@@ -122,13 +122,13 @@ void hcom_mono_rqst_enable_mono(uint32_t userData)
   hcom_utils_set_bbr_bits(HCOM_BBREG_MONO_START_BIT_MASK);
 
   char *sendMsgToHost = "Mono being enabled. Restarting F7 Micro";
-  hcom_comms_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0,
+  hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0,
           sendMsgToHost, thisFile, __LINE__);
 
   hcom_utils_set_bbr_bits(HCOM_BBREG_RESTART_CONCLUDED_BIT_MASK);
   
   // Tell host to begin to reconnect
-  hcom_comms_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_RECONNECT, userData,
+  hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_RECONNECT, userData,
           sendMsgToHost, thisFile, __LINE__);
 
   usleep(500 * 1000);
@@ -146,7 +146,7 @@ void hcom_mono_rqst_is_mono_enabled(uint32_t userData)
   else
     monoStartupMsg = "On reset, mono will not run app.exe";
 
-  hcom_comms_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0,
+  hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0,
           monoStartupMsg, thisFile, __LINE__);
 }
 

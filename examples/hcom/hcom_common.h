@@ -78,13 +78,13 @@
   #define OK 0
 #endif
 
-// #ifndef MIN
-// #  define MIN(a,b) (((a) < (b)) ? (a) : (b))
-// #endif
+#ifndef MIN
+#  define MIN(a,b) (((a) < (b)) ? (a) : (b))
+#endif
 
-// #ifndef MAX
-// #  define MAX(a,b) (((a) > (b)) ? (a) : (b))
-// #endif
+#ifndef MAX
+#  define MAX(a,b) (((a) > (b)) ? (a) : (b))
+#endif
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -106,8 +106,8 @@
 // To reduce Meadow.OS size "syslog(LOG_DEBUG, ...);" messages are optional
 #define HCOM_COMMS_DEBUG 0
 #if HCOM_COMMS_DEBUG > 0
-#define hcom_comms_dbg(...) hcom_utils_f7syslog(__VA_ARGS__)
-#define hcom_comms_dbg_x(...) hcom_utils_f7syslog_x(__VA_ARGS__)
+#define hcom_comms_dbg(...) hcom_logging_syslog(__VA_ARGS__)
+#define hcom_comms_dbg_x(...) hcom_logging_syslog_x(__VA_ARGS__)
 #else
 #define hcom_comms_dbg(...)
 #define hcom_comms_dbg_x(...)
@@ -432,31 +432,31 @@ extern "C"
   // int hcom_initial_startup(void);
 
   // // USB CDC/ACM receive host messages
-  int hcom_comms_recv_setup(void);
-  void hcom_comms_recv_shutdown(void);
-  int hcom_comms_recv_thread_loop(void);
-  const char *hcom_comms_recv_get_device_name(void);
+  int hcom_host_recv_setup(void);
+  void hcom_host_recv_shutdown(void);
+  int hcom_host_recv_receiving_loop(void);
+  const char *hcom_host_recv_get_device_name(void);
 
   // USB CDC/ACM send host messages
-  int hcom_comms_send_setup(void);
-  void hcom_comms_send_msg_shutdown(void);
-  void hcom_comms_send_header_msg(uint16_t requestType, uint32_t userData,
+  int hcom_host_send_setup(void);
+  void hcom_host_send_shutdown(void);
+  void hcom_host_send_header_msg(uint16_t requestType, uint32_t userData,
           char *sourceFileName, int sourceLineNumber);
-  void hcom_comms_send_simple_text_msg(char *shortText, uint32_t userData, 
+  void hcom_host_send_simple_msg_no_rqst_type(char *shortText, uint32_t userData, 
           char *sourceFileName, int sourceLineNumber);
-  void hcom_comms_send_simple_string_msg(uint16_t requestType, uint32_t userData, char *shortText,
+  void hcom_host_send_simple_string_msg(uint16_t requestType, uint32_t userData, char *shortText,
           char *sourceFileName, int sourceLineNumber);
-  int hcom_comms_send_raw_string_msg(uint16_t requestType, uint32_t userData, char *shortText,
+  int hcom_host_send_raw_string_msg(uint16_t requestType, uint32_t userData, char *shortText,
           size_t msgLength, char *sourceFileName, int sourceLineNumber);
 
   // Save and Parse request
-  int hcom_proc_rqst_setup(void);
-  void hcom_proc_rqst_shutdown(void);
-  int hcom_proc_rqst_process_raw_data(uint8_t recvBuff[], const ssize_t recvByteCnt);
-  void hcom_execute_host_command_type(const uint8_t *recvOrigData, const size_t recvOrigDataSize);
+  int hcom_host_parse_setup(void);
+  void hcom_host_parse_shutdown(void);
+  int hcom_host_parse_process_raw_data(uint8_t recvBuff[], const ssize_t recvByteCnt);
+  void hcom_host_route_request_by_type(const uint8_t *recvOrigData, const size_t recvOrigDataSize);
 
-  int hcom_route_rqst_setup(void);
-  void hcom_route_rqst_shutdown(void);
+  int hcom_host_route_setup(void);
+  void hcom_host_route_shutdown(void);
 
 //   // Execute Request for downloaded file
   int hcom_dnld_proc_setup(void);
@@ -481,15 +481,15 @@ extern "C"
   int hcom_diag_misc_setup(void);
 
   // Execute Utility Request
-  int hcom_rqst_misc_setup(void);
-  void hcom_rqst_misc_enter_dfu_mode(uint32_t user_data);
-  void hcom_diag_misc_change_trace_level(uint32_t userData);
+  int hcom_misc_rqst_setup(void);
+  void hcom_misc_rqst_enter_dfu_mode(uint32_t user_data);
+  void hcom_misc_rqst_change_trace_level(uint32_t userData);
   void hcom_proxy_forward_cmd_to_proxy(uint16_t cliCmd, uint32_t proxyCmd, uint32_t userData);
 
   void hcom_mono_rqst_disable_mono(uint32_t userData);
   void hcom_mono_rqst_enable_mono(uint32_t userData);
 //   void hcom_mono_rqst_is_mono_enabled(uint32_t userData);
-  void hcom_rqst_misc_get_device_info(uint32_t userData);
+  void hcom_misc_rqst_get_device_info(uint32_t userData);
   void hcom_diag_misc_launch_nsh(uint32_t userData);
 
 //   // File commands
@@ -508,7 +508,7 @@ extern "C"
 //   int hcom_fs_init_partitions(FAR struct mtd_dev_s *master_flash_mtd, uint32_t partitionCount);
 //   int hcom_fs_mount_file_system(const char *sourceDevice, const char *targetDevice,
 //                                           const char *fileSystemType, uint32_t partitionId, const char *mountCommand);
-  bool hcom_fs_is_mounted(uint32_t partitionId);
+  bool hcom_proxy_is_mounted(uint32_t partitionId);
 //   int hcom_fs_1st_erase_sector_of_partition(uint32_t partitionId);
   int hcom_list_files_in_partition(uint32_t partitionId);
   int hcom_list_files_and_crc_in_partition(uint32_t partitionId);
@@ -529,8 +529,8 @@ extern "C"
 // #endif
 
   // Comms support, COBS encode and receive circular buffer
-  size_t hcom_comms_cobs_encoder(uint8_t source[], size_t startingOffset, size_t length, uint8_t encoded[]);
-  size_t hcom_comms_cobs_decoder(uint8_t encoded[], size_t length, uint8_t decoded[]);
+  size_t host_comms_cobs_encoder(uint8_t source[], size_t startingOffset, size_t length, uint8_t encoded[]);
+  size_t host_comms_cobs_decoder(uint8_t encoded[], size_t length, uint8_t decoded[]);
   int hcom_cirbuf_init(struct host_com_cir_buffer_s *hcom_cbuf, size_t totalCapacity, uint8_t delimiter);
   size_t hcom_cirbuf_avail_space(struct host_com_cir_buffer_s *hcom_cbuf);
   int hcom_cirbuf_add_bytes(struct host_com_cir_buffer_s *hcom_cbuf, uint8_t *newBytes, uint32_t bytesToAdd);
@@ -548,15 +548,17 @@ extern "C"
 //   void hcom_remote_dbg_recv_host_send_to_mono(const uint8_t *recvPayload, size_t recvPayloadSize, uint32_t userData);
 
   // Common Utils and persistent (battery backed) storage functions
-  int hcom_utils_setup(void);
-  void hcom_utils_shutdown(void);
+  int hcom_common_utils_setup(void);
+  int hcom_logging_utils_setup(void);
+
+  void hcom_common_utils_shutdown(void);
 #if defined(CONFIG_STM32F7_PWR)
-  int hcom_utils_syslog_mask_init(void);
+  int hcom_logging_syslog_mask_init(void);
 #endif
 //   bool hcom_utils_boot_time_qemu_check(void);
-  void hcom_utils_diag_print_buffer(const uint8_t packetBuffer[], const int bufLen, uint8_t logPriority);
-  void hcom_utils_f7syslog(int priority, FAR const IPTR char *fmt, ...);
-  void hcom_utils_f7syslog_x(int priority, FAR const IPTR char *fmt, ...);
+  void hcom_logging_utils_print_buffer(const uint8_t packetBuffer[], const int bufLen, uint8_t logPriority);
+  void hcom_logging_syslog(int priority, FAR const IPTR char *fmt, ...);
+  void hcom_logging_syslog_x(int priority, FAR const IPTR char *fmt, ...);
   void hcom_utils_safe_ramlog(int priority, FAR const IPTR char *fmt, va_list args);
   void hcom_utils_dbg_gpio_1led_update(bool ledOn);
   void hcom_utils_dbg_gpio_8bit_update(uint8_t newValue, bool ledOn);
@@ -578,6 +580,8 @@ extern "C"
   int hcom_proxy_update_bbr(uint32_t clearBits, uint32_t setBits);
   int hcom_proxy_restart_meadow(void);
   int hcom_proxy_get_mcu_id(uint8_t uniqueId[12]);
+  int hcom_proxy_gpio_config(int gpioDefn, uint8_t configValue);
+  int hcom_proxy_gpio_write(int gpioDefn, uint8_t cmdValue);
 
   // p-m LIKE TO REMOVE THESE GENERIC REGISTER QUERIES
   // int hcom_proxy_set_register(uint32_t address, uint32_t value);

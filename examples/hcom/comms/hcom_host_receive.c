@@ -69,19 +69,19 @@ static const char *deviceName;
  * Private Function Prototypes
  ****************************************************************************/
 
-static bool hcom_comms_receive_data(void);
-static ssize_t hcom_comms_recv_wait_until_change(uint8_t *recvBuffer, time_t readTimeout);
-static void hcom_comms_recv_timeout_expired(int signo, FAR siginfo_t *info, FAR void *context);
-static int hcom_comms_recv_timer_start(timer_t timerid, time_t sec);
-static int hcom_comms_recv_timer_init(void);
-static int hcom_comms_recv_open_connection(void);
-static int hcom_comms_recv_restart_concluded(void);
+static bool hcom_host_recv_received_data(void);
+static ssize_t hcom_host_recv_wait_until_change(uint8_t *recvBuffer, time_t readTimeout);
+static void hcom_host_recv_timeout_expired(int signo, FAR siginfo_t *info, FAR void *context);
+static int hcom_host_recv_timer_start(timer_t timerid, time_t sec);
+static int hcom_host_recv_timer_init(void);
+static int hcom_host_recv_open_connection(void);
+static int hcom_host_recv_restart_concluded(void);
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
-int hcom_comms_recv_setup()
+int hcom_host_recv_setup()
 {
   syslog(1, "RCV-->Entered %s\n", __func__);
 
@@ -104,31 +104,31 @@ int hcom_comms_recv_setup()
 }
 
 //=======================================================================
-const char *hcom_comms_recv_get_device_name()
+const char *hcom_host_recv_get_device_name()
 {
   return deviceName;
 }
 
 //=======================================================================
-void hcom_comms_recv_shutdown()
+void hcom_host_recv_shutdown()
 {
   _shutting_down = true;
 
   // Forces a receive error which, causes the thread to return.
-  // file_close(&_comms_read_fd);
+  close(_comms_read_fd);
   _is_comms_read_open = false;
   free(_tempRecvBuff);
 }
 
 //=======================================================================
 // The dedicated thread lives here. However, this thread calls throughout hcom
-int hcom_comms_recv_thread_loop()
+int hcom_host_recv_receiving_loop()
 {
   int ret;
   bool wait_before_retry = false;
 
   // Same thread must init as uses the timer
-  hcom_comms_recv_timer_init();
+  hcom_host_recv_timer_init();
 
   // This loop only runs initially and when we loose a host connection
   while(! _shutting_down)
@@ -138,11 +138,11 @@ int hcom_comms_recv_thread_loop()
       sleep(1);    // Delay for certain return values. Thus limiting error messages
       
     // Attempt to establish the connection
-    ret = hcom_comms_recv_open_connection();
+    ret = hcom_host_recv_open_connection();
     if (ret < 0)
     {
       // TODO - should not output messages every second.
-      hcom_utils_f7syslog(LOG_ERR, "%s@%d-connection not made, %d\n", thisFile, __LINE__, ret);
+      hcom_logging_syslog(LOG_ERR, "%s@%d-connection not made, %d\n", thisFile, __LINE__, ret);
       sleep(1);   // Can't leave this loop or all hcom will stop
       continue;
     }
@@ -150,11 +150,11 @@ int hcom_comms_recv_thread_loop()
     if(_firstTimeToConnect)
     {
       _firstTimeToConnect = false;
-      hcom_comms_recv_restart_concluded();
+      hcom_host_recv_restart_concluded();
     }
 
     // Some errors need a delay
-    wait_before_retry = hcom_comms_receive_data();
+    wait_before_retry = hcom_host_recv_received_data();
   }
 
   return OK;
@@ -163,13 +163,13 @@ int hcom_comms_recv_thread_loop()
 //=======================================================================
 // When Meadow is restarted by some CLI command we need to send the
 // "Concluded" message type
-int hcom_comms_recv_restart_concluded()
+int hcom_host_recv_restart_concluded()
 {
   // Check if a CLI command was responsible for this restart, If it was a
   // `Concluded` message must be sent
   if(hcom_utils_read_bbr_and_right_justify(HCOM_BBREG_RESTART_CONCLUDED_BIT_MASK))
   {
-    hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
+    hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
   }
 
   //--------------------------------------------
@@ -180,7 +180,7 @@ int hcom_comms_recv_restart_concluded()
   else
     monoStartupMsg = "Mono disabled, will not run app.exe";
 
-  hcom_comms_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0,
+  hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0,
           monoStartupMsg, thisFile, __LINE__);
 
   return OK;
@@ -188,7 +188,7 @@ int hcom_comms_recv_restart_concluded()
 
 //=======================================================================
 // 
-int hcom_comms_recv_open_connection()
+int hcom_host_recv_open_connection()
 {
   useconds_t hostConnectionAttemptCount = HCOM_CONNECTION_STARTUP_ATTEMPTS;
 
@@ -233,14 +233,14 @@ int hcom_comms_recv_open_connection()
 //========================================================================
 // This thread receives all host data and may call transmit to responsed as
 // needed. This thread is the only thread receiving via USB serial data.
-bool hcom_comms_receive_data()
+bool hcom_host_recv_received_data()
 {
   hcom_comms_dbg(LOG_DEBUG, "Waiting for '%s' message\n", HCOM_COMMUNICATIONS_DEVICE_NAME);
 
   // Stay in this loop forever
   while (!_shutting_down)
   {
-    ssize_t readResult = hcom_comms_recv_wait_until_change(_tempRecvBuff,
+    ssize_t readResult = hcom_host_recv_wait_until_change(_tempRecvBuff,
               hcom_dnld_proc_is_active() ?
                 HCOM_RECV_TIMEOUT_ACTIVE_SECONDS : HCOM_RECV_TIMEOUT_DEFAULT_SECONDS);
 
@@ -250,10 +250,10 @@ bool hcom_comms_receive_data()
       // We've received some data
       syslog(1, "RCV-->Received %d bytes\n", readResult);
 
-      int result = hcom_proc_rqst_process_raw_data(_tempRecvBuff, readResult);
+      int result = hcom_host_parse_process_raw_data(_tempRecvBuff, readResult);
       if (result < 0)
       {
-        hcom_utils_f7syslog(LOG_WARNING, "%s@%d-%d received\n", thisFile, __LINE__, result);
+        hcom_logging_syslog(LOG_WARNING, "%s@%d-%d received\n", thisFile, __LINE__, result);
       }
       continue;
     }
@@ -261,7 +261,7 @@ bool hcom_comms_receive_data()
     if (readResult == 0)
     {
       // readResult == 0 (end-of-file). Host PC probably dropped connection
-      hcom_utils_f7syslog(LOG_INFO, "%s@%d-HCOM received EOF\n", thisFile, __LINE__);
+      hcom_logging_syslog(LOG_INFO, "%s@%d-HCOM received EOF\n", thisFile, __LINE__);
       continue;
     }
 
@@ -270,13 +270,13 @@ bool hcom_comms_receive_data()
     {
       if (hcom_dnld_proc_is_active())
       {
-        hcom_utils_f7syslog(LOG_WARNING, "%s@%d-Comms stopped. Recvd:%d of msg\n", thisFile, __LINE__, readResult);
+        hcom_logging_syslog(LOG_WARNING, "%s@%d-Comms stopped. Recvd:%d of msg\n", thisFile, __LINE__, readResult);
       }
       else
       {
         // Timeout received while waiting for a host communication. This is normal as we will
         // almost always be waiting and not receiving.
-        hcom_utils_f7syslog(LOG_INFO, "%s thread running\n", HCOM_THREAD_NAME_HCOM_RECEIVE);
+        hcom_logging_syslog(LOG_INFO, "%s thread running\n", HCOM_THREAD_NAME_HCOM_RECEIVE);
       }
     }
     else
@@ -287,12 +287,12 @@ bool hcom_comms_receive_data()
       if (readResult == -ENOTCONN || readResult == -ENOTSOCK || readResult == -ENETDOWN)
       {
         // Host dropped connection - calling read will only repeat the error
-        hcom_utils_f7syslog(LOG_NOTICE, "%s@%d-USB connection dropped.\n", thisFile, __LINE__);
+        hcom_logging_syslog(LOG_NOTICE, "%s@%d-USB connection dropped.\n", thisFile, __LINE__);
         delayBeforeRetry = true;    // Delay retry
       }
       else
       {
-        hcom_utils_f7syslog(LOG_ERR, "%s@%d-HCOM recv error:%d, errno:%d\n", thisFile, __LINE__, readResult, errno);
+        hcom_logging_syslog(LOG_ERR, "%s@%d-HCOM recv error:%d, errno:%d\n", thisFile, __LINE__, readResult, errno);
         delayBeforeRetry = false;    // No retry delay
       }
 
@@ -308,7 +308,7 @@ bool hcom_comms_receive_data()
 
 //=============================================================================
 // Receive what the host has to send. On error or timeout return > 0
-ssize_t hcom_comms_recv_wait_until_change(uint8_t *recvBuffer, time_t readTimeout)
+ssize_t hcom_host_recv_wait_until_change(uint8_t *recvBuffer, time_t readTimeout)
 {
   ssize_t readReturn;
 
@@ -322,14 +322,14 @@ ssize_t hcom_comms_recv_wait_until_change(uint8_t *recvBuffer, time_t readTimeou
 
   // Start/restart the timer.  Whenever we read data from the host we must anticipate
   // a timeout because we can never be sure that the host won't just die before the end.
-  hcom_comms_recv_timer_start(_recv_timerid, readTimeout);
+  hcom_host_recv_timer_start(_recv_timerid, readTimeout);
 
   // This is a blocking read. read() will return:
   // (1) readReturn > 0 and readReturn <= buffer size on success
   // (2) readReturn == 0 on end of file
   // (3) readReturn < 0 on a read error or interruption by a signal, value in errno
   readReturn = read(_comms_read_fd, recvBuffer, HCOM_PROTOCOL_PACKET_MAX_SIZE);
-  (void)hcom_comms_recv_timer_start(_recv_timerid, 0); // Stop the timer
+  (void)hcom_host_recv_timer_start(_recv_timerid, 0); // Stop the timer
   sched_unlock();
 
   if (readReturn > 0)
@@ -337,7 +337,7 @@ ssize_t hcom_comms_recv_wait_until_change(uint8_t *recvBuffer, time_t readTimeou
 
   if (readReturn == 0)
   {
-    hcom_utils_f7syslog(LOG_INFO, "%s@%d-EOF recv\n", thisFile, __LINE__);
+    hcom_logging_syslog(LOG_INFO, "%s@%d-EOF recv\n", thisFile, __LINE__);
     return -ENOTCONN; // "Transport endpoint is not connected" [128] - Probably time to shutdown
   }
 
@@ -365,13 +365,13 @@ ssize_t hcom_comms_recv_wait_until_change(uint8_t *recvBuffer, time_t readTimeou
 }
 
 /****************************************************************************
- * Name: hcom_comms_recv_timeout_expired
+ * Name: hcom_host_recv_timeout_expired
  *
  * Description:
  *   SIGALRM signal handler.  Simply posts the timeout event.
  *
  ****************************************************************************/
-void hcom_comms_recv_timeout_expired(int signo, FAR siginfo_t *info, FAR void *context)
+void hcom_host_recv_timeout_expired(int signo, FAR siginfo_t *info, FAR void *context)
 {
   /* Just set the timeout flag.
    * REVISIT:  This is a read-modify-write operation and has the potential
@@ -382,13 +382,13 @@ void hcom_comms_recv_timeout_expired(int signo, FAR siginfo_t *info, FAR void *c
 }
 
 /****************************************************************************
- * Name:  hcom_comms_recv_timer_start
+ * Name:  hcom_host_recv_timer_start
  *
  * Description:
  *   Start, restart, or stop the timer.
  *
  ****************************************************************************/
-int hcom_comms_recv_timer_start(timer_t timerid, time_t sec)
+int hcom_host_recv_timer_start(timer_t timerid, time_t sec)
 {
   struct itimerspec todelay;
   int ret;
@@ -403,21 +403,21 @@ int hcom_comms_recv_timer_start(timer_t timerid, time_t sec)
   if (ret < 0)
   {
     int errorcode = errno;
-    hcom_utils_f7syslog(LOG_ERR, "%s@%d-setting timer errno:%d\n", thisFile, __LINE__, errorcode);
+    hcom_logging_syslog(LOG_ERR, "%s@%d-setting timer errno:%d\n", thisFile, __LINE__, errorcode);
     return -errorcode;
   }
   return OK;
 }
 
 /****************************************************************************
- * Name:  hcom_comms_recv_timer_init
+ * Name:  hcom_host_recv_timer_init
  *
  * Description:
  *   Create the POSIX timer used to manage timeouts and attach the SIGALRM
  *   signal handler to catch the timeout events.
  *
  ****************************************************************************/
-int hcom_comms_recv_timer_init()
+int hcom_host_recv_timer_init()
 {
   struct sigevent toevent;
   struct sigaction act;
@@ -432,12 +432,12 @@ int hcom_comms_recv_timer_init()
   if (ret < 0)
   {
     int errorcode = errno;
-    hcom_utils_f7syslog(LOG_ERR, "%s@%d-create timer errno:%d\n", thisFile, __LINE__, errorcode);
+    hcom_logging_syslog(LOG_ERR, "%s@%d-create timer errno:%d\n", thisFile, __LINE__, errorcode);
     return -errorcode;
   }
 
   /* Attach a signal handler to catch the timeout */
-  act.sa_sigaction = hcom_comms_recv_timeout_expired;
+  act.sa_sigaction = hcom_host_recv_timeout_expired;
   act.sa_flags = SA_SIGINFO;
   sigemptyset(&act.sa_mask);
 
@@ -445,7 +445,7 @@ int hcom_comms_recv_timer_init()
   if (ret < 0)
   {
     int errorcode = errno;
-    hcom_utils_f7syslog(LOG_ERR, "%s@%d-attach signal errno:%d\n", thisFile, __LINE__, errorcode);
+    hcom_logging_syslog(LOG_ERR, "%s@%d-attach signal errno:%d\n", thisFile, __LINE__, errorcode);
     return -errorcode;
   }
   return OK;

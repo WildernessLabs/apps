@@ -43,11 +43,11 @@
 #include <sys/mount.h>
 #include <sys/stat.h>
 #include <sys/ioctl.h>
-//#include <nuttx/drivers/ramdisk.h>
+
 #include <nuttx/fs/fs.h>
-//#include <nuttx/fs/fat.h>
+
 #include <nuttx/fs/dirent.h>
-//#include <nuttx/userspace.h>
+
 
 /****************************************************************************
  * Private Data
@@ -118,7 +118,7 @@ int hcom_dnld_write_del_open_active_file(const uint32_t partitionId,
 
   if (_hcomActiveFileName[0] != '\0')
   {
-    hcom_utils_f7syslog(LOG_ERR, "%s@%d-File '%s' in use\n",
+    hcom_logging_syslog(LOG_ERR, "%s@%d-File '%s' in use\n",
              thisFile, __LINE__, _hcomActiveFileName);
     return -EMFILE; // File already open
   }
@@ -140,16 +140,16 @@ int hcom_dnld_write_del_open_active_file(const uint32_t partitionId,
   // is non-negative and less than buf_size. Otherwise, the string may be truncated.
   if (filePathAndNameLen < 0 || filePathAndNameLen >= HCOM_MAX_PATH_AND_FILE_BUFF_LENGTH - 1)
   {
-    hcom_utils_f7syslog(LOG_ERR, "%s@%d-Open '%s', buffer too small (%d), need %d\n",
+    hcom_logging_syslog(LOG_ERR, "%s@%d-Open '%s', buffer too small (%d), need %d\n",
              thisFile, __LINE__, _hcomActiveFileName, HCOM_MAX_PATH_AND_FILE_BUFF_LENGTH, filePathAndNameLen);
 
     _hcomActiveFileName[0] = '\0';
     return -ENAMETOOLONG; // File name too long
   }
 
-  if (!hcom_fs_is_mounted(partitionId))
+  if (!hcom_proxy_is_mounted(partitionId))
   {
-    hcom_utils_f7syslog(LOG_ERR, "%s@%d-F/S not mounted %s\n",
+    hcom_logging_syslog(LOG_ERR, "%s@%d-F/S not mounted %s\n",
              thisFile, __LINE__, _hcomActiveFileName);
     _hcomActiveFileName[0] = '\0';
     return -ENOENT; // No such file or directory
@@ -157,7 +157,7 @@ int hcom_dnld_write_del_open_active_file(const uint32_t partitionId,
 
   if (_fileDescriptor != -1)
   {
-    hcom_utils_f7syslog(LOG_ERR, "%s@%d-File Descriptor in use, by '%s'\n",
+    hcom_logging_syslog(LOG_ERR, "%s@%d-File Descriptor in use, by '%s'\n",
              thisFile, __LINE__, _hcomActiveFileName);
     _hcomActiveFileName[0] = '\0';
     return -EMFILE; // Too many files open
@@ -170,7 +170,7 @@ int hcom_dnld_write_del_open_active_file(const uint32_t partitionId,
   _fileDescriptor = open(_hcomActiveFileName, O_RDWR | O_CREAT | O_TRUNC, 0644);
   if (_fileDescriptor == -1)
   {
-    hcom_utils_f7syslog(LOG_ERR, "%s@%d-open '%s', errno:%d\n",
+    hcom_logging_syslog(LOG_ERR, "%s@%d-open '%s', errno:%d\n",
               thisFile, __LINE__, _hcomActiveFileName, get_errno());
     _hcomActiveFileName[0] = '\0';
     return _fileDescriptor;
@@ -189,7 +189,7 @@ int hcom_dnld_write_del_add_to_active_file(const uint8_t *fileWriteData, const s
   if (_shutting_down)
     return OK;
 
-  if (!hcom_fs_is_mounted(_activePartitionId))
+  if (!hcom_proxy_is_mounted(_activePartitionId))
     return -ENOENT; // No such file or directory
 
   if (_fileDescriptor < 0)
@@ -200,14 +200,14 @@ int hcom_dnld_write_del_add_to_active_file(const uint8_t *fileWriteData, const s
   if (nbytes < 0)
   {
     int Errno = get_errno();
-    hcom_utils_f7syslog(LOG_ERR, "%s@%d-failed to write %s, errno %d\n",
+    hcom_logging_syslog(LOG_ERR, "%s@%d-failed to write %s, errno %d\n",
              thisFile, __LINE__, _hcomActiveFileName, Errno);
     return nbytes;
   }
 
   if (nbytes < fileWriteSize)
   {
-    hcom_utils_f7syslog(LOG_ERR, "%s@%d-'%s' wrote %d of %d bytes\n",
+    hcom_logging_syslog(LOG_ERR, "%s@%d-'%s' wrote %d of %d bytes\n",
              thisFile, __LINE__, _hcomActiveFileName, nbytes, fileWriteSize);
   }
 
@@ -220,7 +220,7 @@ int hcom_dnld_write_del_add_to_active_file(const uint8_t *fileWriteData, const s
 // this function is called to close the file and clean up.
 int hcom_dnld_write_del_close_active_file()
 {
-  if (!hcom_fs_is_mounted(_activePartitionId))
+  if (!hcom_proxy_is_mounted(_activePartitionId))
     return -ENOENT; // No such file or directory
 
   if (_fileDescriptor < 0) // Okay to close file > once?
@@ -230,7 +230,7 @@ int hcom_dnld_write_del_close_active_file()
   if (ret < 0)
   {
     int Errno = get_errno();
-    hcom_utils_f7syslog(LOG_ERR, "%s@%d-Close of %s, errno %d\n",
+    hcom_logging_syslog(LOG_ERR, "%s@%d-Close of %s, errno %d\n",
              thisFile, __LINE__, _hcomActiveFileName, Errno);
     return ret;
   }
@@ -262,9 +262,9 @@ void hcom_dnld_write_del_remove_file_start(const uint8_t *recvPacketData, const 
   ret = hcom_dnld_write_del_remove_file_by_name(partitionId, HCOM_FILE_MOUNT_POINT_TARGET, fileNameBuffer);
   if (ret != OK)
   {
-    hcom_utils_f7syslog(LOG_ERR, "%s@%d-Error from call to delete:%d\n",
+    hcom_logging_syslog(LOG_ERR, "%s@%d-Error from call to delete:%d\n",
         thisFile, __LINE__, ret);
-    hcom_comms_send_header_msg(HCOM_HOST_REQUEST_TEXT_ERROR, 0, thisFile, __LINE__);
+    hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_ERROR, 0, thisFile, __LINE__);
   }
 
   // Send text message to host
@@ -272,7 +272,7 @@ void hcom_dnld_write_del_remove_file_start(const uint8_t *recvPacketData, const 
         "Delete success %s", fileNameBuffer);
 
   DEBUGASSERT(stringLen < HCOM_MAX_HOST_STRING_BUFF_LENGTH);
-  hcom_comms_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0, hostMsg,
+  hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0, hostMsg,
            thisFile, __LINE__);
 
   free(fileNameBuffer);
@@ -292,7 +292,7 @@ int hcom_dnld_write_del_remove_file_by_name(const uint32_t partitionId, const ch
     // Check if the file to remove is the active file
     if(strcmp(fileName, _hcomActiveFileName) == 0)
     {
-      hcom_utils_f7syslog(LOG_ERR, "%s@%d-Cannot delete '%s', in use\n",
+      hcom_logging_syslog(LOG_ERR, "%s@%d-Cannot delete '%s', in use\n",
               thisFile, __LINE__, fileName);
       free(fullPathAndFileName);
       return -EMFILE;    // Too many files open (1 is too many)
@@ -312,7 +312,7 @@ int hcom_dnld_write_del_remove_file_by_name(const uint32_t partitionId, const ch
   // is non-negative and less than buf_size. Otherwise, the string may be truncated.
   if (filePathAndNameLen < 0 || filePathAndNameLen >= HCOM_MAX_HOST_STRING_BUFF_LENGTH - 1)
   {
-    hcom_utils_f7syslog(LOG_ERR, "%s@%d-Delete '%s' (truncated) but name too long.\n",
+    hcom_logging_syslog(LOG_ERR, "%s@%d-Delete '%s' (truncated) but name too long.\n",
              thisFile, __LINE__, fullPathAndFileName);
     free(fullPathAndFileName);
     return -ENAMETOOLONG; // File name too long
@@ -321,7 +321,7 @@ int hcom_dnld_write_del_remove_file_by_name(const uint32_t partitionId, const ch
   int ret = unlink(fullPathAndFileName);
   if (ret < 0)
   {
-    hcom_utils_f7syslog(LOG_ERR, "%s@%d-unlink %s, errno %d\n",
+    hcom_logging_syslog(LOG_ERR, "%s@%d-unlink %s, errno %d\n",
              thisFile, __LINE__, fullPathAndFileName, get_errno());
     free(fullPathAndFileName);
     return ret;

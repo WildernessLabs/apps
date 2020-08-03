@@ -210,7 +210,6 @@ int hcom_diag_ramlog_trace_lazy_initialization()
 //=============================================================
 int hcom_diag_ramlog_trace_make_thread()
 {
-  // syslog(1, "RLOG-->%s@%d-Entered %s, PID:%d\n", thisFile, __LINE__, __func__, getpid()); usleep(100 * 1000);
     int ret;
     pthread_t thread;
     pthread_attr_t attr;
@@ -240,7 +239,7 @@ FAR void *hcom_diag_ramlog_trace_pthread(FAR void *arg)
   
 // #if HCOM_TASK_SHOW_CREATED_TASK_PID_NAME > 0
 //   struct tcb_s *rtcb = this_task();
-//   hcom_utils_f7syslog(LOG_NOTICE, "PID:%d is '%s'\n", getpid(), rtcb->name);
+//   hcom_logging_syslog(LOG_NOTICE, "PID:%d is '%s'\n", getpid(), rtcb->name);
 // #endif
 
   while(!_shutting_down)
@@ -271,11 +270,7 @@ FAR void *hcom_diag_ramlog_trace_pthread(FAR void *arg)
     }
   }
 
-#ifdef CONFIG_BUILD_PROTECTED
-  return OK;
-#else
-  return NULL;    // Keeps compiler happy
-#endif
+  return NULL;
 }
 
 //=================================================================
@@ -501,7 +496,7 @@ int hcom_diag_ramlog_trace_route_trace_text(uint8_t *recvBuff, int numbBytes)
     // Send entire message, includes ctrl chararacters
 // p-m - removed following because sending to host not implemented yet
     return OK;
-    // int ret = hcom_comms_send_raw_string_msg(HCOM_HOST_REQUEST_TEXT_TRACE_MSG, 0, (char *) recvBuff,
+    // int ret = hcom_host_send_raw_string_msg(HCOM_HOST_REQUEST_TEXT_TRACE_MSG, 0, (char *) recvBuff,
     //         numbBytes, thisFile, __LINE__);
     // if(ret == -EAGAIN)
     //   return ret;
@@ -569,7 +564,7 @@ void hcom_trace_send_trace_to_host(uint32_t userData)
 #endif
 
   char *sendMsgToHost = "Trace logs to be sent to CLI";
-  hcom_comms_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0,
+  hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0,
           sendMsgToHost, thisFile, __LINE__);
 }
 
@@ -585,7 +580,7 @@ void hcom_trace_do_not_send_trace_to_host(uint32_t userData)
 #endif
 
   char *sendMsgToHost = "Trace logs no longer sent to CLI";
-  hcom_comms_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0,
+  hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0,
           sendMsgToHost, thisFile, __LINE__);
 }
 
@@ -605,7 +600,7 @@ void hcom_trace_send_trace_to_uart1(uint32_t userData)
 #endif
 
   char *sendMsgToHost = "Trace logs will be sent to UART1";
-  hcom_comms_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0,
+  hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0,
           sendMsgToHost, thisFile, __LINE__);
 }
 
@@ -620,6 +615,6 @@ void hcom_trace_do_not_send_trace_to_uart1(uint32_t userData)
 #endif
 
   char *sendMsgToHost = "UART1 usable for .Net Apps";
-  hcom_comms_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0,
+  hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0,
           sendMsgToHost, thisFile, __LINE__);
 }

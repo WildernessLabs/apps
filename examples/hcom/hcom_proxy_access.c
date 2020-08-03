@@ -61,8 +61,6 @@ static int _hcom_proxy_fd;
  * Private Function Prototypes
  ****************************************************************************/
 
-int hcom_proxy_is_mounted(uint32_t partitionId, bool *isMounted);
-
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -159,24 +157,11 @@ int hcom_proxy_get_mcu_id(uint8_t uniqueId[12])
 }
 
 //=============================================================
-// Is this this partition mounted in the file system?
-bool hcom_fs_is_mounted(uint32_t partitionId)
+// Is this partition mounted in the file system?
+bool hcom_proxy_is_mounted(uint32_t partitionId)
 {
   int ret;
-  bool isMounted;
-  
-  ret = hcom_proxy_is_mounted(partitionId, &isMounted);
-  if(ret < 0)
-  {
-    return false;
-  }
-  return isMounted;
-}
 
-// The is mounted proxy caller
-int hcom_proxy_is_mounted(uint32_t partitionId, bool *isMounted)
-{
-  int ret;
   struct hcom_proxy_upd_is_part_mounted is_mounted;
   is_mounted.partitionId = partitionId;
 
@@ -188,8 +173,7 @@ int hcom_proxy_is_mounted(uint32_t partitionId, bool *isMounted)
     return ret;
   }
 
-  *isMounted = is_mounted.isMounted;
-  return OK;
+  return is_mounted.isMounted;
 }
 
 //=============================================================
@@ -201,7 +185,50 @@ int hcom_proxy_restart_meadow(void)
 }
 
 //=============================================================
-// Those commands that need to be executed on the OS side are
+// Configures gpio via proxy
+int hcom_proxy_gpio_config(int gpioDefn, uint8_t configValue)
+{
+  int ret;
+  struct hcom_proxy_upd_gpio_config_s gpioConfig;
+
+  DEBUGASSERT(gpioDefn);
+  gpioConfig.gpioDefn = gpioDefn;
+  gpioConfig.configValue = configValue;
+
+  ret = ioctl(_hcom_proxy_fd, HCOM_PROXY_UPD_GPIO_CONFIG, (unsigned long) &gpioConfig);
+  if (ret < 0)
+  {
+    syslog(LOG_ERR, "%s:%s()@%d-%s Failed to get mcu id, errno:%d\n",
+            thisFile, __func__, __LINE__, HCOM_PROXY_UPD_DRIVER_NAME, errno);
+    return ret;
+  }
+
+  return gpioConfig.result;
+}
+
+//=============================================================
+// Writes to gpio via proxy
+int hcom_proxy_gpio_write(int gpioDefn, uint8_t cmdValue)
+{
+  int ret;
+  struct hcom_proxy_upd_gpio_write_s gpioCommand;
+
+  gpioCommand.gpioDefn = gpioDefn;
+  gpioCommand.cmdValue = cmdValue;
+
+  ret = ioctl(_hcom_proxy_fd, HCOM_PROXY_UPD_GPIO_COMMAND, (unsigned long) &gpioCommand);
+  if (ret < 0)
+  {
+    syslog(LOG_ERR, "%s:%s()@%d-%s Failed to get mcu id, errno:%d\n",
+            thisFile, __func__, __LINE__, HCOM_PROXY_UPD_DRIVER_NAME, errno);
+    return ret;
+  }
+
+  return OK;
+}
+
+//=============================================================
+// Those CLI requests that need to be executed on the OS side are
 // routed through here
 void hcom_proxy_forward_cmd_to_proxy(uint16_t cliCmd, uint32_t proxyCmd, uint32_t userData)
 {
@@ -213,7 +240,7 @@ void hcom_proxy_forward_cmd_to_proxy(uint16_t cliCmd, uint32_t proxyCmd, uint32_
 
   cmdData.logLevel = LOG_NONE;
   cmdData.logLen = 0;
-  cmdData.send_host_text = hcom_comms_send_simple_text_msg;
+  cmdData.send_host_text = hcom_host_send_simple_msg_no_rqst_type;
 
   // Forward to hcom_proxy to complete command
   ret = ioctl(_hcom_proxy_fd, HCOM_PROXY_UPD_CLI_COMMAND, (unsigned long)&cmdData);
@@ -223,11 +250,11 @@ void hcom_proxy_forward_cmd_to_proxy(uint16_t cliCmd, uint32_t proxyCmd, uint32_
     {
       DEBUGASSERT(cmdData.logLevel != LOG_NONE);
       DEBUGASSERT(cmdData.logLen <= HCOM_PROXY_CMD_LOG_MSG_SIZE);
-      hcom_utils_f7syslog(cmdData.logLevel, "%s [cli cmd:0x%04x]", cmdData.logMsg, cliCmd);
+      hcom_logging_syslog(cmdData.logLevel, "%s [cli cmd:0x%04x]", cmdData.logMsg, cliCmd);
     }
     else
     {
-      hcom_utils_f7syslog(LOG_ERR, "%s:%s()@%d-%s Failed to update reg, errno:%d, cli cmd:0x%04x\n",
+      hcom_logging_syslog(LOG_ERR, "%s:%s()@%d-%s Failed to update reg, errno:%d, cli cmd:0x%04x\n",
               thisFile, __func__, __LINE__, HCOM_PROXY_UPD_DRIVER_NAME, errno, cliCmd);
       return;   // Returned data may not be reliable
     }
