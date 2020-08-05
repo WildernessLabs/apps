@@ -369,7 +369,7 @@ void hcom_esp32_exec_read_esp32_mac(uint32_t userData)
     hcom_logging_syslog(LOG_ERR, "%s@%d-Read Reg 0x%08x err:%d\n", thisFile, __LINE__, Esp32RegAddrUART_DATE_REG_ADDR, ret);
     return;
   }
-  
+
   // Verify this is an ESP32
   DEBUGASSERT(chipIdInfo == Esp32RegValueDATE_REG_VALUE_ESP32);
 
