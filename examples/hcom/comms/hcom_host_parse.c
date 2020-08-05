@@ -184,16 +184,8 @@ int hcom_host_parse_pull_all_packets_from_buffer()
     DEBUGASSERT(result != HCOM_CIR_BUF_GET_DEST_NO_ROOM);
     DEBUGASSERT(result == HCOM_CIR_BUF_GET_FOUND_MSG);
 
-    // // p-m
-    // syslog(1, "%s@%d-pulled %d bytes from cir buf\n", thisFile, __LINE__, packetLength);
-    // hcom_logging_utils_print_buffer(packet_dest_buf, packetLength, 1);
-
     // Drop trailing delimiter of 0x00 (--packetLength) then decode the packet
     size_t decodedPacketSize = host_comms_cobs_decoder(packet_dest_buf, --packetLength, decode_dest_buf);
-
-    // // p-m
-    // syslog(1, "%s@%d-decoded %d bytes from cir buf\n", thisFile, __LINE__, decodedPacketSize);
-    // hcom_logging_utils_print_buffer(decode_dest_buf, decodedPacketSize, 1);
 
     if(decodedPacketSize == 0)
       continue;
@@ -231,16 +223,13 @@ int hcom_host_parse_process_packet(const uint8_t *packet, const size_t packetSiz
   uint16_t seqNumb = packet[msgOffset] + (packet[msgOffset + 1] << 8);
   msgOffset += sizeof(uint16_t);
 
-  // p-m
-  syslog(1, "%s@%d-%s packet, seq:%d, len:%d\n", thisFile, __LINE__, seqNumb == 0 ? "Non-data" : "Data", seqNumb, packetSize); // p-m
-
   // The sequence number determines packet type
   if (seqNumb == HCOM_PROTOCOL_REQUEST_HEADER_SIMPLE_SEQ_NUMBER)
   {
     // A non-data packet i.e. command (sequence number == 0)
     hcom_comms_dbg(LOG_DEBUG, "%s@%d-Non-data seq:%d, len:%d\n", thisFile, __LINE__, seqNumb, packetSize); 
 #if HCOM_COMMS_DEBUG > 0
-    hcom_logging_utils_print_buffer(packet, packetSize, LOG_DEBUG);
+    hcom_diag_misc_print_buffer(packet, packetSize, LOG_DEBUG);
 #endif
     hcom_host_route_request_by_type(packet + msgOffset, packetSize - msgOffset);
   }
@@ -248,8 +237,6 @@ int hcom_host_parse_process_packet(const uint8_t *packet, const size_t packetSiz
   {
     // Data Packet (sequence number > 0) 
     hcom_comms_dbg(LOG_DEBUG, "%s@%d-Data seq:%d, len:%d\n", thisFile, __LINE__, seqNumb, packetSize); 
-    // p-m Not ready for this functionality yet!!
-    syslog(1, "%s@%d-Data seq:%d, len:%d\n", thisFile, __LINE__, seqNumb, packetSize); 
     hcom_dnld_proc_recvd_file_data(packet, packetSize, seqNumb);
   }
 

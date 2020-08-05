@@ -83,8 +83,6 @@ static int hcom_host_recv_restart_concluded(void);
 
 int hcom_host_recv_setup()
 {
-  syslog(1, "RCV-->Entered %s\n", __func__);
-
   _shutting_down = false;
   _is_comms_read_open = false;
   _firstTimeToConnect = true;
@@ -192,8 +190,6 @@ int hcom_host_recv_open_connection()
 {
   useconds_t hostConnectionAttemptCount = HCOM_CONNECTION_STARTUP_ATTEMPTS;
 
-  syslog(1, "RCV-->Entered %s(), deviceName is:'%s'\n", __func__, deviceName);
-
   if(_is_comms_read_open)
     return OK;
 
@@ -206,7 +202,6 @@ int hcom_host_recv_open_connection()
     _comms_read_fd = open(deviceName, O_RDONLY);
     if(_comms_read_fd >= 0)
     {
-      syslog(1, "RCV-->Connection opened %s\n", deviceName);
       _is_comms_read_open = true;
       break;
     }
@@ -248,8 +243,6 @@ bool hcom_host_recv_received_data()
     if (readResult > 0)
     {
       // We've received some data
-      syslog(1, "RCV-->Received %d bytes\n", readResult);
-
       int result = hcom_host_parse_process_raw_data(_tempRecvBuff, readResult);
       if (result < 0)
       {

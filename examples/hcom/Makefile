@@ -61,18 +61,20 @@ HCOM_SRCS = hcom_mono_control.c \
 	file_access/hcom_dnld_process_file.c \
 	file_access/hcom_dnld_write_delete.c \
 	file_access/hcom_list_files.c \
-	hcom_tests/hcom_bbr_tests.c \
+	hcom_test/hcom_bbr_tests.c \
+	hcom_test/hcom_developer_tests.c \
 	host_rqsts/hcom_misc_requests.c \
 	misc/hcom_circular_buffer.c \
 	misc/hcom_common_utils.c \
 	misc/hcom_logging_utils.c
 
 ifeq ($(CONFIG_HCOM_ESP32_COMMS),y)
- HCOM_SRCS += esp32/hcom_esp32_uart_comms.c \
- esp32/hcom_esp32_proc_xmit.c \
+ HCOM_SRCS += esp32/hcom_esp32_execute.c \
  esp32/hcom_esp32_proc_recv.c \
- esp32/hcom_esp32_execute.c \
- esp32/hcom_esp32_proc_util.c
+ esp32/hcom_esp32_proc_util.c \
+ esp32/hcom_esp32_proc_xmit.c \
+ esp32/hcom_esp32_uart_comms.c
+ 
 endif
 
 MAINSRC = hcom_startup_manager.c

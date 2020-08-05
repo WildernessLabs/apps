@@ -139,7 +139,6 @@ int hcom_main(int argc, char *argv[])
 #endif
 
   // General setup
-  syslog(1, "About to call hcom_manager_setup\n");
   ret = hcom_manager_setup();
   if (ret < 0)
   {
@@ -167,21 +166,6 @@ int hcom_manager_setup()
 {
   int ret;
 
-//   // Determine if there's any special action required by mono_main. This sets up
-//   // variables within mono_main.c before it is started by nuttx. When mono_main is started
-//   // it checks if special action is necessary.
-//   hcom_mono_ctrl_start_mono_if_needed();
-
-//   // Sets the MTD for the file system
-//   // Note: the calling thread is the nuttx startup thread. Any activity here may delay the
-//   //  remainder of nuttx from starting, which may be determined to be a good thing.
-//   ret = hcom_exec_flash_fs_setup(mtd);
-//   if (ret < 0)
-//   {
-//     hcom_logging_syslog(LOG_CRIT, "%s@%d-setup F/S %d\n", thisFile, __LINE__, ret);
-//     return ret;
-//   }
-
   // Doesn't do anything
   ret = hcom_diag_misc_setup();
   if (ret < 0)
@@ -196,13 +180,14 @@ int hcom_manager_setup()
     hcom_logging_syslog(LOG_CRIT, "%s@%d-setup misc %d\n", thisFile, __LINE__, ret);
     return ret;
   }
-//   // Sets a few internal variable states
+
+  // Sets a few internal variable states
   ret = hcom_dnld_proc_setup();
-//   if (ret < 0)
-//   {
-//     hcom_logging_syslog(LOG_CRIT, "%s@%d-setup file download %d\n", thisFile, __LINE__, ret);
-//     return ret;
-//   }
+  if (ret < 0)
+  {
+    hcom_logging_syslog(LOG_CRIT, "%s@%d-setup file download %d\n", thisFile, __LINE__, ret);
+    return ret;
+  }
 
   // Sets a few internal variable states
   ret = hcom_dnld_write_del_setup();
@@ -227,15 +212,8 @@ int hcom_manager_setup()
     return ret;
   }
 
-//   ret = hcom_fs_setup(mtd);
-//   if (ret < 0)
-//   {
-//     hcom_logging_syslog(LOG_CRIT, "%s@%d-setup F/S helper %d\n", thisFile, __LINE__, ret);
-//     return ret;
-//   }
-
 // #if defined(CONFIG_HCOM_MTD_STRESS_TEST)
-//   ret = proc_dnld_rqst_testing_setup(mtd);
+//   ret = hcom_developer_tests_setup(mtd);
 //   if (ret < 0)
 //   {
 //     hcom_logging_syslog(LOG_CRIT, "%s@%d-setup testing %d\n", thisFile, __LINE__, ret);
@@ -257,18 +235,19 @@ int hcom_manager_setup()
     return ret;
   }
 
-// #if defined(CONFIG_HCOM_FILESYSTEM_INIT)
-//   // This will format the file system as needed. This will prevent the nuttx OS from
-//   // starting which includes mono. Therefore, mono cannot start until the file system
-//   // is at least initialized. This is the desired behavior since mono starting before
-//   // the file system would be a problem.
-//   ret = hcom_fs_init_file_system();
-//   if (ret < 0)
-//   {
-//     hcom_logging_syslog(LOG_CRIT, "%s@%d-setup F/S helper %d\n", thisFile, __LINE__, ret);
-//     return ret;
-//   }
-// #endif
+// p-m This define is in .config but not used within hcom_proxy where it would be used
+#if defined(CONFIG_HCOM_FILESYSTEM_INIT)
+  // This will format the file system as needed. This will prevent the nuttx OS from
+  // starting which includes mono. Therefore, mono cannot start until the file system
+  // is at least initialized. This is the desired behavior since mono starting before
+  // the file system would be a problem.
+  // ret = hcom_fs_init_file_system();
+  // if (ret < 0)
+  // {
+  //   hcom_logging_syslog(LOG_CRIT, "%s@%d-setup F/S helper %d\n", thisFile, __LINE__, ret);
+  //   return ret;
+  // }
+#endif
 
 // #if defined(CONFIG_HCOM_MONO_OUTPUT_PIPE)
 //   // Creates a named pipe (fifo) and creates a receiving thread.
@@ -290,52 +269,17 @@ int hcom_manager_setup()
 //   }
 // #endif
 
-// #if defined (CONFIG_HCOM_ESP32_COMMS)
-//   ret = hcom_esp32_uart_comms_setup();
-//   if (ret < 0)
-//   {
-//     hcom_logging_syslog(LOG_CRIT, "%s@%d-setup esp32 comms %d\n", thisFile, __LINE__, ret);
-//     return ret;
-//   }
-// #endif
-
-  // // Do this last! - Create a thread to handle receiving and responding to received messages
-  // ret = hcom_manager_create_worker_thread();
-  // if (ret < 0)
-  // {
-  //   hcom_logging_syslog(LOG_CRIT, "%s@%d-create hcom thread %s\n", thisFile, __LINE__, ret);
-  //   return ret;
-  // }
+#if defined (CONFIG_HCOM_ESP32_COMMS)
+  ret = hcom_esp32_uart_comms_setup();
+  if (ret < 0)
+  {
+    hcom_logging_syslog(LOG_CRIT, "%s@%d-setup esp32 comms %d\n", thisFile, __LINE__, ret);
+    return ret;
+  }
+#endif
 
   return OK;
 }
-
-//============================================================================
-// hcom main thread
-// int hcom_comms_recv_task_main_thread(int argc, FAR char *argv[])
-// {
-//  int ret;
-
-// // #if HCOM_TASK_SHOW_CREATED_TASK_PID_NAME > 0
-// //   struct tcb_s *rtcb = this_task();
-// //   hcom_logging_syslog(LOG_NOTICE, "PID:%d is '%s'\n", getpid(), rtcb->name);
-// // #endif
-
-//   // //-------------------------------------------------------
-//   // // Main thread only returns on shutdown or serious error
-//   // //-------------------------------------------------------  
-//   // ret = hcom_host_recv_receiving_loop();
-//   // if (ret < 0)
-//   // {
-//   //   hcom_logging_syslog(LOG_CRIT, "%s@%d-%s thread exit:%d\n", thisFile, __LINE__, HCOM_THREAD_NAME_HCOM_RECEIVE, ret);
-//   // }
-
-//   // hcom_manager_shutdown();
-
-//   // hcom_logging_syslog(LOG_INFO, "%s thread exit'\n", HCOM_THREAD_NAME_HCOM_RECEIVE);
-
-//  return OK;      // Thread exit
-// }
 
 //=========================================================================
 // Notify all interested children that we are shutting down. This closes the
@@ -344,7 +288,7 @@ void hcom_manager_shutdown()
 {
   syslog(1, "MGR-->%s@%d-Entered:%s hcom_diag_ramlog_trace_setup\n", thisFile, __LINE__, __func__); usleep(100 * 1000);
   
-  // todo - confirm that all functions that need shutdown are called
+  // p-m - confirm that all functions that need shutdown are called
   hcom_host_recv_shutdown();
 //   hcom_mono_pipe_shutdown();
   hcom_common_utils_shutdown();
@@ -352,11 +296,10 @@ void hcom_manager_shutdown()
   hcom_host_parse_shutdown();
   hcom_host_send_shutdown();
   hcom_dnld_write_del_shutdown();
-//   hcom_fs_shutdown();
 //   hcom_remote_dbg_shutdown();
-// #if defined (CONFIG_HCOM_ESP32_COMMS)
-//   hcom_esp32_uart_comms_shutdown();
-// #endif
+#if defined (CONFIG_HCOM_ESP32_COMMS)
+  hcom_esp32_uart_comms_shutdown();
+#endif
 #if defined (CONFIG_RAMLOG_SYSLOG)
   hcom_diag_ramlog_trace_shutdown();
 #endif

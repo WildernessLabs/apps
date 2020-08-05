@@ -104,7 +104,8 @@
 #define HCOM_IGNORE_UNNECESSARY_FILE_SYSTEM_COMMANDS
 
 // To reduce Meadow.OS size "syslog(LOG_DEBUG, ...);" messages are optional
-#define HCOM_COMMS_DEBUG 0
+// p-m RETURN THIS BACK TO 0 (ZERO)
+#define HCOM_COMMS_DEBUG 1
 #if HCOM_COMMS_DEBUG > 0
 #define hcom_comms_dbg(...) hcom_logging_syslog(__VA_ARGS__)
 #define hcom_comms_dbg_x(...) hcom_logging_syslog_x(__VA_ARGS__)
@@ -115,24 +116,25 @@
 
 //---------------------------------------------------------------------
 // Thread priorities
+// PTHREADS DON'T HAVE NAMES...
 #define HCOM_THREAD_PRIORITY_HCOM_RECEIVE 120
-#define HCOM_THREAD_NAME_HCOM_RECEIVE "HcomxRecv"
+#define HCOM_THREAD_NAME_HCOM_RECEIVE "HcomRecv"
 
 // Insure hcom recv thread runs before esp32 recv
 #define HCOM_THREAD_PRIORITY_ESP32_RECEIVE (HCOM_THREAD_PRIORITY_HCOM_RECEIVE - 1)
-#define HCOM_THREAD_NAME_ESP32_RECEIVE "EspxRecv"
+#define HCOM_THREAD_NAME_ESP32_RECEIVE "EspRecv"
 
 // This pipe carries .Net Console.WriteLine output to Host via stdout
 #define HCOM_THREAD_PRIORITY_STDOUT_PIPE 120
-#define HCOM_THREAD_NAME_STDOUT_PIPE "MonoxText"
+#define HCOM_THREAD_NAME_STDOUT_PIPE "MonoText"
 
 // This thread is used for remote debugging mono apps
 #define HCOM_THREAD_PRIORITY_REMOTE_DBG 120
-#define HCOM_THREAD_NAME_REMOTE_DBG "RemotexDbg"
+#define HCOM_THREAD_NAME_REMOTE_DBG "RemoteDbg"
 
 // The ramlog is created by nuttx and contains syslog text
 #define HCOM_THREAD_PRIORITY_TRACE_RAMLOG 120
-#define HCOM_THREAD_NAME_TRACE_RAMLOG "RamlogxRead"
+#define HCOM_THREAD_NAME_TRACE_RAMLOG "RamlogRead"
 
 //---------------------------------------------------------------------
 // These define how long the receive thread waits before "waking up"
@@ -512,7 +514,7 @@ extern "C"
 //   int hcom_fs_1st_erase_sector_of_partition(uint32_t partitionId);
   int hcom_list_files_in_partition(uint32_t partitionId);
   int hcom_list_files_and_crc_in_partition(uint32_t partitionId);
-  int hcom_list_all_dev_dir_and_files_start(void);
+  int hcom_list_all_dev_dir_and_files_start(uint32_t userData);
 
 //   int hcom_fs_initialize_proxy(uint32_t partitionId);
 //   int hcom_fs_format_proxy(uint32_t partitionId);
@@ -555,8 +557,10 @@ extern "C"
 #if defined(CONFIG_STM32F7_PWR)
   int hcom_logging_syslog_mask_init(void);
 #endif
+  int hcom_logging_utils_get_syslog_mask(void);
+
 //   bool hcom_utils_boot_time_qemu_check(void);
-  void hcom_logging_utils_print_buffer(const uint8_t packetBuffer[], const int bufLen, uint8_t logPriority);
+  void hcom_diag_misc_print_buffer(const uint8_t packetBuffer[], const int bufLen, uint8_t logPriority);
   void hcom_logging_syslog(int priority, FAR const IPTR char *fmt, ...);
   void hcom_logging_syslog_x(int priority, FAR const IPTR char *fmt, ...);
   void hcom_utils_safe_ramlog(int priority, FAR const IPTR char *fmt, va_list args);
@@ -589,7 +593,6 @@ extern "C"
   // int hcom_proxy_update_register(uint32_t address, uint32_t clearBits, uint32_t setBits);
 
   // hcom_mono_control.c
-  int hcom_mono_ctrl_start_mono_if_needed(void);
   bool hcom_mono_ctrl_is_mono_enabled(void);
 
   // Ramlog to host/uart
@@ -603,14 +606,15 @@ extern "C"
   void hcom_trace_do_not_send_trace_to_uart1(uint32_t userData);
 
 //   // Testing utilities
-//   int proc_dnld_rqst_testing_setup(FAR struct mtd_dev_s *mtd);
-//   void proc_dnld_rqst_testing_flash_qspi_init(uint32_t userData);
-//   void proc_dnld_rqst_testing_flash_qspi_write(uint32_t userData);
-//   void proc_dnld_rqst_testing_flash_qspi_read(uint32_t userData);
-//   void proc_dnld_rqst_testing_developer_1(uint32_t userData);
-//   void proc_dnld_rqst_testing_developer_2(uint32_t userData);
-//   void proc_dnld_rqst_testing_developer_3(uint32_t userData);
-//   void proc_dnld_rqst_testing_developer_4(uint32_t userData);
+//   int hcom_developer_tests_setup(FAR struct mtd_dev_s *mtd);
+//   void hcom_developer_tests_flash_qspi_init(uint32_t userData);
+//   void hcom_developer_tests_flash_qspi_write(uint32_t userData);
+//   void hcom_developer_tests_flash_qspi_read(uint32_t userData);
+
+  void hcom_developer_tests_developer_1(uint32_t userData);
+  void hcom_developer_tests_developer_2(uint32_t userData);
+  void hcom_developer_tests_developer_3(uint32_t userData);
+  void hcom_developer_tests_developer_4(uint32_t userData);
 
 //----------------------------------------------------------------
 // Redefine Battery Backed Registers so we know what's what

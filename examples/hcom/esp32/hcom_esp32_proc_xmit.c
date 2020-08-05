@@ -131,7 +131,7 @@ int hcom_esp32_xmit_build_and_send_msg(uint8_t *msgBody, ssize_t msgBodyLen,
 
   // Build header
   struct HcomEsp32XmitHeader_s espSendHdr;
-  espSendHdr.direction = 0;   // always 0 for to ESP32
+  espSendHdr.direction = 0;   // always 0 if going to ESP32
   espSendHdr.command = espCommand;
   espSendHdr.size = msgBodyLen;
 
@@ -160,27 +160,27 @@ int hcom_esp32_xmit_build_and_send_msg(uint8_t *msgBody, ssize_t msgBodyLen,
   // Can't continue because we've overrun the buffer we guessed at above
   DEBUGASSERT(encodedOffset < bufferSize);
 
-hcom_comms_dbg(LOG_DEBUG, "Transmitting '%s' (0x%02x) cmd to ESP32\n",
-           hcom_esp_command_hex_to_string(espCommand), espCommand);
+  hcom_comms_dbg(LOG_DEBUG, "Transmitting '%s' (0x%02x) cmd to ESP32\n",
+            hcom_esp_command_hex_to_string(espCommand), espCommand);
 
-  // Send the completed message and get the results
+  // Send the completed message and wait for the response
   ret = hcom_esp32_xmit_send_complete_msg(encodedMsg, encodedOffset,
         espCommand, millisecDelay, mqRecvdData);
   if(ret < 0)
   {
-    // Assumes nothing was received from receiver
+    // Timeout is assumed to mean nothing received from ESP32
     if(ret == -ETIMEDOUT)
       hcom_logging_syslog(LOG_INFO, "%s@%d-Xmit timed out after %d ms\n", thisFile, __LINE__, millisecDelay);
     else
       hcom_logging_syslog(LOG_ERR, "%s@%d-Sending to ESP:%d\n", thisFile, __LINE__, ret);
-    
+
     free(encodedMsg);
     return ret;
   }
 
   if(millisecDelay > 0)
   {
-    // Only get received data if successfully received data and data expected
+    // Only given received data if successfully received data and the data expected
     // Copy the data to the user supplied structure
     recvdData->espHdr.direction = mqRecvdData->espMqHdr.direction;
     recvdData->espHdr.command = mqRecvdData->espMqHdr.command;

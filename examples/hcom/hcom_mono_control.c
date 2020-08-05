@@ -56,19 +56,6 @@ bool hcom_mono_ctrl_is_app_exe(void);
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
-// This is called during startup, before the hcom thread is created.
-// Its purpose is to allow inform mono (via mono_main) whether it is
-// to run or not run.
-int hcom_mono_ctrl_start_mono_if_needed()
-{
-  if(hcom_mono_ctrl_is_mono_enabled() && hcom_mono_ctrl_is_app_exe())
-  {
-    // Create a task and call the mono entry point
-  }
-  return OK;
-}
-
-//=======================================================================
 // Check of the file App.exe exists in the files system
 bool hcom_mono_ctrl_is_app_exe()
 {

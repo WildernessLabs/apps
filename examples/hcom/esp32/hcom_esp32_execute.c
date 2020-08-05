@@ -130,7 +130,7 @@ int hcom_esp32_exec_download_flash_start(const size_t entireFileSize,
   ret = hcom_esp32_util_initialize_communications();
   if(ret < 0)
   {
-    hcom_logging_syslog(LOG_ERR, "%s@%d-Init Comms:%d\n", thisFile, __LINE__, ret);
+    hcom_logging_syslog(LOG_ERR, "%s@%d-Init Comms for download:%d\n", thisFile, __LINE__, ret);
     return ret;
   }
 
@@ -389,7 +389,7 @@ int send_data_block_buffer_to_esp32(uint8_t *downloadData, size_t dnldDataSize, 
 
   hcom_comms_dbg(LOG_DEBUG, "SENDING DATA PACKET, seq:%d\n", _espSeqNumb - 1);
 #if HCOM_COMMS_DEBUG > 0
-  hcom_logging_utils_print_buffer(_downloadBuffer, dataDnldOffset, LOG_DEBUG);
+  hcom_diag_misc_print_buffer(_downloadBuffer, dataDnldOffset, LOG_DEBUG);
 #endif
 
   ret = hcom_esp32_xmit_build_and_send_msg(_downloadBuffer, dataDnldOffset,

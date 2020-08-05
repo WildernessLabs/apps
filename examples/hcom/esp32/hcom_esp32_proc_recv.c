@@ -59,9 +59,6 @@ static uint8_t _currentExpectRecvCommand;
 static struct hcom_esp32_cir_buffer_s *_esp_cir_buf;
 static uint32_t _cr_lf_esp32_crlf_counter;
 
-// The g_syslog_mask is external and set by NuttX. Don't make static
-extern uint8_t g_syslog_mask;
-
 /****************************************************************************
  * Private Function Prototypes
  ****************************************************************************/
@@ -202,7 +199,7 @@ int PullAndProcessAllPackets()
 
     while (true)
     {
-      // Get the next packet, binary or text
+      // Get the next packet, binary packet or text line
       ret = hcom_esp32_buf_get_next_packet(_esp_cir_buf, packetBuffer,
                     HCOM_ESP_COMMS_MAX_ESP_PACKET_SIZE, &packetLength);
       if (ret == HCOM_ESP32_BUF_GET_NONE_FOUND)
@@ -244,10 +241,11 @@ int PullAndProcessAllPackets()
 }
 
 //=====================================================================
+// This function is pretty much just diagnostic in nature
 int hcom_esp32_recv_handle_text_packet(uint8_t *text_buffer, ssize_t length)
 {
   // Ignore if not LOG_INFO
-  if ((g_syslog_mask & LOG_MASK(LOG_INFO)) == 0)
+  if ((hcom_logging_utils_get_syslog_mask() & LOG_MASK(LOG_INFO)) == 0)
     return OK;   // Nothing to do
 
   // There are times when the ESP32 sends endless cr/lf very fast
@@ -260,14 +258,17 @@ int hcom_esp32_recv_handle_text_packet(uint8_t *text_buffer, ssize_t length)
     _cr_lf_esp32_crlf_counter++;
 
     if(_cr_lf_esp32_crlf_counter % 500000 == 0)
-      hcom_comms_dbg(LOG_DEBUG, "Another 500,000 cr/lf %d\n", _cr_lf_esp32_crlf_counter);
+    {
+      syslog(LOG_INFO, "Another 500,000 cr/lf %d\n", _cr_lf_esp32_crlf_counter);
+      return OK;
+    }
 
     if(_cr_lf_esp32_crlf_counter > 4)
       return OK;
 
     if(_cr_lf_esp32_crlf_counter == 4)
     {
-      hcom_comms_dbg(LOG_DEBUG, "Appears to be endless stream of cr/lf\n");
+      syslog(LOG_INFO, "Appears to be endless stream of cr/lf\n");
       return OK;
     }
   }
@@ -280,10 +281,17 @@ int hcom_esp32_recv_handle_text_packet(uint8_t *text_buffer, ssize_t length)
   if(length >= HCOM_ESP_COMMS_MAX_ESP_PACKET_SIZE)
     return OK;
   
-  // Since text is not SLIP encoded we can see it if it's terminated
+  // Since text is not SLIP encoded we can see it, if it's null
+  // terminated. So, we'll terminate and display it via syslog
+  // Strip off ending cr/lf which all messages seem to have.
+  if(text_buffer[length - 1] == 0x0a || text_buffer[length - 1] == 0x0d)
+    length--;
+  if(text_buffer[length - 1] == 0x0a || text_buffer[length - 1] == 0x0d)
+    length--;
   text_buffer[length] = '\0';   // null terminate
+  
   // This cannot be routed to Meadow.CLI so send directly to syslog
-  syslog(LOG_INFO, "ESP32 Trace:%s", text_buffer);
+  syslog(LOG_INFO, "ESP32 Text:'%s'", text_buffer);
   return OK;
 }
 
@@ -302,8 +310,8 @@ int hcom_esp32_recv_handle_bin_packet(uint8_t *binRecvdData, ssize_t binRecvdLen
   // and 0x01 (direction).
   if(binRecvdData[1] != 0x01)
   {
-    // Only saw this when system tick set to 100 usec received 0x0c 0x0c
-    // with nothing in between. But leaving test, just in case.
+    // Only saw this when system tick set to 100 usec (it's now 1 ms) received
+    // 0x0c 0x0c with nothing in between. But leaving test, just in case.
     sleep(1);
   }
   DEBUGASSERT(binRecvdData[1] == 0x01);
@@ -318,7 +326,8 @@ int hcom_esp32_recv_handle_bin_packet(uint8_t *binRecvdData, ssize_t binRecvdLen
     return OK;    // Not an error. Just not needed.
   }
 
-  // This message is the one expected, so inhibit duplicates
+  // This message is the one expected, so inhibit duplicates by
+  // telling receiver we're expecting nothing
   hcom_esp32_recv_expect_command_type(Esp32CommandUndefined);
 
   // Allocate a buffer to build the message for transmitter. It's a bit
@@ -371,7 +380,7 @@ int hcom_esp32_recv_handle_bin_packet(uint8_t *binRecvdData, ssize_t binRecvdLen
   mqRecvdData.esp32Status = decodedMsg[decodedLen - 4];
   mqRecvdData.esp32Error = decodedMsg[decodedLen - 3];
 
-  // Notify the transmitter of what we've received, it's waiting
+  // Wakeup the transmitter of what we've received and it's waiting
   ret = mq_send(recvMsgQueue, (char *)&mqRecvdData, HCOM_ESP32_MQ_RECVD_DATA_STRUCT_LENGTH, 0);
   if(ret < 0)
   {

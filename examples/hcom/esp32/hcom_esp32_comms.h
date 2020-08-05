@@ -270,7 +270,6 @@ enum Esp32Registers
   void hcom_esp32_uart_comms_shutdown(void);
   int hcom_esp32_uart_lazy_initialization(void);  
   int hcom_esp32_uart_comms_write_serial(uint8_t* espWriteBuf, size_t espWriteSize);
-  void hcom_esp32_xmit_developer_4(uint32_t userData);
 
   // ESP32 execute
   int hcom_esp32_exec_setup_lazy(void);
@@ -299,7 +298,6 @@ enum Esp32Registers
   // ESP32 Utility functions
   int hcom_esp32_util_setup_lazy(void);
   void hcom_esp32_util_shutdown(void);
-  void hcom_esp32_utils_hardware_reboot(void);
   int hcom_esp32_util_initialize_communications(void);
   int hcom_esp32_util_read_register(uint32_t regAddr, uint32_t *regValue);
   int hcom_esp32_util_write_register(uint32_t regAddr, uint32_t regValue);

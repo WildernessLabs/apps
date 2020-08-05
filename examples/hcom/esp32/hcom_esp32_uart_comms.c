@@ -92,7 +92,8 @@ static int hcom_esp32_uart_comms_read_serial_loop(void);
  * Public Functions
  ****************************************************************************/
 
-// We'll do a minimum of initialization because this is a rarely used feature
+// We'll do a minimum of initialization because this is a rarely used feature.
+// The first time it's used we'll finish the initialization.
 int hcom_esp32_uart_comms_setup()
 {
   int ret;
@@ -103,6 +104,7 @@ int hcom_esp32_uart_comms_setup()
   _is_esp32_read_open = false;
   _is_esp32_write_open = false;
 
+  // Only configured here and left as output
   ret = hcom_proxy_gpio_config(HcomProxyGpioDefnEspReset, HCOM_PROXY_GPIO_CONFIG_OUTPUT);
   if(ret < 0)
   {
@@ -118,6 +120,9 @@ int hcom_esp32_uart_comms_setup()
   }
 
 #if HCOM_ESP32_ALLOW_BOOT_PIN_TO_BE_INPUT > 0
+  // The boot pin needs to be an output for the operations of this module. However,
+  // the the boot pin servers as an input in other places. So, by default we leave
+  // it configured as an input pin unless needed.
   ret = hcom_proxy_gpio_config(HcomProxyGpioDefnEspBoot, HCOM_PROXY_GPIO_CONFIG_INPUT);
   if(ret < 0)
   {
@@ -284,10 +289,10 @@ int hcom_esp32_uart_comms_make_thread()
     pthread_attr_t attr;
     struct sched_param param;
 
-    param.sched_priority = 120;
+    param.sched_priority = HCOM_THREAD_PRIORITY_ESP32_RECEIVE;
     (void)pthread_attr_init(&attr);
     (void)pthread_attr_setschedparam(&attr, &param);
-    (void)pthread_attr_setstacksize(&attr, 1024);
+    (void)pthread_attr_setstacksize(&attr, 2048);
 
     ret = pthread_create(&thread, &attr, hcom_esp32_uart_comms_pthread, NULL);
     if (ret < 0)
@@ -323,6 +328,7 @@ FAR void *hcom_esp32_uart_comms_pthread(FAR void *arg)
   sem_post(&_initalizeWaitSem);  // Allow hcom thread to proceed
 
   // Allow hcom thread to start before using this thread
+  // p-m is this necessary???
   usleep(500 * 1000);
 
   while(!_shutting_down)

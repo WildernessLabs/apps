@@ -235,13 +235,13 @@ int hcom_list_files_and_crc_in_partition(uint32_t partitionId)
 
 // ==============================================================
 // THIS IS CALLABLE from Developer 4 at this time
-int hcom_list_all_dev_dir_and_files_start()
+int hcom_list_all_dev_dir_and_files_start(uint32_t userData)
 {
   // Changing "/" to "meadow0" will only show files
   return hcom_list_all_dev_dir_and_files("/", 0);
 }
 
-// WARNING - Recursive function
+// NOTE - Recursive function
 int hcom_list_all_dev_dir_and_files(const char *name, int indent)
 {
   char hostMsg[HCOM_SHORT_HOST_STRING_BUFF_LENGTH];
@@ -260,8 +260,6 @@ int hcom_list_all_dev_dir_and_files(const char *name, int indent)
     if (DIRENT_ISDIRECTORY(entry->d_type))
     {
       // Directory
-      char path[1024];
-      snprintf(path, sizeof(path), "%s/%s", name, entry->d_name);
       snprintf(hostMsg, HCOM_SHORT_HOST_STRING_BUFF_LENGTH,
               "%*s%s/\n", indent, "", entry->d_name);
       hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION,
@@ -271,6 +269,10 @@ int hcom_list_all_dev_dir_and_files(const char *name, int indent)
       if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
         continue;
 
+      char path[256];
+      snprintf(path, sizeof(path), "%s/%s", name, entry->d_name);
+      
+      // Recursion is here
       hcom_list_all_dev_dir_and_files(path, indent + 1);
     }
     else

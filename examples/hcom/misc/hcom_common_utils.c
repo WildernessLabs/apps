@@ -96,8 +96,6 @@ uint32_t hcom_utils_read_bbr_and_right_justify(uint32_t bitMask)
  
   if(bitMask == 0)
     return 0;
-
-  // syslog(1, "bitMask:0x%08x\n", bitMask);
   
   int ret = hcom_proxy_get_bbr(&regValue);
   if(ret < 0)
@@ -105,14 +103,10 @@ uint32_t hcom_utils_read_bbr_and_right_justify(uint32_t bitMask)
     hcom_logging_syslog(LOG_ERR, "%s:%s()@%d-%s Failed, errno:%d\n");
   }
 
-  // syslog(1, ">>>*** bbr reg:0x%08x\n", regValue);
-  // syslog(1, ">>>*** bitMask:0x%08x\n", bitMask);
-
   if(regValue == 0)
     return 0;
 
   regValue &= bitMask;    // Save only bit in mask
-  // syslog(1, ">>>*** regValue &= bitMask:0x%08x\n", regValue);
 
   // We have the 32-bit value, shift right based on the mask
   uint32_t tempMask = bitMask;
@@ -122,7 +116,6 @@ uint32_t hcom_utils_read_bbr_and_right_justify(uint32_t bitMask)
     regValue >>= 1;
   }
 
-  // syslog(1, ">>>*** return Value:0x%08x\n", regValue);
   return regValue;
 }
 

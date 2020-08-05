@@ -74,6 +74,13 @@ int hcom_logging_utils_setup()
 }
 
 //============================================================
+// Make syslogMask available
+int hcom_logging_utils_get_syslog_mask()
+{
+  return _syslogMask;
+}
+
+//============================================================
 // This function sets up the syslog mask as desired
 int hcom_logging_syslog_mask_init()
 {
@@ -148,91 +155,6 @@ int hcom_logging_syslog_mask_init()
 #endif
 
   return OK;
-}
-
-//============================================================================
-// For diagnostic use only
-void hcom_logging_utils_print_buffer(const uint8_t buffer[], const int bufLen, uint8_t msgPriority)
-{
-#if HCOM_COMMON_UTILS_DIAG_PRINT_BUFFER > 0
-
-#define HCOM_UTIL_BYTES_PER_LINE 16
-#define HCOM_UTIL_LEADING_SPACES 2
-#define HCOM_UTIL_HEXADECIMAL_OFFSET (8 + HCOM_UTIL_LEADING_SPACES)
-#define HCOM_UTIL_ASCII_OFFSET (57 + HCOM_UTIL_LEADING_SPACES)
-#define HCOM_UTIL_DISPLAY_LENGTH (HCOM_UTIL_ASCII_OFFSET + HCOM_UTIL_BYTES_PER_LINE + 3)
-
-  if(bufLen <= 0)
-  {
-    hcom_logging_syslog(msgPriority, "hcom_logging_utils_print_buffer() called with 'bufLen:%d'\n", bufLen);
-    return;
-  }
-
-  if(buffer == NULL)
-  {
-    hcom_logging_syslog(msgPriority, "hcom_logging_utils_print_buffer() called with 'buffer == NULL'\n");
-    return;
-  }
-
-  if ((_syslogMask & LOG_MASK(msgPriority)) == 0)
-    return;
-
-  int rowStartOffset, rowByteOffset;
-  char lineBuff[HCOM_UTIL_DISPLAY_LENGTH];
-  int hexOffset;
-  int asciiOffset;
-
-  // One line at a time
-  for (rowStartOffset = 0; rowStartOffset < bufLen; rowStartOffset += HCOM_UTIL_BYTES_PER_LINE)
-  {
-    memset(lineBuff, 0x20, HCOM_UTIL_DISPLAY_LENGTH);
-
-    // Buffer offset address
-    snprintf(&lineBuff[HCOM_UTIL_LEADING_SPACES], HCOM_UTIL_DISPLAY_LENGTH, "%08x ", rowStartOffset);
-
-    hexOffset = HCOM_UTIL_HEXADECIMAL_OFFSET;
-    asciiOffset = HCOM_UTIL_ASCII_OFFSET;
-
-    for (rowByteOffset = 0; rowByteOffset < HCOM_UTIL_BYTES_PER_LINE; rowByteOffset++)
-    {
-      off_t buffOffset = rowStartOffset + rowByteOffset;
-      if (buffOffset >= bufLen)
-        break;        // Reached the end of the buffer's data
-
-      // Grab the next byte to output
-      uint8_t nextByte = buffer[buffOffset];
-
-      // Save the hex value (add '.' half way)
-      if(rowByteOffset == HCOM_UTIL_BYTES_PER_LINE / 2)
-        snprintf(&lineBuff[hexOffset], HCOM_UTIL_DISPLAY_LENGTH - hexOffset, ".%02x", nextByte);
-      else
-        snprintf(&lineBuff[hexOffset], HCOM_UTIL_DISPLAY_LENGTH - hexOffset, " %02x", nextByte);
-      hexOffset += 3;
-
-      // Save the ascii value
-      if (nextByte == 0) // Make it easy to spot '0'
-        snprintf(&lineBuff[asciiOffset], HCOM_UTIL_DISPLAY_LENGTH - hexOffset, "-");
-      else if (nextByte == 0xff)
-        snprintf(&lineBuff[asciiOffset], HCOM_UTIL_DISPLAY_LENGTH - hexOffset, "*");
-      else if (nextByte < 0x20 || nextByte > 0x7e)  //isprint()
-        snprintf(&lineBuff[asciiOffset], HCOM_UTIL_DISPLAY_LENGTH - hexOffset, ".");
-      else
-        snprintf(&lineBuff[asciiOffset], HCOM_UTIL_DISPLAY_LENGTH - hexOffset, "%c", nextByte);
-
-      asciiOffset++;
-      DEBUGASSERT(asciiOffset < HCOM_UTIL_DISPLAY_LENGTH - 1);
-    }
-
-    // This row is ready
-    lineBuff[hexOffset] = 0x20;   // Replace last hex null with a space
-    lineBuff[asciiOffset++] = 0x0a; // line feed
-    lineBuff[asciiOffset] = 0x00; // null terminator
-
-  // Output one row at a time
-  hcom_logging_syslog(msgPriority, lineBuff);
-  }
-
-#endif
 }
 
 //===================================================================
@@ -384,11 +306,9 @@ void hcom_logging_syslog(int priority, FAR const IPTR char *fmt, ...)
 #if defined CONFIG_RAMLOG_SYSLOG
   stringLen = stringLen;    // Keep conpiler from warning (I know there's a better way...)
 #else
-// p-m - removed following because BBR not functional
-  stringLen = stringLen;    // p-m - added
   // syslog - check if these should be routed to host.
-  // Note: no timestamp for these messages
-  // if(hcom_utils_is_bbr_bit_set(HCOM_BBREG_TRACE_MSG_TO_HOST_BIT_MASK))
+  // Note: there's no timestamp for these messages
+  if(hcom_utils_is_bbr_bit_set(HCOM_BBREG_TRACE_MSG_TO_HOST_BIT_MASK))
   {
     // Strip off cr/lf since Meadow.CLI takes care of this
     if(_f7syslogTextBuf[stringLen - 1] == 0x0a || _f7syslogTextBuf[stringLen - 1] == 0x0d)
@@ -431,9 +351,8 @@ void hcom_utils_safe_ramlog(int priority, FAR const IPTR char *fmt,
   if(_safeRamlogText[stringLen - 1] == 0x0a || _safeRamlogText[stringLen - 1] == 0x0d)
     stringLen--;
 
-// p-m - removed following because sending to host not implemented yet
-  // hcom_host_send_raw_string_msg(HCOM_HOST_REQUEST_TEXT_TRACE_MSG, 0, _safeRamlogText,
-  //         stringLen, thisFile, __LINE__);
+  hcom_host_send_raw_string_msg(HCOM_HOST_REQUEST_TEXT_TRACE_MSG, 0, _safeRamlogText,
+          stringLen, thisFile, __LINE__);
   free(_safeRamlogText);
 }
 #endif

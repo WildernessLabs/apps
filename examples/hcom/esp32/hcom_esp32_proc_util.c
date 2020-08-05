@@ -90,6 +90,7 @@ void hcom_esp32_utils_hardware_reboot(void)
 {
   int ret;
 
+  // Make sure the boot pin is high then drop the reset pin and raise it (toggle it).
 #if HCOM_ESP32_ALLOW_BOOT_PIN_TO_BE_INPUT > 0
   // The boot pin is used for i/o need to config
   ret = hcom_proxy_gpio_config(HcomProxyGpioDefnEspBoot, HCOM_PROXY_GPIO_CONFIG_OUTPUT);
@@ -117,6 +118,7 @@ void hcom_esp32_utils_hardware_reboot(void)
     return;
   }
   usleep(10 * 1000);
+
   ret = hcom_proxy_gpio_write(HcomProxyGpioDefnEspReset, HCOM_PROXY_GPIO_CMD_VALUE_HIGH);
   if(ret < 0)
   {
@@ -153,7 +155,7 @@ void hcom_esp32_util_gpio_enter_prog_mode(void)
 #endif
 
   // Pull boot pin low. Then pull reset low and release reset pin. At this
-  // moment the boot pin is read. If low the ESP32 enters bootloader.
+  // moment the boot pin is read by the ESP32. If low the ESP32 enters bootloader.
   ret = hcom_proxy_gpio_write(HcomProxyGpioDefnEspBoot, HCOM_PROXY_GPIO_CMD_VALUE_LOW);
   if(ret < 0)
   {
@@ -168,6 +170,7 @@ void hcom_esp32_util_gpio_enter_prog_mode(void)
     return;
   }
   usleep(10 * 1000);
+  
   ret = hcom_proxy_gpio_write(HcomProxyGpioDefnEspReset, HCOM_PROXY_GPIO_CMD_VALUE_HIGH);
   if(ret < 0)
   {
@@ -199,14 +202,15 @@ void hcom_esp32_util_gpio_enter_prog_mode(void)
 // can be specified.
 int hcom_esp32_util_initialize_communications()
 {
+#define HCOM_ESP32_MAX_NUMB_CONNECT_ATTEMPTS 40
   int ret;
-  int maxNumbAttempts = 40;
   struct HcomEsp32UserRecvdData_s recvdData[1];
+  int currentNumbAttempts = HCOM_ESP32_MAX_NUMB_CONNECT_ATTEMPTS;
 
   // Has communications already been initialized?
   if(_is_comms_initialized)
     return OK;
-  
+
   // Make sure everything has been initialized. Note: this call will
   // in turn call all the setup_exp32_xxx_xxx_lazy functions
   ret = hcom_esp32_uart_lazy_initialization();
@@ -227,11 +231,12 @@ int hcom_esp32_util_initialize_communications()
   // The esp will send text for about 1.1 seconds so we'll just wait
   usleep(1250 * 1000);
 
-  // From here out we should only receive binary information
-  // Send sync commands until esp32 responds by echoing the sync command.
+  // The ESP32 should be done sending text. From here out we should only
+  // receive binary information. Send sync commands until esp32 responds by
+  // echoing the sync command.
   do
   {
-    maxNumbAttempts--;  // Attemts vary from 1 to 10+.
+    currentNumbAttempts--;  // Attempts vary from 1 to n.
 
     // 100 ms seems to be a reasonable compromise. Much faster and ESP32 never responses
     // (it's probably too busy handling these commands) and slower just takes longer to
@@ -241,7 +246,7 @@ int hcom_esp32_util_initialize_communications()
     if(ret == -ETIMEDOUT)
     {
       hcom_comms_dbg(LOG_DEBUG, "%s@%d-send sync Timed out will try again. ret:%d, %d tries left\n",
-              thisFile, __LINE__, ret, maxNumbAttempts);
+              thisFile, __LINE__, ret, currentNumbAttempts);
       continue;     // try again
     }
     else if(ret < 0)
@@ -251,9 +256,9 @@ int hcom_esp32_util_initialize_communications()
     }
 
     _is_comms_initialized = true;
-  } while (maxNumbAttempts > 0 && !_is_comms_initialized);
+  } while (currentNumbAttempts > 0 && !_is_comms_initialized);
 
-  maxNumbAttempts--;   // if no attempts left return -1
+  currentNumbAttempts--;   // if no attempts left return -1
   if(_is_comms_initialized)
   {
     // Give time for the other 7 responses to be received before
@@ -262,10 +267,11 @@ int hcom_esp32_util_initialize_communications()
   }
   else
   {
-    hcom_logging_syslog(LOG_ERR, "%s@%d-No connection, %d attempts\n", thisFile, __LINE__, maxNumbAttempts);
+    hcom_logging_syslog(LOG_ERR, "%s@%d-No connection, %d attempts\n", thisFile, __LINE__,
+              HCOM_ESP32_MAX_NUMB_CONNECT_ATTEMPTS);
   }
-  
-  return maxNumbAttempts;
+
+  return currentNumbAttempts;
 }
 
 //====================================================================
@@ -278,7 +284,7 @@ int hcom_esp32_util_read_register(uint32_t regAddr, uint32_t *regValue)
   ret = hcom_esp32_util_initialize_communications();
   if(ret < 0)
   {
-    hcom_logging_syslog(LOG_ERR, "%s@%d-Init Comms:%d\n", thisFile, __LINE__, ret);
+    hcom_logging_syslog(LOG_ERR, "%s@%d-Init Comms for reg read:%d\n", thisFile, __LINE__, ret);
     return ret;
   }
 
@@ -324,7 +330,7 @@ void hcom_esp32_exec_restart_esp32(uint32_t userData)
   ret = hcom_esp32_util_initialize_communications();
   if(ret < 0)
   {
-    hcom_logging_syslog(LOG_ERR, "%s@%d-Init Comms:%d\n", thisFile, __LINE__, ret);
+    hcom_logging_syslog(LOG_ERR, "%s@%d-Init Comms for restart:%d\n", thisFile, __LINE__, ret);
     return;
   }
 
@@ -352,7 +358,7 @@ void hcom_esp32_exec_read_esp32_mac(uint32_t userData)
   ret = hcom_esp32_util_initialize_communications();
   if(ret < 0)
   {
-    hcom_logging_syslog(LOG_ERR, "%s@%d-init comms:%d\n", thisFile, __LINE__, ret);
+    hcom_logging_syslog(LOG_ERR, "%s@%d-Init comms for mac:%d\n", thisFile, __LINE__, ret);
     return;
   }
   
