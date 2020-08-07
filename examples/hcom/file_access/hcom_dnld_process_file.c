@@ -105,14 +105,14 @@ static uint64_t get_current_time64(void)
 int hcom_dnld_proc_setup()
 {
     _fileDownloadFailedNoted = false;
-    _currentHcomDataPacketAction = CurrentHcomDataPacketActionNone;
+    _currentHcomDataPacketAction = HcomDnldActionNone;
   return OK;
 }
 
 //====================================================================
 bool hcom_dnld_proc_is_active()
 {
-  return (_currentHcomDataPacketAction != CurrentHcomDataPacketActionNone);
+  return (_currentHcomDataPacketAction != HcomDnldActionNone);
 }
 
 //=======================================================================================
@@ -158,7 +158,8 @@ void hcom_dnld_proc_begin(const uint8_t *recvPacketData, const size_t recvPacket
   {
     case HCOM_MDOW_REQUEST_START_FILE_TRANSFER:
       // Meadow
-      _currentHcomDataPacketAction = CurrentHcomDataPacketActionF7FileXfer;
+      _currentHcomDataPacketAction = HcomDnldActionMeadowFileXfer;
+      // Only the F7 files have a file name associated with them
       fileNameLength = recvPacketDataSize - (msgOffset + HCOM_PROTOCOL_REQUEST_MD5_HASH_LENGTH);
       fileNameBuffer = malloc(fileNameLength + 1);
       memcpy(fileNameBuffer, recvPacketData + msgOffset + HCOM_PROTOCOL_REQUEST_MD5_HASH_LENGTH,
@@ -180,11 +181,11 @@ void hcom_dnld_proc_begin(const uint8_t *recvPacketData, const size_t recvPacket
     case HCOM_MDOW_REQUEST_START_ESP_FILE_TRANSFER:
       // ESP32
 #if defined (CONFIG_HCOM_ESP32_COMMS)
-      _currentHcomDataPacketAction = CurrentHcomDataPacketActionEsp32FileXfer;
+      _currentHcomDataPacketAction = HcomDnldActionEsp32FileXfer;
       memcpy(_md5FileHash, recvPacketData + msgOffset, HCOM_PROTOCOL_REQUEST_MD5_HASH_LENGTH);
       _md5FileHash[HCOM_PROTOCOL_REQUEST_MD5_HASH_LENGTH] = '\0';
 
-      hcom_logging_syslog(LOG_INFO, "ESP32 download (Size:%d, Crc:0x%08x, MCUAddr:0x%08x, MD5Hash:%s)\n",
+      hcom_logging_syslog(LOG_INFO, "ESP32 download start (Size:%d, Crc:0x%08x, MCUAddr:0x%08x, MD5Hash:%s)\n",
               _xferRecvFullFileSize, _xferRecvFullFileCrc, _xferTargetMcuAddr, _md5FileHash);
 
       // Adding file to ESP32-pico-d4 flash
@@ -192,7 +193,7 @@ void hcom_dnld_proc_begin(const uint8_t *recvPacketData, const size_t recvPacket
       if (ret < 0)
       {
         _fileSystemOpenFailed = true;
-        _currentHcomDataPacketAction = CurrentHcomDataPacketActionNone;
+        _currentHcomDataPacketAction = HcomDnldActionNone;
         hcom_logging_syslog(LOG_ERR, "%s@%d-from call for ESP32 start transfer:%d\n", thisFile, __LINE__, ret);
       }
 #endif
@@ -252,25 +253,24 @@ void hcom_dnld_proc_recvd_file_data(const uint8_t *packet, const size_t packetSi
     char hostMsg[HCOM_SHORT_HOST_STRING_BUFF_LENGTH];
     _lastPercentSent = percentDone / 10;
 
-    int stringLen = snprintf(hostMsg, HCOM_SHORT_HOST_STRING_BUFF_LENGTH, "File %d%% downloaded", percentDone);
-
+    int stringLen = snprintf(hostMsg, HCOM_SHORT_HOST_STRING_BUFF_LENGTH,
+              "File %d%% downloaded", percentDone);
     DEBUGASSERT(stringLen < HCOM_SHORT_HOST_STRING_BUFF_LENGTH);
     hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0, hostMsg,
             thisFile, __LINE__);
   }
 
-  // Depending on what we're doing process this data packet
+  // Depending on what we're doing, process this data packet
   switch (_currentHcomDataPacketAction)
   {
-    case CurrentHcomDataPacketActionF7FileXfer:
+    case HcomDnldActionMeadowFileXfer:
       // Calculate CRC checksum of the payload without sequence number
       _xferMeadowCalcCrc = crc32part(recvOrigData, recvOrigDataSize, _xferMeadowCalcCrc);
-      _xferCalcFullFileSize += recvOrigDataSize;
 
       ret = hcom_dnld_write_del_add_to_active_file(recvOrigData, recvOrigDataSize);
       break;
 
-    case CurrentHcomDataPacketActionEsp32FileXfer:
+    case HcomDnldActionEsp32FileXfer:
 #if defined (CONFIG_HCOM_ESP32_COMMS)
       ret = hcom_esp32_exec_add_flash_data(recvOrigData, recvOrigDataSize, seqNumb);
 #endif
@@ -282,6 +282,8 @@ void hcom_dnld_proc_recvd_file_data(const uint8_t *packet, const size_t packetSi
               thisFile, __LINE__, seqNumb);
       break;
   }
+  
+  _xferCalcFullFileSize += recvOrigDataSize;
 
   if (ret < 0)
   {
@@ -292,6 +294,9 @@ void hcom_dnld_proc_recvd_file_data(const uint8_t *packet, const size_t packetSi
 
 //=======================================================================================
 // Process a end of file transfer message
+// Note: The the userData is 0 unless it's last file to be sent by the CLI command.
+// For F7 this value is not used but the ESP32 uses this to rebood the ESP32.
+// Only after a reboot will the ESP32 attempt to execute the program.
 void hcom_dnld_proc_end(uint32_t userData)
 {
   int ret;
@@ -299,14 +304,17 @@ void hcom_dnld_proc_end(uint32_t userData)
   char *sendMsgToHost;
 #if defined (CONFIG_HCOM_ESP32_COMMS)
   char *espCalculatedMd5;
-#endif  
+#endif
   int stringLen;
   uint16_t requestType;
+  bool lastFile = userData == 1 ? true : false;
 
-  hcom_logging_syslog(LOG_NOTICE, "End of %s transfer\n", _currentHcomDataPacketAction ? "Meadow" : "ESP32");
+  hcom_logging_syslog(LOG_NOTICE, "End of %s transfer\n",
+            _currentHcomDataPacketAction == HcomDnldActionMeadowFileXfer? "Meadow" : "ESP32");
+
   switch(_currentHcomDataPacketAction)
   {
-    case CurrentHcomDataPacketActionF7FileXfer:
+    case HcomDnldActionMeadowFileXfer:
       ret = hcom_dnld_write_del_close_active_file();
       if (ret < 0)
       {
@@ -339,7 +347,6 @@ void hcom_dnld_proc_end(uint32_t userData)
         }
         else
         {
-          DEBUGASSERT(_xferCalcFullFileSize != _xferRecvFullFileSize);
           stringLen = snprintf(hostMsg, HCOM_SHORT_HOST_STRING_BUFF_LENGTH, "File size mismatch Calc=%d, Recv=%d",
                   _xferCalcFullFileSize, _xferRecvFullFileSize);
           sendMsgToHost = hostMsg;
@@ -348,19 +355,25 @@ void hcom_dnld_proc_end(uint32_t userData)
       }
       break;
 
-    case CurrentHcomDataPacketActionEsp32FileXfer:
+    case HcomDnldActionEsp32FileXfer:
 #if defined (CONFIG_HCOM_ESP32_COMMS)
-      ret = hcom_esp32_exec_add_flash_end(userData);
-      if (ret < 0)
+      if(lastFile)
       {
-        hcom_logging_syslog(LOG_ERR, "%s@%d-ESP32 File end error:%d\n", thisFile, __LINE__, ret);
+        // This will end flashing
+        ret = hcom_esp32_exec_add_flash_end();
+        if (ret < 0)
+        {
+          hcom_logging_syslog(LOG_ERR, "%s@%d-ESP32 File end error:%d\n", thisFile, __LINE__, ret);
+        }
       }
+
       // Compare the two MD5 hashs
       espCalculatedMd5 = hcom_esp32_exec_get_md5_file_hash();
-      int cmpResult = strcmp(espCalculatedMd5, _md5FileHash);
+      int md5CmpResult = strcmp(espCalculatedMd5, _md5FileHash);
       hcom_logging_syslog(LOG_INFO, "Esp32 MD5 hash:'%s', CLI MD5 hash:'%s', %s\n", espCalculatedMd5, _md5FileHash,
-              cmpResult == 0 ? "Success" : "Error");
-      if(cmpResult == 0)
+              md5CmpResult == 0 ? "Success" : "Error");
+      
+      if(md5CmpResult == 0 && _xferCalcFullFileSize == _xferRecvFullFileSize)
       {
         stringLen = snprintf(hostMsg, HCOM_SHORT_HOST_STRING_BUFF_LENGTH,
             "File Sent Success MD5 calc='%s', CLI='%s')", espCalculatedMd5, _md5FileHash);
@@ -369,11 +382,28 @@ void hcom_dnld_proc_end(uint32_t userData)
       }
       else
       {
+        if(md5CmpResult != 0)
+        {
           stringLen = snprintf(hostMsg, HCOM_SHORT_HOST_STRING_BUFF_LENGTH,
           "MD5 hash compare error MD5 calc:%s, CLI:%s)", espCalculatedMd5, _md5FileHash);
           sendMsgToHost = hostMsg;
           requestType = HCOM_HOST_REQUEST_TEXT_ERROR;
+        }
+        else
+        {
+          stringLen = snprintf(hostMsg, HCOM_SHORT_HOST_STRING_BUFF_LENGTH, "File size mismatch Calc=%d, Recv=%d",
+                  _xferCalcFullFileSize, _xferRecvFullFileSize);
+          sendMsgToHost = hostMsg;
+          requestType = HCOM_HOST_REQUEST_TEXT_ERROR;
+        }
       }
+
+      // Restart ESP32 if everything is done
+      if(lastFile)
+      {
+        hcom_esp32_utils_hardware_reboot();
+      }
+
 #endif
       break;
 
@@ -400,5 +430,5 @@ void hcom_dnld_proc_end(uint32_t userData)
   _xferCalcFullFileSize = 0;
   _xferMeadowCalcCrc = 0; // Set to 0 for next message
 
-  _currentHcomDataPacketAction = CurrentHcomDataPacketActionNone;
+  _currentHcomDataPacketAction = HcomDnldActionNone;
 }

@@ -109,10 +109,10 @@ int hcom_diag_ramlog_trace_setup()
   _uart1_fd = -1;
   _trace_ramlog_to_uart1 = false;
 
+  // p-m FOR INITIAL TESTING SAVE SOME TROUBLE BY FORCING HAPPY VALUES
   // p-m THESE ALL NEED TO BE CHANGED WHEN EVERTHING READY
   // p-m - force to uart1 for ORTING TO APPS SIDE
   _trace_ramlog_to_uart1 = true;
-
   // p-m Override defaults from battery backed register values
   // if(hcom_utils_read_bbr_and_right_justify(HCOM_BBREG_TRACE_MSG_TO_UART1_BIT_MASK))
   //   _trace_ramlog_to_uart1 = true;

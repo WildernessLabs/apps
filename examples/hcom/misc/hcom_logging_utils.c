@@ -81,73 +81,52 @@ int hcom_logging_utils_get_syslog_mask()
 }
 
 //============================================================
-// This function sets up the syslog mask as desired
+// This function gets the syslog mast set by hcom_proxy
 int hcom_logging_syslog_mask_init()
 {
-  int syslogMaskPrev;
   bool isPowerOnRestart;
 
 #if defined(CONFIG_STM32F7_PWR)
+  // This BBR was set by hcom proxy since it starts first
+  _syslogMask = hcom_utils_read_bbr_and_right_justify(HCOM_BBREG_RESTART_SYSLOG_CONFIG_VALUE_MASK);
+
   // Check if this is a reboot or a power-on restart. The MCU on Power-on
   // clears all 32 battery backed registers to 0.
   if(hcom_utils_bbr_read() == 0)
   {
     // Power-on restart
     isPowerOnRestart = true;
-
-    // Set and save the syslog level to the default value
-    _syslogMask = LOG_MASK(LOG_EMERG) | LOG_MASK(LOG_ALERT) | LOG_MASK(LOG_CRIT) |
-               LOG_MASK(LOG_ERR) | LOG_MASK(LOG_WARNING);
-    // This works here because we know that the bits are all zeros
-    hcom_utils_set_bbr_bits(_syslogMask);
   }
   else
   {
     // Rebooted - it's safe to use the battery backed registers values
     isPowerOnRestart = false;
-    _syslogMask = hcom_utils_read_bbr_and_right_justify(HCOM_BBREG_RESTART_SYSLOG_CONFIG_VALUE_MASK);
-  }
-
-  // Save for emergency debugging :-)
-  // _syslogMask = LOG_MASK(LOG_EMERG) | LOG_MASK(LOG_ALERT) | LOG_MASK(LOG_CRIT) |
-  //             LOG_MASK(LOG_ERR) | LOG_MASK(LOG_WARNING) | LOG_MASK(LOG_NOTICE) | 
-  //             LOG_MASK(LOG_INFO);  // | LOG_MASK(LOG_DEBUG);
-
-  // Sets new mask and returns the previous syslog_mask
-  syslogMaskPrev = setlogmask(_syslogMask);
-  if (syslogMaskPrev < 0)
-  {
-    hcom_logging_syslog(LOG_CRIT, "%s@%d-setlogmask err:0x%08x\n", thisFile, __LINE__, syslogMaskPrev);
-    return syslogMaskPrev;    // not old mask be error
   }
 #else
 #warning "CONFIG_STM32F7_PWR not defined\n"
-
-  // Without battery backed registers the best we can do is defaults
+  // Without battery backed registers the best we can do is guess
   isPowerOnRestart = true;
-  _syslogMask = LOG_MASK(LOG_EMERG) | LOG_MASK(LOG_ALERT) | LOG_MASK(LOG_CRIT) |
-              LOG_MASK(LOG_ERR) | LOG_MASK(LOG_WARNING);
-  syslogMaskPrev = setlogmask(_syslogMask);
 #endif
 
-// p-m the following should have #if defined(CONFIG_STM32F7_PWR) because it access
-// battery backed registers
-  // This is an informational syslog message
+#if defined(CONFIG_STM32F7_PWR)
+  // Check the host and uart1 bits
   char *traceCombo[] = {
     "none",
     "Host",
     "UART1",
     "Host+UART1"};
-  // Check the 2 host and uart1 bits
-  uint32_t toValue = hcom_utils_read_bbr_and_right_justify(HCOM_BBREG_TRACE_MSG_TO_EITHER_BIT_MASK);
-  char *traceDest = traceCombo[toValue];
+  uint32_t destValue = hcom_utils_read_bbr_and_right_justify(HCOM_BBREG_TRACE_MSG_TO_HOST_AND_UART1_BIT_MASK);
+  char *traceDest = traceCombo[destValue];
+#else
+  char *traceDest = "unknown";
+#endif
 
   // Provide some information that may be useful
-  hcom_logging_syslog(LOG_INFO, "Meadow %s (%s@%s) %s, Mono:%s, Trace level:0x%02x(was 0x%02x), to:%s, type:%s\n",
+  hcom_logging_syslog(LOG_NOTICE, "Meadow %s (%s@%s) %s, Mono:%s, Trace level:0x%02x, to:%s, type:%s\n",
         HCOM_DEVICE_INFO_MEADOW_OS_VERSION, __DATE__, __TIME__, 
         isPowerOnRestart ? "power-on restart" :"rebooted",
         hcom_mono_ctrl_is_mono_enabled() ? "Enabled" : "Disabled",
-        _syslogMask, syslogMaskPrev, traceDest,
+        _syslogMask, traceDest,
 #if defined CONFIG_RAMLOG_SYSLOG
         "ramlog");
 #else
@@ -155,6 +134,53 @@ int hcom_logging_syslog_mask_init()
 #endif
 
   return OK;
+}
+
+//=======================================================================================
+void hcom_logging_utils_change_trace_level(uint32_t userData)
+{
+  char hostMsg[HCOM_SHORT_HOST_STRING_BUFF_LENGTH];
+  int stringLen;
+
+  // Minimum default
+  int syslogmask = LOG_MASK(LOG_EMERG) | LOG_MASK(LOG_ALERT) | LOG_MASK(LOG_CRIT) | LOG_MASK(LOG_ERR) |
+                   LOG_MASK(LOG_WARNING);
+
+  switch (userData)
+  {
+    case HCOM_TRACE_LEVEL_NOTICE:
+      syslogmask |= LOG_MASK(LOG_NOTICE);
+      break;
+
+    case HCOM_TRACE_LEVEL_NOTICE_INFO:
+      syslogmask |= LOG_MASK(LOG_NOTICE) | LOG_MASK(LOG_INFO);
+      break;
+
+    case HCOM_TRACE_LEVEL_NOTICE_INFO_DEBUG:
+      syslogmask |= LOG_MASK(LOG_NOTICE) | LOG_MASK(LOG_INFO) | LOG_MASK(LOG_DEBUG);
+      break;
+    
+    case HCOM_TRACE_LEVEL_DEFAULT:
+    default:    // minumum syslogmask
+      break;
+  }
+
+  hcom_utils_clear_then_set_bbr_bits(HCOM_BBREG_RESTART_SYSLOG_CONFIG_VALUE_MASK, syslogmask);
+  _syslogMask = syslogmask;
+
+  // Does the user care about the old trace level returned as a mask?
+  int oldTraceLevel = setlogmask(syslogmask);
+
+  stringLen = snprintf(hostMsg, HCOM_SHORT_HOST_STRING_BUFF_LENGTH,
+          "Trace level changed from 0x%02x to 0x%02x",
+          oldTraceLevel, syslogmask);
+
+  DEBUGASSERT(stringLen < HCOM_SHORT_HOST_STRING_BUFF_LENGTH);
+  hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0, hostMsg,
+          thisFile, __LINE__);
+
+
+  hcom_logging_syslog(LOG_NOTICE, "Trace from 0x%02x to 0x%02x\n\n", oldTraceLevel, syslogmask);
 }
 
 //===================================================================

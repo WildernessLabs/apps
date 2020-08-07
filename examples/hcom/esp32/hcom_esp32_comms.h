@@ -277,10 +277,11 @@ enum Esp32Registers
   int hcom_esp32_exec_download_flash_start(const size_t entireFileSize, const uint32_t targetAddr,
             const char *md5Hash);
   int hcom_esp32_exec_add_flash_data(const uint8_t *packet, const size_t packetSize, uint16_t seqNumb);
-  int hcom_esp32_exec_add_flash_end(uint32_t lastFile);
+  int hcom_esp32_exec_add_flash_end(void);
   void hcom_esp32_exec_read_esp32_mac(uint32_t userData);
   void hcom_esp32_exec_restart_esp32(uint32_t userData);
   char *hcom_esp32_exec_get_md5_file_hash(void);
+  void hcom_esp32_utils_hardware_reboot(void);
 
   // ESP32 Received data processing
   int hcom_esp32_recv_setup_lazy(void);

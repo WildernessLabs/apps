@@ -39,17 +39,9 @@
 
 #include "../hcom_common.h"
 
-#include <nuttx/arch.h>
-#include <nuttx/mtd/mtd.h>
-#include <nuttx/userspace.h>
-
-#include <arch/board/boardctl.h>
-#include <sys/boardctl.h>
-
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
-
 
 /* Configuration ************************************************************/
 /****************************************************************************
@@ -64,7 +56,6 @@ static char *thisFile = __FILE__;
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
-
 int hcom_misc_rqst_setup()
 {
   return OK;
@@ -139,51 +130,6 @@ void hcom_misc_rqst_get_device_info(uint32_t userData)
     
   free(csvDevInfo);
 }
-
-//=======================================================================================
-void hcom_misc_rqst_change_trace_level(uint32_t userData)
-{
-  char hostMsg[HCOM_SHORT_HOST_STRING_BUFF_LENGTH];
-  int stringLen;
-
-  int syslogmask = LOG_MASK(LOG_EMERG) | LOG_MASK(LOG_ALERT) | LOG_MASK(LOG_CRIT) | LOG_MASK(LOG_ERR) |
-                   LOG_MASK(LOG_WARNING);
-
-  switch (userData)
-  {
-    case HCOM_TRACE_LEVEL_NOTICE:
-      syslogmask |= LOG_MASK(LOG_NOTICE);
-      break;
-
-    case HCOM_TRACE_LEVEL_NOTICE_INFO:
-      syslogmask |= LOG_MASK(LOG_NOTICE) | LOG_MASK(LOG_INFO);
-      break;
-
-    case HCOM_TRACE_LEVEL_NOTICE_INFO_DEBUG:
-      syslogmask |= LOG_MASK(LOG_NOTICE) | LOG_MASK(LOG_INFO) | LOG_MASK(LOG_DEBUG);
-      break;
-    
-    case HCOM_TRACE_LEVEL_DEFAULT:
-    default:    // use already calculated syslogmask
-      break;
-  }
-
-  hcom_utils_clear_then_set_bbr_bits(HCOM_BBREG_RESTART_SYSLOG_CONFIG_VALUE_MASK, syslogmask);
-
-  // Does the user care about the old trace level returned as a mask?
-  int newTraceLevel = setlogmask(syslogmask);
-
-  stringLen = snprintf(hostMsg, HCOM_SHORT_HOST_STRING_BUFF_LENGTH,
-          "Trace level changed from 0x%02x to 0x%02x",
-          newTraceLevel, syslogmask);
-
-  DEBUGASSERT(stringLen < HCOM_SHORT_HOST_STRING_BUFF_LENGTH);
-  hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0, hostMsg,
-          thisFile, __LINE__);
-
-  hcom_logging_syslog(LOG_NOTICE, "Trace from 0x%02x to 0x%02x\n\n", newTraceLevel, syslogmask);
-}
-
 //======================================================================================
 // Enter the dfu mode so the user can flash the internal flash with the OS
 void hcom_misc_rqst_enter_dfu_mode(uint32_t userData)

@@ -282,8 +282,8 @@ int hcom_esp32_recv_handle_text_packet(uint8_t *text_buffer, ssize_t length)
     return OK;
   
   // Since text is not SLIP encoded we can see it, if it's null
-  // terminated. So, we'll terminate and display it via syslog
-  // Strip off ending cr/lf which all messages seem to have.
+  // terminated. So, we'll terminate and display it via syslog. Strip
+  // off ending cr/lf (0x0d, 0x0a) which all messages seem to have.
   if(text_buffer[length - 1] == 0x0a || text_buffer[length - 1] == 0x0d)
     length--;
   if(text_buffer[length - 1] == 0x0a || text_buffer[length - 1] == 0x0d)

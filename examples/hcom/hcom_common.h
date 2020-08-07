@@ -217,11 +217,11 @@ enum hcom_comms_recv_buffer_return
 // command carried an additional field to identify the "series" a particular
 // data packet belonged to. Each data packet would be unuque and the
 // sequence numbers 1-n would be unique for each series.
-enum hcom_current_data_packet_activity
+enum hcom_download_data_packet_action
 {
-  CurrentHcomDataPacketActionNone,
-  CurrentHcomDataPacketActionF7FileXfer, // Could be expanded to specify file type (e.g. mscorlib.dll)
-  CurrentHcomDataPacketActionEsp32FileXfer,
+  HcomDnldActionNone,
+  HcomDnldActionMeadowFileXfer, // Could be expanded to specify file type (e.g. mscorlib.dll)
+  HcomDnldActionEsp32FileXfer,
 };
 
 // Used for writing and deleting files
@@ -485,7 +485,7 @@ extern "C"
   // Execute Utility Request
   int hcom_misc_rqst_setup(void);
   void hcom_misc_rqst_enter_dfu_mode(uint32_t user_data);
-  void hcom_misc_rqst_change_trace_level(uint32_t userData);
+  void hcom_logging_utils_change_trace_level(uint32_t userData);
   void hcom_proxy_forward_cmd_to_proxy(uint16_t cliCmd, uint32_t proxyCmd, uint32_t userData);
 
   void hcom_mono_rqst_disable_mono(uint32_t userData);
@@ -630,7 +630,7 @@ extern "C"
 #define HCOM_BBREG_TRACE_MSG_TO_HOST_BIT_MASK 0x00000200
 // This bit indicates if we are to send trace messages to the uart1
 #define HCOM_BBREG_TRACE_MSG_TO_UART1_BIT_MASK 0x00000400
-#define HCOM_BBREG_TRACE_MSG_TO_EITHER_BIT_MASK (HCOM_BBREG_TRACE_MSG_TO_HOST_BIT_MASK | HCOM_BBREG_TRACE_MSG_TO_UART1_BIT_MASK)
+#define HCOM_BBREG_TRACE_MSG_TO_HOST_AND_UART1_BIT_MASK (HCOM_BBREG_TRACE_MSG_TO_HOST_BIT_MASK | HCOM_BBREG_TRACE_MSG_TO_UART1_BIT_MASK)
 // This bit indicates if mono should be started during startup
 #define HCOM_BBREG_MONO_START_BIT_MASK 0x00000800
 

@@ -58,9 +58,9 @@ static char *thisFile = __FILE__;
 /****************************************************************************
  * Private Function Prototypes
  ****************************************************************************/
-uint32_t hcom_calc_crc_for_file(char *completeFilePath, off_t *fileSize,
+static uint32_t hcom_calc_crc_for_file(char *completeFilePath, off_t *fileSize,
           uint32_t *blockSizeKB);
-int hcom_list_all_dev_dir_and_files(const char *name, int indent);
+static int hcom_list_all_dev_dir_and_files(const char *name, int indent, uint32_t userData);
 
 /****************************************************************************
  * Public Functions
@@ -237,12 +237,12 @@ int hcom_list_files_and_crc_in_partition(uint32_t partitionId)
 // THIS IS CALLABLE from Developer 4 at this time
 int hcom_list_all_dev_dir_and_files_start(uint32_t userData)
 {
-  // Changing "/" to "meadow0" will only show files
-  return hcom_list_all_dev_dir_and_files("/", 0);
+  // Changing "/" to "meadow0" will only show meadow files
+  return hcom_list_all_dev_dir_and_files("/", 0, userData);
 }
-
+//----------------------------------------------
 // NOTE - Recursive function
-int hcom_list_all_dev_dir_and_files(const char *name, int indent)
+int hcom_list_all_dev_dir_and_files(const char *name, int indent, uint32_t userData)
 {
   char hostMsg[HCOM_SHORT_HOST_STRING_BUFF_LENGTH];
 
@@ -259,12 +259,14 @@ int hcom_list_all_dev_dir_and_files(const char *name, int indent)
   {
     if (DIRENT_ISDIRECTORY(entry->d_type))
     {
-      // Directory
+      // Only show procfs information if userData == 1234
+      if(userData != 1234 && strcmp(entry->d_name, "proc") == 0)
+        return OK; // ignore procfs information
+
       snprintf(hostMsg, HCOM_SHORT_HOST_STRING_BUFF_LENGTH,
               "%*s%s/\n", indent, "", entry->d_name);
       hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION,
                 0, hostMsg, thisFile, __LINE__);
-      syslog(1, hostMsg);
 
       if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
         continue;
@@ -273,7 +275,7 @@ int hcom_list_all_dev_dir_and_files(const char *name, int indent)
       snprintf(path, sizeof(path), "%s/%s", name, entry->d_name);
       
       // Recursion is here
-      hcom_list_all_dev_dir_and_files(path, indent + 1);
+      hcom_list_all_dev_dir_and_files(path, indent + 1, userData);
     }
     else
     {
@@ -288,7 +290,6 @@ int hcom_list_all_dev_dir_and_files(const char *name, int indent)
               "%*s%s [%s]\n",indent, "", entry->d_name, entryType);
       hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION,
                 0, hostMsg, thisFile, __LINE__);
-      syslog(1, hostMsg);
     }
   }
 
@@ -324,7 +325,6 @@ uint32_t hcom_calc_crc_for_file(char *completeFilePath,
   // struct stat
   // {
   //   /* Required, standard fields */
-
   //   mode_t    st_mode;    /* File type, attributes, and access mode bits */
   //   off_t     st_size;    /* Size of file/directory, in bytes */
   //   blksize_t st_blksize; /* Block size used for filesystem I/O */
@@ -332,11 +332,9 @@ uint32_t hcom_calc_crc_for_file(char *completeFilePath,
   //   time_t    st_atime;   /* Time of last access */
   //   time_t    st_mtime;   /* Time of last modification */
   //   time_t    st_ctime;   /* Time of last status change */
-
   //   /* Internal fields.  These are part this specific implementation and
   //   * should not referenced by application code for portability reasons.
   //   */
-
   // #ifdef CONFIG_PSEUDOFS_SOFTLINKS
   //   uint8_t   st_count;   /* Used internally to limit traversal of links */
   // #endif

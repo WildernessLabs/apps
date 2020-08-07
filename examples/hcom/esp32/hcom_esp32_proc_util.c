@@ -296,7 +296,6 @@ int hcom_esp32_util_read_register(uint32_t regAddr, uint32_t *regValue)
   hcom_comms_dbg(LOG_DEBUG, "%s@%d-Register read at:%p\n", thisFile, __LINE__, regAddr);
 
   struct HcomEsp32UserRecvdData_s recvdData[1];
-
   ret = hcom_esp32_xmit_build_and_send_msg(regAddrBody, sizeof(regAddrBody),
             Esp32CommandReadRegister, HCOM_ESP_XMIT_TYPICAL_DELAY_MS, recvdData);
   if(ret < 0)

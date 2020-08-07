@@ -445,26 +445,23 @@ char *hcom_esp32_exec_get_md5_file_hash()
 //====================================================================
 // The user data contains 1 if this is the last file, meaning it's time
 // to leave boot mode
-int hcom_esp32_exec_add_flash_end(uint32_t lastFile)
+int hcom_esp32_exec_add_flash_end()
 {
   int ret;
   struct HcomEsp32UserRecvdData_s recvdData;
   struct HcomEsp32SecHdrBegin_s flashBegin;
   struct HcomEsp32SecHdrFlashEnd_s flashEnd;
 
-  if(lastFile == 0)
-    return OK;
-
   // Continue if last file of a sequence
   // ----------------------------------------------
   // esptool sends a flash begin at this point, the purpose is unknown.
-  // If this is not needed then the 'lastFile' variable is not needed,
-  // here or in Meadow.CLI.
+  // But it must do something good?
   flashBegin.eraseSize = 0;
   flashBegin.numbBlocks = 0;
   flashBegin.downloadWriteSize = HCOM_ESP32_BOOT_LOADER_PAYLOAD_SIZE;
   flashBegin.downloadOffset = 0;
 
+  // Note: Returns number of bytes in ESP32 response or -Error
   ret = hcom_esp32_xmit_build_and_send_msg((uint8_t *)&flashBegin, HCOM_ESP32_PROTOCOL_BEGIN_HDR_LENGTH,
         Esp32CommandFlashBegin, HCOM_ESP_XMIT_TYPICAL_DELAY_MS, &recvdData);
   if(ret < 0)
@@ -475,8 +472,8 @@ int hcom_esp32_exec_add_flash_end(uint32_t lastFile)
 
   // ----------------------------------------------
   // Flash End is the last command for flashing a file to the ESP32.
-  // This will cause the ESP32 to leave the boot
-  flashEnd.execFlag = 0;    // 0 = reboot (software reset), 1 = don't reboot, stay in bootloader
+  // This will cause the ESP32 to leave boot mode
+  flashEnd.execFlag = 1;   // 1 = don't reboot, 0 = reboot (software reset)
   flashEnd.zero1 = 0;
   flashEnd.zero2 = 0;
   flashEnd.zero3 = 0;
