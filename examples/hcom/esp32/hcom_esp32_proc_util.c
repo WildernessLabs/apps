@@ -51,8 +51,9 @@
  ****************************************************************************/
 
 static bool _shutting_down;
-static bool _is_comms_initialized;
-static char _lineBuff[8];   // Only for converting command to string
+static char _cmdStrBuff[8];   // Only for converting command to string
+
+// This is the command to sync the ESP32
 static uint8_t hcom_esp_sync_msg[] =
 { 
   0x07, 0x07, 0x12, 0x20, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 
@@ -74,7 +75,6 @@ static uint8_t hcom_esp_sync_msg[] =
 int hcom_esp32_util_setup_lazy()
 {
   _shutting_down = false;
-  _is_comms_initialized = false;
   return OK;
 }
 
@@ -86,59 +86,58 @@ void hcom_esp32_util_shutdown()
 
 //====================================================================
 // Reboot needed after programming to enter run mode
-void hcom_esp32_utils_hardware_reboot(void)
+int hcom_esp32_utils_hardware_restart(void)
 {
   int ret;
-
+  
   // Make sure the boot pin is high then drop the reset pin and raise it (toggle it).
 #if HCOM_ESP32_ALLOW_BOOT_PIN_TO_BE_INPUT > 0
-  // The boot pin is used for i/o need to config
+  // The boot pin is used for input too so need to config
   ret = hcom_proxy_gpio_config(HcomProxyGpioDefnEspBoot, HCOM_PROXY_GPIO_CONFIG_OUTPUT);
   if(ret < 0)
   {
     hcom_logging_syslog(LOG_ERR, "%s@%d-gpio config:%d\n", thisFile, __LINE__, ret);
-    return;
+    return ret;
   }
-  usleep(100 * 1000);
+  usleep(10 * 1000);
 #endif
 
-  // Initiate a reset
+  // Insure boot pin is high, if it's low ESP32 will enter Boot Loader Mode
   ret = hcom_proxy_gpio_write(HcomProxyGpioDefnEspBoot, HCOM_PROXY_GPIO_CMD_VALUE_HIGH);
   if(ret < 0)
   {
     hcom_logging_syslog(LOG_ERR, "%s@%d-gpio write:%d\n", thisFile, __LINE__, ret);
-    return;
+    return ret;
   }
-  usleep(10 * 1000);
 
   ret = hcom_proxy_gpio_write(HcomProxyGpioDefnEspReset, HCOM_PROXY_GPIO_CMD_VALUE_LOW);
   if(ret < 0)
   {
     hcom_logging_syslog(LOG_ERR, "%s@%d-gpio write:%d\n", thisFile, __LINE__, ret);
-    return;
+    return ret;
   }
-  usleep(10 * 1000);
 
   ret = hcom_proxy_gpio_write(HcomProxyGpioDefnEspReset, HCOM_PROXY_GPIO_CMD_VALUE_HIGH);
   if(ret < 0)
   {
     hcom_logging_syslog(LOG_ERR, "%s@%d-gpio write:%d\n", thisFile, __LINE__, ret);
-    return;
+    return ret;
   }
-  usleep(30 * 1000);
 
 #if HCOM_ESP32_ALLOW_BOOT_PIN_TO_BE_INPUT > 0
   ret = hcom_proxy_gpio_config(HcomProxyGpioDefnEspBoot, HCOM_PROXY_GPIO_CONFIG_INPUT);
   if(ret < 0)
   {
     hcom_logging_syslog(LOG_ERR, "%s@%d-gpio config:%d\n", thisFile, __LINE__, ret);
-    return;
+    return ret;
   }
 #endif
+  return ret;
 }
 
 //====================================================================
 // The following sequence puts the ESP32 into programming mode
+// This mode is called Boot Loader mode in ESP32 documents
 void hcom_esp32_util_gpio_enter_prog_mode(void)
 {
   int ret;
@@ -151,7 +150,7 @@ void hcom_esp32_util_gpio_enter_prog_mode(void)
     hcom_logging_syslog(LOG_ERR, "%s@%d-gpio config:%d\n", thisFile, __LINE__, ret);
     return;
   }
-  usleep(100 * 1000);
+  usleep(20 * 1000);
 #endif
 
   // Pull boot pin low. Then pull reset low and release reset pin. At this
@@ -178,6 +177,7 @@ void hcom_esp32_util_gpio_enter_prog_mode(void)
     return;
   }
   usleep(20 * 1000);
+
   // Boot pin's been read by now
   ret = hcom_proxy_gpio_write(HcomProxyGpioDefnEspBoot, HCOM_PROXY_GPIO_CMD_VALUE_HIGH);
   if(ret < 0)
@@ -200,19 +200,16 @@ void hcom_esp32_util_gpio_enter_prog_mode(void)
 // Takes care of the GPIO and sending synchronization messages.
 // To prevent getting locked into this loop the number of attempts
 // can be specified.
-int hcom_esp32_util_initialize_communications()
+int hcom_esp32_util_initi_comms_enter_boot_mode()
 {
 #define HCOM_ESP32_MAX_NUMB_CONNECT_ATTEMPTS 40
   int ret;
   struct HcomEsp32UserRecvdData_s recvdData[1];
   int currentNumbAttempts = HCOM_ESP32_MAX_NUMB_CONNECT_ATTEMPTS;
 
-  // Has communications already been initialized?
-  if(_is_comms_initialized)
-    return OK;
-
   // Make sure everything has been initialized. Note: this call will
-  // in turn call all the setup_exp32_xxx_xxx_lazy functions
+  // in turn call all the setup_exp32_xxx_xxx_lazy functions. It will
+  // only do this once.
   ret = hcom_esp32_uart_lazy_initialization();
   if(ret < 0)
   {
@@ -222,8 +219,13 @@ int hcom_esp32_util_initialize_communications()
 
   hcom_esp32_recv_expect_command_type(Esp32CommandUndefined);
 
-  // Place in known state and delay
-  hcom_esp32_utils_hardware_reboot();
+  // Restart the esp32 hardware
+  ret = hcom_esp32_utils_hardware_restart();
+  if(ret < 0)
+  {
+    hcom_logging_syslog(LOG_ERR, "%s@%d-restart failed:%d\n", thisFile, __LINE__, ret);
+    return ret;
+  }
 
   // Put the esp into programming mode
   hcom_esp32_util_gpio_enter_prog_mode();
@@ -243,32 +245,35 @@ int hcom_esp32_util_initialize_communications()
     // sync
     ret = hcom_esp32_xmit_build_and_send_msg(hcom_esp_sync_msg, sizeof(hcom_esp_sync_msg),
             Esp32CommandSynchronise, HCOM_ESP_XMIT_CONNECT_DELAY_MS, recvdData);
-    if(ret == -ETIMEDOUT)
+    if(ret >= 0)
+    {
+      break;    // Success
+    }
+    else if(ret == -ETIMEDOUT)
     {
       hcom_comms_dbg(LOG_DEBUG, "%s@%d-send sync Timed out will try again. ret:%d, %d tries left\n",
               thisFile, __LINE__, ret, currentNumbAttempts);
       continue;     // try again
     }
-    else if(ret < 0)
+    else
     {
       hcom_logging_syslog(LOG_ERR, "%s@%d-Sending hcom_esp_sync_msg:%d\n", thisFile, __LINE__, ret);
       return ret;
     }
 
-    _is_comms_initialized = true;
-  } while (currentNumbAttempts > 0 && !_is_comms_initialized);
+  } while (currentNumbAttempts > 0);
 
   currentNumbAttempts--;   // if no attempts left return -1
-  if(_is_comms_initialized)
-  {
-    // Give time for the other 7 responses to be received before
-    // allowing the initiating command to be processed
-    usleep(100 * 1000);
-  }
-  else
+  if(currentNumbAttempts == -1)
   {
     hcom_logging_syslog(LOG_ERR, "%s@%d-No connection, %d attempts\n", thisFile, __LINE__,
               HCOM_ESP32_MAX_NUMB_CONNECT_ATTEMPTS);
+  }
+  else
+  {
+    // Give time for the other 7 responses to be received before
+    // allowing the command to be processed
+    usleep(100 * 1000);
   }
 
   return currentNumbAttempts;
@@ -280,13 +285,6 @@ int hcom_esp32_util_read_register(uint32_t regAddr, uint32_t *regValue)
 {
   int ret;
   uint8_t regAddrBody[4];
-
-  ret = hcom_esp32_util_initialize_communications();
-  if(ret < 0)
-  {
-    hcom_logging_syslog(LOG_ERR, "%s@%d-Init Comms for reg read:%d\n", thisFile, __LINE__, ret);
-    return ret;
-  }
 
   regAddrBody[0] =  regAddr & 0x000000ff;
   regAddrBody[1] = (regAddr & 0x0000ff00) >> 8;
@@ -326,17 +324,13 @@ void hcom_esp32_exec_restart_esp32(uint32_t userData)
   int ret;
   char hostMsg[HCOM_SHORT_HOST_STRING_BUFF_LENGTH];
 
-  ret = hcom_esp32_util_initialize_communications();
+  // Restart the ESP32 via GPIO lines
+  ret = hcom_esp32_utils_hardware_restart();
   if(ret < 0)
   {
-    hcom_logging_syslog(LOG_ERR, "%s@%d-Init Comms for restart:%d\n", thisFile, __LINE__, ret);
+    hcom_logging_syslog(LOG_ERR, "%s@%d-restart failed:%d\n", thisFile, __LINE__, ret);
     return;
   }
-
-  hcom_esp32_utils_hardware_reboot();
-  
-  // Reconnect next time
-  _is_comms_initialized = false;
 
   int stringLen = snprintf(hostMsg, HCOM_SHORT_HOST_STRING_BUFF_LENGTH, "ESP32 restarted");
   DEBUGASSERT(stringLen < HCOM_SHORT_HOST_STRING_BUFF_LENGTH);
@@ -354,13 +348,13 @@ void hcom_esp32_exec_read_esp32_mac(uint32_t userData)
   uint32_t chipMac1;
   uint32_t chipMac2;
 
-  ret = hcom_esp32_util_initialize_communications();
+  ret = hcom_esp32_util_initi_comms_enter_boot_mode();
   if(ret < 0)
   {
     hcom_logging_syslog(LOG_ERR, "%s@%d-Init comms for mac:%d\n", thisFile, __LINE__, ret);
     return;
   }
-  
+
   // Step #1 make sure ESP32
   ret = hcom_esp32_util_read_register(Esp32RegAddrUART_DATE_REG_ADDR, &chipIdInfo);
   if(ret < 0)
@@ -397,42 +391,49 @@ void hcom_esp32_exec_read_esp32_mac(uint32_t userData)
 
   hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0, macAddr,
           thisFile, __LINE__);
+
+  // Restore to original state
+  ret = hcom_esp32_utils_hardware_restart();
+  if(ret < 0)
+  {
+    hcom_logging_syslog(LOG_ERR, "%s@%d-restart failed:%d\n", thisFile, __LINE__, ret);
+    return;
+  }
 }
 
 //====================================================================
-char *hcom_esp_command_hex_to_string(uint8_t cmd)
+char *hcom_esp32_utils_convert_cmd_to_string(uint8_t cmd)
 {
   switch(cmd)
   {
-    // Save space for Meadow.OS
-    // case 0x02:
-    // return "FLASH_BEGIN";
-    // case 0x03:
-    // return "FLASH_DATA";
-    // case 0x04:
-    // return "FLASH_END";
-    // case 0x05:
-    // return "MEM_BEGIN";
-    // case 0x06:
-    // return "MEM_DATA";
-    // case 0x07:
-    // return "MEM_END";
-    // case 0x08:
-    // return "SYNC";
-    // case 0x09:
-    // return "WRITE_REG";
-    // case 0x0a:
-    // return "READ_REG";
-    // case 0x0b:
-    // return "SPI_SET_PARAMS";
-    // case 0x0d:
-    // return "SPI_ATTACH";
-    // case 0x13:
-    // return "SPI_FLASH_MD5";
+    case 0x02:
+    return "FLASH_BEGIN";
+    case 0x03:
+    return "FLASH_DATA";
+    case 0x04:
+    return "FLASH_END";
+    case 0x05:
+    return "MEM_BEGIN";
+    case 0x06:
+    return "MEM_DATA";
+    case 0x07:
+    return "MEM_END";
+    case 0x08:
+    return "SYNC";
+    case 0x09:
+    return "WRITE_REG";
+    case 0x0a:
+    return "READ_REG";
+    case 0x0b:
+    return "SPI_SET_PARAMS";
+    case 0x0d:
+    return "SPI_ATTACH";
+    case 0x13:
+    return "SPI_FLASH_MD5";
     default:
     {
-      snprintf(_lineBuff, 8, "?-0x%02x", cmd);
-      return _lineBuff;
+      snprintf(_cmdStrBuff, 8, "?-0x%02x", cmd);
+      return _cmdStrBuff;
     }
   }
 }

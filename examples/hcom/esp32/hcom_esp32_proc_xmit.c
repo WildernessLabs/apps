@@ -161,7 +161,7 @@ int hcom_esp32_xmit_build_and_send_msg(uint8_t *msgBody, ssize_t msgBodyLen,
   DEBUGASSERT(encodedOffset < bufferSize);
 
   hcom_comms_dbg(LOG_DEBUG, "Transmitting '%s' (0x%02x) cmd to ESP32\n",
-            hcom_esp_command_hex_to_string(espCommand), espCommand);
+            hcom_esp32_utils_convert_cmd_to_string(espCommand), espCommand);
 
   // Send the completed message and wait for the response
   ret = hcom_esp32_xmit_send_complete_msg(encodedMsg, encodedOffset,
@@ -169,7 +169,7 @@ int hcom_esp32_xmit_build_and_send_msg(uint8_t *msgBody, ssize_t msgBodyLen,
   if(ret < 0)
   {
     // Timeout is assumed to mean nothing received from ESP32
-    if(ret == -ETIMEDOUT)
+    if(ret == -ETIMEDOUT)   // ETIMEDOUT = 116
       hcom_logging_syslog(LOG_INFO, "%s@%d-Xmit timed out after %d ms\n", thisFile, __LINE__, millisecDelay);
     else
       hcom_logging_syslog(LOG_ERR, "%s@%d-Sending to ESP:%d\n", thisFile, __LINE__, ret);

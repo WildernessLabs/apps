@@ -259,7 +259,7 @@ int hcom_esp32_recv_handle_text_packet(uint8_t *text_buffer, ssize_t length)
 
     if(_cr_lf_esp32_crlf_counter % 500000 == 0)
     {
-      syslog(LOG_INFO, "Another 500,000 cr/lf %d\n", _cr_lf_esp32_crlf_counter);
+      hcom_logging_syslog(LOG_DEBUG, "Another 500,000 cr/lf %d\n", _cr_lf_esp32_crlf_counter);
       return OK;
     }
 
@@ -268,7 +268,7 @@ int hcom_esp32_recv_handle_text_packet(uint8_t *text_buffer, ssize_t length)
 
     if(_cr_lf_esp32_crlf_counter == 4)
     {
-      syslog(LOG_INFO, "Appears to be endless stream of cr/lf\n");
+      hcom_logging_syslog(LOG_DEBUG, "Appears to be endless stream of cr/lf\n");
       return OK;
     }
   }
@@ -291,7 +291,7 @@ int hcom_esp32_recv_handle_text_packet(uint8_t *text_buffer, ssize_t length)
   text_buffer[length] = '\0';   // null terminate
   
   // This cannot be routed to Meadow.CLI so send directly to syslog
-  syslog(LOG_INFO, "ESP32 Text:'%s'", text_buffer);
+  syslog(LOG_INFO, "ESP32 Text:'%s'\n", text_buffer);
   return OK;
 }
 

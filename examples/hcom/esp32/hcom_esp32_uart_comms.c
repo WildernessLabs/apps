@@ -130,6 +130,7 @@ int hcom_esp32_uart_comms_setup()
     return ret;
   }
 #else
+  // This is the only place this gpio is configured
   ret = hcom_proxy_gpio_config(HcomProxyGpioDefnEspBoot, HCOM_PROXY_GPIO_CONFIG_OUTPUT);
   if(ret < 0)
   {
@@ -308,12 +309,6 @@ FAR void *hcom_esp32_uart_comms_pthread(FAR void *arg)
 {
   int ret;
   
-#if HCOM_TASK_SHOW_CREATED_TASK_PID_NAME > 0
-// p-m this won't work on the apps side
-  struct tcb_s *rtcb = this_task();
-  hcom_logging_syslog(LOG_NOTICE, "PID:%d is '%s'\n", getpid(), rtcb->name);
-#endif
-
   ret = hcom_esp32_uart_phase2_initialization();
   if(ret < 0)
   {
@@ -328,7 +323,7 @@ FAR void *hcom_esp32_uart_comms_pthread(FAR void *arg)
   sem_post(&_initalizeWaitSem);  // Allow hcom thread to proceed
 
   // Allow hcom thread to start before using this thread
-  // p-m is this necessary???
+  // This may not be needed on the apps side of things
   usleep(500 * 1000);
 
   while(!_shutting_down)

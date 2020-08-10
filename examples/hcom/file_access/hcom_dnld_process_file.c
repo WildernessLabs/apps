@@ -295,7 +295,7 @@ void hcom_dnld_proc_recvd_file_data(const uint8_t *packet, const size_t packetSi
 //=======================================================================================
 // Process a end of file transfer message
 // Note: The the userData is 0 unless it's last file to be sent by the CLI command.
-// For F7 this value is not used but the ESP32 uses this to rebood the ESP32.
+// For F7 this value is not used but the ESP32 uses this to reboot the ESP32.
 // Only after a reboot will the ESP32 attempt to execute the program.
 void hcom_dnld_proc_end(uint32_t userData)
 {
@@ -357,16 +357,6 @@ void hcom_dnld_proc_end(uint32_t userData)
 
     case HcomDnldActionEsp32FileXfer:
 #if defined (CONFIG_HCOM_ESP32_COMMS)
-      if(lastFile)
-      {
-        // This will end flashing
-        ret = hcom_esp32_exec_add_flash_end();
-        if (ret < 0)
-        {
-          hcom_logging_syslog(LOG_ERR, "%s@%d-ESP32 File end error:%d\n", thisFile, __LINE__, ret);
-        }
-      }
-
       // Compare the two MD5 hashs
       espCalculatedMd5 = hcom_esp32_exec_get_md5_file_hash();
       int md5CmpResult = strcmp(espCalculatedMd5, _md5FileHash);
@@ -398,10 +388,14 @@ void hcom_dnld_proc_end(uint32_t userData)
         }
       }
 
-      // Restart ESP32 if everything is done
       if(lastFile)
       {
-        hcom_esp32_utils_hardware_reboot();
+        // Tell ESP32 download complete and restart ESP32 since all files have been flashed
+        ret = hcom_esp32_exec_add_flash_end();
+        if (ret < 0)
+        {
+          hcom_logging_syslog(LOG_ERR, "%s@%d-ESP32 File end error:%d\n", thisFile, __LINE__, ret);
+        }
       }
 
 #endif

@@ -48,10 +48,10 @@ typedef struct {
  * Private Data
  ****************************************************************************/
 
-static uint32_t _startupAction;
-static bool _shutting_down = false;
+// static uint32_t _startupAction;
+// static bool _shutting_down = false;
 
-static int _pipe_fd = -1;
+// static int _pipe_fd = -1;
 
 #ifdef BUILD_MONO_DEBUGGING_TEST_CODE
 static int _sockfd = -1;

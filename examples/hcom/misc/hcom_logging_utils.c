@@ -87,8 +87,10 @@ int hcom_logging_syslog_mask_init()
   bool isPowerOnRestart;
 
 #if defined(CONFIG_STM32F7_PWR)
+
   // This BBR was set by hcom proxy since it starts first
   _syslogMask = hcom_utils_read_bbr_and_right_justify(HCOM_BBREG_RESTART_SYSLOG_CONFIG_VALUE_MASK);
+  setlogmask(_syslogMask);
 
   // Check if this is a reboot or a power-on restart. The MCU on Power-on
   // clears all 32 battery backed registers to 0.
@@ -143,44 +145,44 @@ void hcom_logging_utils_change_trace_level(uint32_t userData)
   int stringLen;
 
   // Minimum default
-  int syslogmask = LOG_MASK(LOG_EMERG) | LOG_MASK(LOG_ALERT) | LOG_MASK(LOG_CRIT) | LOG_MASK(LOG_ERR) |
+  int newSyslogMask = LOG_MASK(LOG_EMERG) | LOG_MASK(LOG_ALERT) | LOG_MASK(LOG_CRIT) | LOG_MASK(LOG_ERR) |
                    LOG_MASK(LOG_WARNING);
 
   switch (userData)
   {
     case HCOM_TRACE_LEVEL_NOTICE:
-      syslogmask |= LOG_MASK(LOG_NOTICE);
+      newSyslogMask |= LOG_MASK(LOG_NOTICE);
       break;
 
     case HCOM_TRACE_LEVEL_NOTICE_INFO:
-      syslogmask |= LOG_MASK(LOG_NOTICE) | LOG_MASK(LOG_INFO);
+      newSyslogMask |= LOG_MASK(LOG_NOTICE) | LOG_MASK(LOG_INFO);
       break;
 
     case HCOM_TRACE_LEVEL_NOTICE_INFO_DEBUG:
-      syslogmask |= LOG_MASK(LOG_NOTICE) | LOG_MASK(LOG_INFO) | LOG_MASK(LOG_DEBUG);
+      newSyslogMask |= LOG_MASK(LOG_NOTICE) | LOG_MASK(LOG_INFO) | LOG_MASK(LOG_DEBUG);
       break;
     
     case HCOM_TRACE_LEVEL_DEFAULT:
-    default:    // minumum syslogmask
+    default:    // minumum newSyslogMask
       break;
   }
 
-  hcom_utils_clear_then_set_bbr_bits(HCOM_BBREG_RESTART_SYSLOG_CONFIG_VALUE_MASK, syslogmask);
-  _syslogMask = syslogmask;
+  hcom_utils_clear_then_set_bbr_bits(HCOM_BBREG_RESTART_SYSLOG_CONFIG_VALUE_MASK, newSyslogMask);
+  _syslogMask = newSyslogMask;
 
   // Does the user care about the old trace level returned as a mask?
-  int oldTraceLevel = setlogmask(syslogmask);
+  int oldTraceLevel = setlogmask(newSyslogMask);
 
   stringLen = snprintf(hostMsg, HCOM_SHORT_HOST_STRING_BUFF_LENGTH,
           "Trace level changed from 0x%02x to 0x%02x",
-          oldTraceLevel, syslogmask);
+          oldTraceLevel, newSyslogMask);
 
   DEBUGASSERT(stringLen < HCOM_SHORT_HOST_STRING_BUFF_LENGTH);
   hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0, hostMsg,
           thisFile, __LINE__);
 
 
-  hcom_logging_syslog(LOG_NOTICE, "Trace from 0x%02x to 0x%02x\n\n", oldTraceLevel, syslogmask);
+  hcom_logging_syslog(LOG_NOTICE, "Trace from 0x%02x to 0x%02x\n\n", oldTraceLevel, newSyslogMask);
 }
 
 //===================================================================

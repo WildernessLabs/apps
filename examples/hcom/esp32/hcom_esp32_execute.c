@@ -127,7 +127,7 @@ int hcom_esp32_exec_download_flash_start(const size_t entireFileSize,
   _espSeqNumb = 0;
 
   // Establish communications with ESP32
-  ret = hcom_esp32_util_initialize_communications();
+  ret = hcom_esp32_util_initi_comms_enter_boot_mode();
   if(ret < 0)
   {
     hcom_logging_syslog(LOG_ERR, "%s@%d-Init Comms for download:%d\n", thisFile, __LINE__, ret);
@@ -452,10 +452,8 @@ int hcom_esp32_exec_add_flash_end()
   struct HcomEsp32SecHdrBegin_s flashBegin;
   struct HcomEsp32SecHdrFlashEnd_s flashEnd;
 
-  // Continue if last file of a sequence
-  // ----------------------------------------------
-  // esptool sends a flash begin at this point, the purpose is unknown.
-  // But it must do something good?
+  // I don't know why but the esptool sends a flash begin at this point, the
+  // purpose is unknown. But it must do something good? So, it's here.
   flashBegin.eraseSize = 0;
   flashBegin.numbBlocks = 0;
   flashBegin.downloadWriteSize = HCOM_ESP32_BOOT_LOADER_PAYLOAD_SIZE;
@@ -471,8 +469,8 @@ int hcom_esp32_exec_add_flash_end()
   }
 
   // ----------------------------------------------
-  // Flash End is the last command for flashing a file to the ESP32.
-  // This will cause the ESP32 to leave boot mode
+  // Flash End is the last command for flashing files to the ESP32
+  // after all downloading is completed.
   flashEnd.execFlag = 1;   // 1 = don't reboot, 0 = reboot (software reset)
   flashEnd.zero1 = 0;
   flashEnd.zero2 = 0;
@@ -491,6 +489,13 @@ int hcom_esp32_exec_add_flash_end()
 
   DEBUGASSERT(recvdData.espHdr.direction == 1);
   DEBUGASSERT(recvdData.espHdr.command == Esp32CommandFlashEnd);
+
+  ret = hcom_esp32_utils_hardware_restart();
+  if(ret < 0)
+  {
+    hcom_logging_syslog(LOG_ERR, "%s@%d-restart failed:%d\n", thisFile, __LINE__, ret);
+  }
+
   return ret;
 }
 
