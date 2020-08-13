@@ -350,7 +350,7 @@ int hcom_host_send_transmit_to_host(FAR uint8_t xmitBuffer[], size_t xmitLength)
   }
 
   // Encode
-  size_t encodedLength = host_comms_cobs_encoder(xmitBuffer, 0, xmitLength, _encodedXmitBuff);
+  size_t encodedLength = hcom_host_cobs_encoder(xmitBuffer, 0, xmitLength, _encodedXmitBuff);
 
   // Encoded message needs a terminating delimiter for COBS
   DEBUGASSERT(encodedLength < HCOM_SAFE_PACKET_BUF_SIZE - 1);

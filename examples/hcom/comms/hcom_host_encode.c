@@ -62,7 +62,8 @@
 // any length packet to be encoded but adds at least 1 byte every 254 bytes.
 // To used this encoded packet, a 0x00 is added to the end of this encoded
 // message as a packet delimiter. This algorithm is known as 'COBS'
-size_t host_comms_cobs_encoder(uint8_t source[], size_t startingOffset, size_t length, uint8_t encoded[])
+// (Consistent Overhead Byte Stuffing)
+size_t hcom_host_cobs_encoder(uint8_t source[], size_t startingOffset, size_t length, uint8_t encoded[])
 {
   DEBUGASSERT(length <= HCOM_PROTOCOL_PACKET_MAX_SIZE);
   
@@ -104,7 +105,7 @@ size_t host_comms_cobs_encoder(uint8_t source[], size_t startingOffset, size_t l
 //-------------------------------------------------------------------------
 // This function restores the removed 0x00s, thus returning the packet to it's
 // original content.
-size_t host_comms_cobs_decoder(uint8_t encoded[], size_t length, uint8_t decoded[])
+size_t hcom_host_cobs_decoder(uint8_t encoded[], size_t length, uint8_t decoded[])
 {
   size_t encodedOffset = 0; // Offset into original (encoded) buffer
   size_t decodedOffset = 0; // Offset into destination (decoded) buffer

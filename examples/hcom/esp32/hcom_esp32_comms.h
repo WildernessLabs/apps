@@ -278,8 +278,8 @@ enum Esp32Registers
             const char *md5Hash);
   int hcom_esp32_exec_add_flash_data(const uint8_t *packet, const size_t packetSize, uint16_t seqNumb);
   int hcom_esp32_exec_add_flash_end(void);
-  void hcom_esp32_exec_read_esp32_mac(uint32_t userData);
-  void hcom_esp32_exec_restart_esp32(uint32_t userData);
+  void hcom_esp32_util_read_esp32_mac(uint32_t userData);
+  void hcom_esp32_util_restart_esp32(uint32_t userData);
   char *hcom_esp32_exec_get_md5_file_hash(void);
 
   // ESP32 Received data processing
@@ -298,10 +298,10 @@ enum Esp32Registers
   // ESP32 Utility functions
   int hcom_esp32_util_setup_lazy(void);
   void hcom_esp32_util_shutdown(void);
-  int hcom_esp32_util_initi_comms_enter_boot_mode(void);
+  int hcom_esp32_util_init_comms_enter_boot_mode(void);
   int hcom_esp32_util_read_register(uint32_t regAddr, uint32_t *regValue);
   int hcom_esp32_util_write_register(uint32_t regAddr, uint32_t regValue);
-  char *hcom_esp32_utils_convert_cmd_to_string(uint8_t cmd);
-  int hcom_esp32_utils_hardware_restart(void);
+  char *hcom_esp32_util_convert_cmd_to_string(uint8_t cmd);
+  int hcom_esp32_util_hardware_restart(void);
 
 #endif // __CONFIGS_MEADOW_SRC_MEADOW_ESP32_MAIN__H

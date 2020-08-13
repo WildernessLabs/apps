@@ -163,9 +163,9 @@ int hcom_host_recv_receiving_loop()
 // "Concluded" message type
 int hcom_host_recv_restart_concluded()
 {
-  // Check if a CLI command was responsible for this restart, If it was a
-  // `Concluded` message must be sent
-  if(hcom_utils_read_bbr_and_right_justify(HCOM_BBREG_RESTART_CONCLUDED_BIT_MASK))
+  // Check if a CLI command was responsible for this restart, If it was
+  // then a `Concluded` message must be sent
+  if(hcom_utils_read_bbr_and_right_justify(HCOM_BBREG_RESTART_INITIATED_BY_HOST_CMD_BIT))
   {
     hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
   }

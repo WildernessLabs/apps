@@ -65,7 +65,7 @@ static uint8_t hcom_esp_sync_msg[] =
  * Private Function Prototypes
  ****************************************************************************/
  static char *thisFile = __FILE__;
-
+ static bool _connectionActive;
  static void hcom_esp32_util_gpio_enter_prog_mode(void);
 
 /****************************************************************************
@@ -75,6 +75,7 @@ static uint8_t hcom_esp_sync_msg[] =
 int hcom_esp32_util_setup_lazy()
 {
   _shutting_down = false;
+  _connectionActive = false;
   return OK;
 }
 
@@ -86,9 +87,11 @@ void hcom_esp32_util_shutdown()
 
 //====================================================================
 // Reboot needed after programming to enter run mode
-int hcom_esp32_utils_hardware_restart(void)
+int hcom_esp32_util_hardware_restart(void)
 {
   int ret;
+  
+  _connectionActive = false;
   
   // Make sure the boot pin is high then drop the reset pin and raise it (toggle it).
 #if HCOM_ESP32_ALLOW_BOOT_PIN_TO_BE_INPUT > 0
@@ -200,12 +203,15 @@ void hcom_esp32_util_gpio_enter_prog_mode(void)
 // Takes care of the GPIO and sending synchronization messages.
 // To prevent getting locked into this loop the number of attempts
 // can be specified.
-int hcom_esp32_util_initi_comms_enter_boot_mode()
+int hcom_esp32_util_init_comms_enter_boot_mode()
 {
 #define HCOM_ESP32_MAX_NUMB_CONNECT_ATTEMPTS 40
   int ret;
   struct HcomEsp32UserRecvdData_s recvdData[1];
   int currentNumbAttempts = HCOM_ESP32_MAX_NUMB_CONNECT_ATTEMPTS;
+
+  if(_connectionActive)
+    return OK;
 
   // Make sure everything has been initialized. Note: this call will
   // in turn call all the setup_exp32_xxx_xxx_lazy functions. It will
@@ -220,7 +226,7 @@ int hcom_esp32_util_initi_comms_enter_boot_mode()
   hcom_esp32_recv_expect_command_type(Esp32CommandUndefined);
 
   // Restart the esp32 hardware
-  ret = hcom_esp32_utils_hardware_restart();
+  ret = hcom_esp32_util_hardware_restart();
   if(ret < 0)
   {
     hcom_logging_syslog(LOG_ERR, "%s@%d-restart failed:%d\n", thisFile, __LINE__, ret);
@@ -273,6 +279,7 @@ int hcom_esp32_util_initi_comms_enter_boot_mode()
   {
     // Give time for the other 7 responses to be received before
     // allowing the command to be processed
+    _connectionActive = true;    
     usleep(100 * 1000);
   }
 
@@ -318,14 +325,14 @@ int hcom_esp32_util_write_register(uint32_t regAddr, uint32_t regValue)
 }
 
 //====================================================================
-// Restart the ESP32
-void hcom_esp32_exec_restart_esp32(uint32_t userData)
+// Host command to restart the ESP32 arrives here
+void hcom_esp32_util_restart_esp32(uint32_t userData)
 {
   int ret;
   char hostMsg[HCOM_SHORT_HOST_STRING_BUFF_LENGTH];
 
   // Restart the ESP32 via GPIO lines
-  ret = hcom_esp32_utils_hardware_restart();
+  ret = hcom_esp32_util_hardware_restart();
   if(ret < 0)
   {
     hcom_logging_syslog(LOG_ERR, "%s@%d-restart failed:%d\n", thisFile, __LINE__, ret);
@@ -339,8 +346,8 @@ void hcom_esp32_exec_restart_esp32(uint32_t userData)
 }
 
 //====================================================================
-// Get the ESP32's Mac address
-void hcom_esp32_exec_read_esp32_mac(uint32_t userData)
+// Host command to read the ESP32's Mac address arrives here
+void hcom_esp32_util_read_esp32_mac(uint32_t userData)
 {
   int ret;
   int stringLen;  
@@ -348,7 +355,7 @@ void hcom_esp32_exec_read_esp32_mac(uint32_t userData)
   uint32_t chipMac1;
   uint32_t chipMac2;
 
-  ret = hcom_esp32_util_initi_comms_enter_boot_mode();
+  ret = hcom_esp32_util_init_comms_enter_boot_mode();
   if(ret < 0)
   {
     hcom_logging_syslog(LOG_ERR, "%s@%d-Init comms for mac:%d\n", thisFile, __LINE__, ret);
@@ -393,7 +400,7 @@ void hcom_esp32_exec_read_esp32_mac(uint32_t userData)
           thisFile, __LINE__);
 
   // Restore to original state
-  ret = hcom_esp32_utils_hardware_restart();
+  ret = hcom_esp32_util_hardware_restart();
   if(ret < 0)
   {
     hcom_logging_syslog(LOG_ERR, "%s@%d-restart failed:%d\n", thisFile, __LINE__, ret);
@@ -402,7 +409,7 @@ void hcom_esp32_exec_read_esp32_mac(uint32_t userData)
 }
 
 //====================================================================
-char *hcom_esp32_utils_convert_cmd_to_string(uint8_t cmd)
+char *hcom_esp32_util_convert_cmd_to_string(uint8_t cmd)
 {
   switch(cmd)
   {

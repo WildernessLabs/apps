@@ -185,7 +185,7 @@ int hcom_host_parse_pull_all_packets_from_buffer()
     DEBUGASSERT(result == HCOM_CIR_BUF_GET_FOUND_MSG);
 
     // Drop trailing delimiter of 0x00 (--packetLength) then decode the packet
-    size_t decodedPacketSize = host_comms_cobs_decoder(packet_dest_buf, --packetLength, decode_dest_buf);
+    size_t decodedPacketSize = hcom_host_cobs_decoder(packet_dest_buf, --packetLength, decode_dest_buf);
 
     if(decodedPacketSize == 0)
       continue;

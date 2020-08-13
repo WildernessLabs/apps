@@ -161,7 +161,7 @@ int hcom_esp32_xmit_build_and_send_msg(uint8_t *msgBody, ssize_t msgBodyLen,
   DEBUGASSERT(encodedOffset < bufferSize);
 
   hcom_comms_dbg(LOG_DEBUG, "Transmitting '%s' (0x%02x) cmd to ESP32\n",
-            hcom_esp32_utils_convert_cmd_to_string(espCommand), espCommand);
+            hcom_esp32_util_convert_cmd_to_string(espCommand), espCommand);
 
   // Send the completed message and wait for the response
   ret = hcom_esp32_xmit_send_complete_msg(encodedMsg, encodedOffset,

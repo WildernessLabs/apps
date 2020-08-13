@@ -63,20 +63,20 @@ static uint32_t _cr_lf_esp32_crlf_counter;
  * Private Function Prototypes
  ****************************************************************************/
 
-static int PullAndProcessAllPackets(void);
+static int hcom_esp32_recv_pull_and_process(void);
 static int hcom_esp32_recv_handle_bin_packet(uint8_t *binRecvdData, ssize_t binRecvdLen);
 static int hcom_esp32_recv_handle_text_packet(uint8_t *text_buffer, ssize_t length);
 
-static int hcom_esp32_buf_init(struct hcom_esp32_cir_buffer_s *espbuf, size_t totalCapacity);
-static size_t hcom_esp32_buf_avail_space(struct hcom_esp32_cir_buffer_s *espbuf);
-static int hcom_esp32_buf_release_memory(struct hcom_esp32_cir_buffer_s *espbuf);
-static int hcom_esp32_buf_add_bytes(struct hcom_esp32_cir_buffer_s *espbuf,
+static int hcom_esp32_recv_buff_init(struct hcom_esp32_cir_buffer_s *espbuf, size_t totalCapacity);
+static size_t hcom_esp32_recv_buff_avail_space(struct hcom_esp32_cir_buffer_s *espbuf);
+static int hcom_esp32_recv_buff_release_mem(struct hcom_esp32_cir_buffer_s *espbuf);
+static int hcom_esp32_recv_buff_add_bytes(struct hcom_esp32_cir_buffer_s *espbuf,
                               uint8_t *newBytes, uint32_t bytesToAdd);
-static int hcom_esp32_buf_get_next_packet(struct hcom_esp32_cir_buffer_s *espbuf, uint8_t *packetDestBuf,
+static int hcom_esp32_recv_buff_get_next_packet(struct hcom_esp32_cir_buffer_s *espbuf, uint8_t *packetDestBuf,
                                 size_t packetDestBufSize, size_t *packetLength);
 static int hcom_esp32_recv_slip_decoder(uint8_t *encodedMsg, ssize_t encodedMsgLen,
       uint8_t *decoded);
-static uint8_t *memValChr(const uint8_t *s, uint8_t expectedDelimiter, size_t n);
+static uint8_t *hcom_esp32_recv_buff_find_delimiter(const uint8_t *s, uint8_t expectedDelimiter, size_t n);
 
 /****************************************************************************
  * Public Functions
@@ -96,10 +96,10 @@ int hcom_esp32_recv_setup_lazy()
     return -1;
   }
 
-  int ret = hcom_esp32_buf_init(_esp_cir_buf, HCOM_ESP_COMMS_MAX_ESP_PACKET_SIZE * 4);
+  int ret = hcom_esp32_recv_buff_init(_esp_cir_buf, HCOM_ESP_COMMS_MAX_ESP_PACKET_SIZE * 4);
   if (ret == HCOM_ESP32_BUF_INIT_FAILED)
   {
-    hcom_logging_syslog(LOG_ERR, "%s@%d-hcom_esp32_buf_init failed:%D\n", thisFile, __LINE__, ret);
+    hcom_logging_syslog(LOG_ERR, "%s@%d-hcom_esp32_recv_buff_init failed:%D\n", thisFile, __LINE__, ret);
     return -1;
   }
 
@@ -121,7 +121,7 @@ int hcom_esp32_recv_setup_lazy()
 void hcom_esp32_recv_shutdown()
 {
   _shutting_down = true;
-  hcom_esp32_buf_release_memory(_esp_cir_buf);
+  hcom_esp32_recv_buff_release_mem(_esp_cir_buf);
 
   mq_close(recvMsgQueue);
   mq_unlink(HCOM_ESP_COMMS_MSG_QUEUE_NAME);
@@ -144,7 +144,7 @@ int hcom_esp32_recv_handle_data(uint8_t *esp32_read_buffer, ssize_t bytesToAdd)
   
   while (true)
   {
-    ret = hcom_esp32_buf_add_bytes(_esp_cir_buf, esp32_read_buffer, bytesToAdd);
+    ret = hcom_esp32_recv_buff_add_bytes(_esp_cir_buf, esp32_read_buffer, bytesToAdd);
     if(ret == HCOM_ESP32_BUF_ADD_SUCCESS)
       break;
 
@@ -152,7 +152,7 @@ int hcom_esp32_recv_handle_data(uint8_t *esp32_read_buffer, ssize_t bytesToAdd)
     {
       // Wasn't possible to put these bytes in the buffer. We need to
       // process a few packets and then retry to add this data
-      ret = PullAndProcessAllPackets();
+      ret = hcom_esp32_recv_pull_and_process();
       if (ret == HCOM_ESP32_BUF_GET_FOUND_BIN ||
           ret == HCOM_ESP32_BUF_GET_FOUND_TEXT ||
           ret == HCOM_ESP32_BUF_GET_NONE_FOUND)
@@ -180,7 +180,7 @@ int hcom_esp32_recv_handle_data(uint8_t *esp32_read_buffer, ssize_t bytesToAdd)
     }
   }   // while(true);
 
-  ret = PullAndProcessAllPackets();
+  ret = hcom_esp32_recv_pull_and_process();
 
   // Any other response is an error
   DEBUGASSERT(ret == HCOM_ESP32_BUF_GET_FOUND_BIN ||
@@ -191,7 +191,7 @@ int hcom_esp32_recv_handle_data(uint8_t *esp32_read_buffer, ssize_t bytesToAdd)
 
 //===================================================================
 // Pull packets from the circular buffer
-int PullAndProcessAllPackets()
+int hcom_esp32_recv_pull_and_process()
 {
     int ret;
     size_t packetLength;
@@ -200,7 +200,7 @@ int PullAndProcessAllPackets()
     while (true)
     {
       // Get the next packet, binary packet or text line
-      ret = hcom_esp32_buf_get_next_packet(_esp_cir_buf, packetBuffer,
+      ret = hcom_esp32_recv_buff_get_next_packet(_esp_cir_buf, packetBuffer,
                     HCOM_ESP_COMMS_MAX_ESP_PACKET_SIZE, &packetLength);
       if (ret == HCOM_ESP32_BUF_GET_NONE_FOUND)
           break;      // We've emptied buffer of all full packets
@@ -446,7 +446,7 @@ ssize_t hcom_esp32_recv_slip_decoder(uint8_t *encodedMsg, ssize_t encodedMsgLen,
 //
 // Note: this is not thread safe as all functions share a common buffer.
 // However, at this time only one thread access these functions.
-int hcom_esp32_buf_init(struct hcom_esp32_cir_buffer_s *espbuf, size_t totalCapacity)
+int hcom_esp32_recv_buff_init(struct hcom_esp32_cir_buffer_s *espbuf, size_t totalCapacity)
 {
   espbuf->bottom = (uint8_t *)malloc(totalCapacity);
   if (espbuf->bottom == NULL)
@@ -460,7 +460,7 @@ int hcom_esp32_buf_init(struct hcom_esp32_cir_buffer_s *espbuf, size_t totalCapa
 }
 
 //=====================================================================
-size_t hcom_esp32_buf_avail_space(struct hcom_esp32_cir_buffer_s *espbuf)
+size_t hcom_esp32_recv_buff_avail_space(struct hcom_esp32_cir_buffer_s *espbuf)
 {
   // We leave one free byte so the head and tail are equal only if
   // empty not when full. Full means 1 free byte.
@@ -472,7 +472,7 @@ size_t hcom_esp32_buf_avail_space(struct hcom_esp32_cir_buffer_s *espbuf)
 
 //==============================================================================
 //
-int hcom_esp32_buf_release_memory(struct hcom_esp32_cir_buffer_s *espbuf)
+int hcom_esp32_recv_buff_release_mem(struct hcom_esp32_cir_buffer_s *espbuf)
 {
   free(espbuf->bottom);
   free(espbuf);
@@ -481,13 +481,13 @@ int hcom_esp32_buf_release_memory(struct hcom_esp32_cir_buffer_s *espbuf)
 
 //==============================================================================
 // Pretty much "throw and go"
-int hcom_esp32_buf_add_bytes(struct hcom_esp32_cir_buffer_s *espbuf,
+int hcom_esp32_recv_buff_add_bytes(struct hcom_esp32_cir_buffer_s *espbuf,
                               uint8_t *newBytes, uint32_t bytesToAdd)
 {
   if (bytesToAdd == 0)
     return HCOM_ESP32_BUF_ADD_BAD_ARG;
 
-  if (hcom_esp32_buf_avail_space(espbuf) < bytesToAdd)
+  if (hcom_esp32_recv_buff_avail_space(espbuf) < bytesToAdd)
     return HCOM_ESP32_BUF_ADD_WONT_FIT;
 
   uint8_t *newHead = espbuf->head + bytesToAdd;
@@ -510,7 +510,7 @@ int hcom_esp32_buf_add_bytes(struct hcom_esp32_cir_buffer_s *espbuf,
 
 //==============================================================================
 // Caller must supply packetDestBuf and it's size
-int hcom_esp32_buf_get_next_packet(struct hcom_esp32_cir_buffer_s *espbuf, uint8_t *packetDestBuf,
+int hcom_esp32_recv_buff_get_next_packet(struct hcom_esp32_cir_buffer_s *espbuf, uint8_t *packetDestBuf,
                                 size_t packetDestBufSize, size_t *packetLength)
 {
   uint8_t *found;
@@ -554,13 +554,13 @@ int hcom_esp32_buf_get_next_packet(struct hcom_esp32_cir_buffer_s *espbuf, uint8
   if (espbuf->head > activeTail)
   {
     // Simple case (no wrap around)
-    found = (uint8_t *)memValChr(activeTail, delimiter, espbuf->head - activeTail);
+    found = (uint8_t *)hcom_esp32_recv_buff_find_delimiter(activeTail, delimiter, espbuf->head - activeTail);
     if (found == NULL)
       return HCOM_ESP32_BUF_GET_NONE_FOUND;
   }
   else
   {
-    found = (uint8_t *)memValChr(activeTail, delimiter, espbuf->top - activeTail);
+    found = (uint8_t *)hcom_esp32_recv_buff_find_delimiter(activeTail, delimiter, espbuf->top - activeTail);
   }
 
   if (found != NULL)
@@ -604,7 +604,7 @@ int hcom_esp32_buf_get_next_packet(struct hcom_esp32_cir_buffer_s *espbuf, uint8
 
   //----------------------------------------------------------
   // Continue looking for the delimiter from the bottom up.
-  found = (uint8_t *)memValChr(espbuf->bottom, delimiter, espbuf->head - espbuf->bottom);
+  found = (uint8_t *)hcom_esp32_recv_buff_find_delimiter(espbuf->bottom, delimiter, espbuf->head - espbuf->bottom);
   if (found == NULL)
     return HCOM_ESP32_BUF_GET_NONE_FOUND;
 
@@ -657,7 +657,7 @@ int hcom_esp32_buf_get_next_packet(struct hcom_esp32_cir_buffer_s *espbuf, uint8
 // If binary expected uses memchr, if ascii then verify that no non-ascii
 // characters found.
 // Return a pointer to the last character checked
-uint8_t *memValChr(const uint8_t *start, uint8_t expectedDelimiter, size_t numb)
+uint8_t *hcom_esp32_recv_buff_find_delimiter(const uint8_t *start, uint8_t expectedDelimiter, size_t numb)
 {
   uint8_t *nextCheck = (uint8_t *)start;
 

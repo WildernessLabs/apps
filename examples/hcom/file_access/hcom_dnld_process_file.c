@@ -109,13 +109,14 @@ int hcom_dnld_proc_setup()
   return OK;
 }
 
-//====================================================================
+//==========================================================================
+// Are we actively receiving a file?
 bool hcom_dnld_proc_is_active()
 {
   return (_currentHcomDataPacketAction != HcomDnldActionNone);
 }
 
-//=======================================================================================
+//==========================================================================
 void hcom_dnld_proc_begin(const uint8_t *recvPacketData, const size_t recvPacketDataSize,
                                                 uint32_t partitionId, uint16_t requestType)
 {
@@ -324,7 +325,7 @@ void hcom_dnld_proc_end(uint32_t userData)
       // Compare results and report to host
       if (_fileSystemOpenFailed)
       {
-        sendMsgToHost = "File Start Failed.";
+        sendMsgToHost = "File Download Failed.";
         stringLen = strlen(sendMsgToHost);
         requestType = HCOM_HOST_REQUEST_TEXT_ERROR;
       }
@@ -413,7 +414,7 @@ void hcom_dnld_proc_end(uint32_t userData)
 
 #if HCOM_RECV_DEBUG_TIMING
   _dbgReceptionEndedAt = get_current_time64();
-  hcom_comms_dbg(LOG_DEBUG, "File transfer %d packets, took %llu mSec, CalcPacketCRC:0x%08x CalcFileCRC:0x%08x\n",
+  hcom_logging_syslog(LOG_DEBUG, "File transfer %d packets, took %llu mSec, CalcPacketCRC:0x%08x CalcFileCRC:0x%08x\n",
            _dbgNumbPacketsRecvd, ((_dbgReceptionEndedAt - _dbgReceptionBeganAt) / 1000000),
            _xferCalcPacketCrc, _xferMeadowCalcCrc);
 #else

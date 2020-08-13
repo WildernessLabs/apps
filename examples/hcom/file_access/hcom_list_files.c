@@ -58,7 +58,7 @@ static char *thisFile = __FILE__;
 /****************************************************************************
  * Private Function Prototypes
  ****************************************************************************/
-static uint32_t hcom_calc_crc_for_file(char *completeFilePath, off_t *fileSize,
+static uint32_t hcom_list_calc_crc_for_file(char *completeFilePath, off_t *fileSize,
           uint32_t *blockSizeKB);
 static int hcom_list_all_dev_dir_and_files(const char *name, int indent, uint32_t userData);
 
@@ -186,7 +186,7 @@ int hcom_list_files_and_crc_in_partition(uint32_t partitionId)
       // Find the CRC checksum
       off_t fileSize;
       uint32_t blockSizeKB;
-      uint32_t crcChecksum = hcom_calc_crc_for_file(completeNameBuf, &fileSize, &blockSizeKB);
+      uint32_t crcChecksum = hcom_list_calc_crc_for_file(completeNameBuf, &fileSize, &blockSizeKB);
       totalSizeOfFiles += fileSize;
       totalFlashSizeKB += blockSizeKB;
 
@@ -299,7 +299,7 @@ int hcom_list_all_dev_dir_and_files(const char *name, int indent, uint32_t userD
 
 //==================================================================
 // This call will calculate the crc32 checksum for the requested file
-uint32_t hcom_calc_crc_for_file(char *completeFilePath,
+uint32_t hcom_list_calc_crc_for_file(char *completeFilePath,
           off_t *fileSize, uint32_t *blockSizeKB)
 {
   uint32_t crc32Checksum = 0;

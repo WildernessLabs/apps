@@ -228,16 +228,15 @@ int hcom_main(int argc, char *argv[])
   // }
 #endif
 
-// #if defined(CONFIG_HCOM_MONO_OUTPUT_PIPE)
-//   // Creates a named pipe (fifo) and creates a receiving thread.
-  // syslog(1, "MGR--> 17\n"); usleep(20 * 1000);
-//   ret = hcom_mono_pipe_setup();
-//   if (ret < 0)
-//   {
-//     hcom_logging_syslog(LOG_CRIT, "%s@%d-setup mono pipe %d\n", thisFile, __LINE__, ret);
-//     return ret;
-//   }
-// #endif
+#if defined(CONFIG_HCOM_MONO_OUTPUT_PIPE)
+  // Creates a pipe and a receiving thread.
+  ret = hcom_mono_pipe_setup();
+  if (ret < 0)
+  {
+    hcom_logging_syslog(LOG_CRIT, "%s@%d-setup mono pipe %d\n", thisFile, __LINE__, ret);
+    return ret;
+  }
+#endif
 
 // #if defined(CONFIG_HCOM_MONO_DEBUG_PIPE)
 //   // Creates a unix domain socket and creates a receiving thread.
@@ -259,6 +258,10 @@ int hcom_main(int argc, char *argv[])
     return ret;
   }
 #endif
+
+  // Last we start mono, if it should be started
+  hcom_mono_ctrl_start_mono_main();
+
 
   syslog(1, "MGR-->The HCOM Main thread-all setup functions successful\n");
 
@@ -286,7 +289,7 @@ void hcom_manager_shutdown()
   
   // p-m - confirm that all functions that need shutdown are called
   hcom_host_recv_shutdown();
-//   hcom_mono_pipe_shutdown();
+  hcom_mono_pipe_shutdown();
   hcom_common_utils_shutdown();
   hcom_host_route_shutdown();  
   hcom_host_parse_shutdown();

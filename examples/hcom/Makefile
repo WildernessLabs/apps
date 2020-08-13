@@ -51,13 +51,14 @@ HCOM_DIR = ../../../hcom/
 ASRCS =
 HCOM_SRCS = hcom_mono_control.c \
 	hcom_proxy_access.c \
+	hcom_stdout_redirect.c \
 	comms/hcom_host_encode.c \
 	comms/hcom_host_parse.c \
 	comms/hcom_host_receive.c \
 	comms/hcom_host_route.c \
 	comms/hcom_host_send.c \
 	diag/hcom_diag_misc.c \
-	diag/hcom_diag_trace_ramlog.c \
+	diag/hcom_diag_trace_processing.c \
 	file_access/hcom_dnld_process_file.c \
 	file_access/hcom_dnld_write_delete.c \
 	file_access/hcom_list_files.c \

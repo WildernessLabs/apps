@@ -148,13 +148,13 @@ void hcom_host_route_request_by_type(const uint8_t *recvOrigData, const size_t r
     
     case HCOM_MDOW_REQUEST_READ_ESP_MAC_ADDRESS:
       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-      hcom_esp32_exec_read_esp32_mac(userData);
+      hcom_esp32_util_read_esp32_mac(userData);
       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
       break;
 
     case HCOM_MDOW_REQUEST_RESTART_ESP32:
       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-      hcom_esp32_exec_restart_esp32(userData);
+      hcom_esp32_util_restart_esp32(userData);
       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
       break;
 #endif
@@ -236,25 +236,25 @@ void hcom_host_route_request_by_type(const uint8_t *recvOrigData, const size_t r
 
     case HCOM_MDOW_REQUEST_NO_TRACE_TO_HOST:
       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-      hcom_trace_do_not_send_trace_to_host(userData);
+      hcom_diag_trace_do_not_send_to_host(userData);
       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
       break;
 
     case HCOM_MDOW_REQUEST_SEND_TRACE_TO_HOST:
       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-      hcom_trace_send_trace_to_host(userData);
+      hcom_diag_trace_forward_to_host(userData);
       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
       break;
 
     case HCOM_MDOW_REQUEST_NO_TRACE_TO_UART:
       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-      hcom_trace_do_not_send_trace_to_uart1(userData);
+      hcom_diag_trace_do_not_send_to_uart1(userData);
       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
       break;
 
     case HCOM_MDOW_REQUEST_SEND_TRACE_TO_UART:
       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-      hcom_trace_send_trace_to_uart1(userData);
+      hcom_diag_trace_forward_to_uart1(userData);
       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
       break;
 

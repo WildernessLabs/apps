@@ -336,7 +336,7 @@ void hcom_logging_syslog(int priority, FAR const IPTR char *fmt, ...)
 #else
   // syslog - check if these should be routed to host.
   // Note: there's no timestamp for these messages
-  if(hcom_utils_is_bbr_bit_set(HCOM_BBREG_TRACE_MSG_TO_HOST_BIT_MASK))
+  if(hcom_utils_is_bbr_bit_set(HCOM_BBREG_ROUTE_TRACE_MSG_TO_HOST_BIT))
   {
     // Strip off cr/lf since Meadow.CLI takes care of this
     if(_f7syslogTextBuf[stringLen - 1] == 0x0a || _f7syslogTextBuf[stringLen - 1] == 0x0d)
@@ -353,13 +353,13 @@ void hcom_logging_syslog(int priority, FAR const IPTR char *fmt, ...)
 
 #if defined (CONFIG_RAMLOG_SYSLOG)
 //===================================================================
-// hcom_utils_safe_ramlog solves the problem that with ramlog 
+// hcom_logging_safe_ramlog solves the problem that with ramlog 
 // enabled, we can't use syslog while processing the syslog message,
 // because it will cause "feedback", every syslog message would
 // generated another ramlog message. So, we go directly to the host
 // without going to syslog -> ramlog -> host PC.
 //===================================================================
-void hcom_utils_safe_ramlog(int priority, FAR const IPTR char *fmt,
+void hcom_logging_safe_ramlog(int priority, FAR const IPTR char *fmt,
           va_list args)
 {
   // Check priority but otherwise ignore syslog.

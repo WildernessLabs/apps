@@ -98,7 +98,7 @@ void hcom_diag_misc_launch_nsh(uint32_t userData)
     _nsh_pid = task_create("nsh", CONFIG_SYSTEM_NSH_PRIORITY,
                         CONFIG_SYSTEM_NSH_STACKSIZE,
                         (main_t)nsh_main,
-                        (FAR char * const *)NULL);
+                        (FAR char * const *) NULL);
     if(_nsh_pid > 0)
     {
       _nsh_enabled = true;

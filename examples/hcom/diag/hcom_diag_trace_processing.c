@@ -114,10 +114,10 @@ int hcom_diag_ramlog_trace_setup()
   // p-m - force to uart1 for ORTING TO APPS SIDE
   _trace_ramlog_to_uart1 = true;
   // p-m Override defaults from battery backed register values
-  // if(hcom_utils_read_bbr_and_right_justify(HCOM_BBREG_TRACE_MSG_TO_UART1_BIT_MASK))
+  // if(hcom_utils_read_bbr_and_right_justify(HCOM_BBREG_ROUTE_TRACE_MSG_TO_UART1_BIT))
   //   _trace_ramlog_to_uart1 = true;
 
-  // if(hcom_utils_read_bbr_and_right_justify(HCOM_BBREG_TRACE_MSG_TO_HOST_BIT_MASK))
+  // if(hcom_utils_read_bbr_and_right_justify(HCOM_BBREG_ROUTE_TRACE_MSG_TO_HOST_BIT))
   //   _trace_ramlog_to_host = true;
 
   // If either enabled initialize
@@ -531,18 +531,19 @@ void hcom_diag_ramlog_trace_err_logger(int priority, FAR const IPTR char *fmt, .
 
   va_list args;
   va_start(args, fmt);
-  hcom_utils_safe_ramlog(priority, fmt, args);
+  hcom_logging_safe_ramlog(priority, fmt, args);
   va_end(args);  
 }
 
 #endif    // #if defined (CONFIG_RAMLOG_SYSLOG)
 
-// The following functions are always built and used by ramlog and syslog
+// The following functions are always built . They are used to
+// process hcom commands received from CLI
 //======================================================================================
 // Called from Meadow.CLI to enable tracing to host.
-void hcom_trace_send_trace_to_host(uint32_t userData)
+void hcom_diag_trace_forward_to_host(uint32_t userData)
 {
-  hcom_utils_set_bbr_bits(HCOM_BBREG_TRACE_MSG_TO_HOST_BIT_MASK);
+  hcom_utils_set_bbr_bits(HCOM_BBREG_ROUTE_TRACE_MSG_TO_HOST_BIT);
 
   // If ramlog configured, need to init ramlog now. This insures
   // that Meadow.CLI is listening
@@ -559,9 +560,9 @@ void hcom_trace_send_trace_to_host(uint32_t userData)
 
 //======================================================================================
 // Called from Meadow.CLI for both ramlog and syslog
-void hcom_trace_do_not_send_trace_to_host(uint32_t userData)
+void hcom_diag_trace_do_not_send_to_host(uint32_t userData)
 {
-  hcom_utils_clear_bbr_bits(HCOM_BBREG_TRACE_MSG_TO_HOST_BIT_MASK);
+  hcom_utils_clear_bbr_bits(HCOM_BBREG_ROUTE_TRACE_MSG_TO_HOST_BIT);
 
 #if defined (CONFIG_RAMLOG_SYSLOG)
   // Turn off ramlogs to host
@@ -575,9 +576,9 @@ void hcom_trace_do_not_send_trace_to_host(uint32_t userData)
 
 //======================================================================================
 // Called from Meadow.CLI to enable tracing to uart1.
-void hcom_trace_send_trace_to_uart1(uint32_t userData)
+void hcom_diag_trace_forward_to_uart1(uint32_t userData)
 {
-  hcom_utils_set_bbr_bits(HCOM_BBREG_TRACE_MSG_TO_UART1_BIT_MASK);
+  hcom_utils_set_bbr_bits(HCOM_BBREG_ROUTE_TRACE_MSG_TO_UART1_BIT);
 
   // If ramlog configured, need to init ramlog now. This insures
   // that Meadow.CLI is listening
@@ -595,9 +596,9 @@ void hcom_trace_send_trace_to_uart1(uint32_t userData)
 
 //======================================================================================
 // Called from Meadow.CLI for both ramlog and syslog
-void hcom_trace_do_not_send_trace_to_uart1(uint32_t userData)
+void hcom_diag_trace_do_not_send_to_uart1(uint32_t userData)
 {
-  hcom_utils_clear_bbr_bits(HCOM_BBREG_TRACE_MSG_TO_UART1_BIT_MASK);
+  hcom_utils_clear_bbr_bits(HCOM_BBREG_ROUTE_TRACE_MSG_TO_UART1_BIT);
 
 #if defined (CONFIG_RAMLOG_SYSLOG)
   _trace_ramlog_to_uart1 = false;

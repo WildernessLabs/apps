@@ -66,7 +66,7 @@ static char _espCalcMd5Hash[HCOM_PROTOCOL_REQUEST_MD5_HASH_LENGTH + 1];
 /****************************************************************************
  * Private Function Prototypes
  ****************************************************************************/
-static int send_data_block_buffer_to_esp32(uint8_t *downloadData, size_t dnldDataSize, bool isLastDownload);
+static int hcom_esp32_exec_buffer_to_esp32(uint8_t *downloadData, size_t dnldDataSize, bool isLastDownload);
 static uint32_t erase_time_per_mega_byte(size_t xmit_size);
 
 /****************************************************************************
@@ -127,7 +127,7 @@ int hcom_esp32_exec_download_flash_start(const size_t entireFileSize,
   _espSeqNumb = 0;
 
   // Establish communications with ESP32
-  ret = hcom_esp32_util_initi_comms_enter_boot_mode();
+  ret = hcom_esp32_util_init_comms_enter_boot_mode();
   if(ret < 0)
   {
     hcom_logging_syslog(LOG_ERR, "%s@%d-Init Comms for download:%d\n", thisFile, __LINE__, ret);
@@ -296,7 +296,7 @@ int hcom_esp32_exec_add_flash_data(const uint8_t *packet, const size_t packetSiz
     hcom_comms_dbg(LOG_DEBUG, "%s@%d-dnld buf FULL (%d), must send\n",
             thisFile, __LINE__, downloadBuffOffset);
 
-    ret = send_data_block_buffer_to_esp32(_downloadBuffer,
+    ret = hcom_esp32_exec_buffer_to_esp32(_downloadBuffer,
             downloadBuffOffset, isLastPacket ? true : false);
     downloadBuffOffset = 0;
     if(ret < 0)
@@ -321,7 +321,7 @@ int hcom_esp32_exec_add_flash_data(const uint8_t *packet, const size_t packetSiz
       tempSaveBufLen = 0;    
 
       // Send this final buffer of data
-      ret = send_data_block_buffer_to_esp32(_downloadBuffer,
+      ret = hcom_esp32_exec_buffer_to_esp32(_downloadBuffer,
                 downloadBuffOffset + HCOM_ESP32_PROTOCOL_DATA_HDR_LENGTH, true);
       downloadBuffOffset = 0;
       if(ret < 0)
@@ -339,7 +339,7 @@ int hcom_esp32_exec_add_flash_data(const uint8_t *packet, const size_t packetSiz
     {
       DEBUGASSERT(tempSaveBufLen == 0); // How could there be saved if buffer not full?
 
-      ret = send_data_block_buffer_to_esp32(_downloadBuffer, downloadBuffOffset, true);
+      ret = hcom_esp32_exec_buffer_to_esp32(_downloadBuffer, downloadBuffOffset, true);
       downloadBuffOffset = 0;
       if(ret < 0)
       {
@@ -354,7 +354,7 @@ int hcom_esp32_exec_add_flash_data(const uint8_t *packet, const size_t packetSiz
 
 //====================================================================
 // The data in the packets is actually downloaed here.
-int send_data_block_buffer_to_esp32(uint8_t *downloadData, size_t dnldDataSize, bool isLastDownload)
+int hcom_esp32_exec_buffer_to_esp32(uint8_t *downloadData, size_t dnldDataSize, bool isLastDownload)
 {
   int ret;
   off_t dataDnldOffset = dnldDataSize;
@@ -490,7 +490,7 @@ int hcom_esp32_exec_add_flash_end()
   DEBUGASSERT(recvdData.espHdr.direction == 1);
   DEBUGASSERT(recvdData.espHdr.command == Esp32CommandFlashEnd);
 
-  ret = hcom_esp32_utils_hardware_restart();
+  ret = hcom_esp32_util_hardware_restart();
   if(ret < 0)
   {
     hcom_logging_syslog(LOG_ERR, "%s@%d-restart failed:%d\n", thisFile, __LINE__, ret);

@@ -166,7 +166,7 @@
 #define HCOM_FS_MONO_RAW_PARTITION_SIZE 0x200000 // 2MB
 #define HCOM_FS_MONO_RUNTIME_FILENAME "Meadow.OS.Runtime.bin"
 
-// "/meadow" is shared by all supported file systems
+// Partitioning may postpend an to /meadow (i.e /meadow0)
 #define HCOM_FILE_MOUNT_POINT_TARGET "/meadow"
 
 #ifdef CONFIG_FS_LITTLEFS
@@ -174,6 +174,9 @@
 #define HCOM_FILE_MOUNT_POINT_SOURCE "/dev/little"
 #define HCOM_FILE_MOUNT_FORCE_FORMAT "forceformat"
 #endif
+
+#define HCOM_REMOTE_DBG_SOCKET_NAME "/dev/monodbg"
+
 
 // This defines the largest packet of data to be sent/received
 #define HCOM_PROTOCOL_PACKET_MAX_SIZE 512
@@ -531,8 +534,8 @@ extern "C"
 // #endif
 
   // Comms support, COBS encode and receive circular buffer
-  size_t host_comms_cobs_encoder(uint8_t source[], size_t startingOffset, size_t length, uint8_t encoded[]);
-  size_t host_comms_cobs_decoder(uint8_t encoded[], size_t length, uint8_t decoded[]);
+  size_t hcom_host_cobs_encoder(uint8_t source[], size_t startingOffset, size_t length, uint8_t encoded[]);
+  size_t hcom_host_cobs_decoder(uint8_t encoded[], size_t length, uint8_t decoded[]);
   int hcom_cirbuf_init(struct host_com_cir_buffer_s *hcom_cbuf, size_t totalCapacity, uint8_t delimiter);
   size_t hcom_cirbuf_avail_space(struct host_com_cir_buffer_s *hcom_cbuf);
   int hcom_cirbuf_add_bytes(struct host_com_cir_buffer_s *hcom_cbuf, uint8_t *newBytes, uint32_t bytesToAdd);
@@ -540,9 +543,9 @@ extern "C"
                                   size_t packetBufferSize, size_t *packetLength);
   int hcom_cirbuf_release_memory(struct host_com_cir_buffer_s *hcom_cbuf);
 
-//   // mono pipe user messages
-//   int hcom_mono_pipe_setup(void);
-//   void hcom_mono_pipe_shutdown(void);
+  // mono stdout to host messages
+  int hcom_mono_pipe_setup(void);
+  void hcom_mono_pipe_shutdown(void);
 
 //   // mono Visual Studio interactions
 //   int hcom_remote_dbg_setup(void);
@@ -563,7 +566,7 @@ extern "C"
   void hcom_diag_misc_print_buffer(const uint8_t packetBuffer[], const int bufLen, uint8_t logPriority);
   void hcom_logging_syslog(int priority, FAR const IPTR char *fmt, ...);
   void hcom_logging_syslog_x(int priority, FAR const IPTR char *fmt, ...);
-  void hcom_utils_safe_ramlog(int priority, FAR const IPTR char *fmt, va_list args);
+  void hcom_logging_safe_ramlog(int priority, FAR const IPTR char *fmt, va_list args);
   void hcom_utils_dbg_gpio_1led_update(bool ledOn);
   void hcom_utils_dbg_gpio_8bit_update(uint8_t newValue, bool ledOn);
 
@@ -594,16 +597,18 @@ extern "C"
 
   // hcom_mono_control.c
   bool hcom_mono_ctrl_is_mono_enabled(void);
+  int hcom_mono_ctrl_start_mono_main(void);
+  void hcom_mono_ctrl_clear_mono_is_running_flag(void);
 
   // Ramlog to host/uart
 #if defined (CONFIG_RAMLOG_SYSLOG)
   int hcom_diag_ramlog_trace_setup(void);
   void hcom_diag_ramlog_trace_shutdown(void);
 #endif
-  void hcom_trace_send_trace_to_host(uint32_t userData);
-  void hcom_trace_do_not_send_trace_to_host(uint32_t userData);
-  void hcom_trace_send_trace_to_uart1(uint32_t userData);
-  void hcom_trace_do_not_send_trace_to_uart1(uint32_t userData);
+  void hcom_diag_trace_forward_to_host(uint32_t userData);
+  void hcom_diag_trace_do_not_send_to_host(uint32_t userData);
+  void hcom_diag_trace_forward_to_uart1(uint32_t userData);
+  void hcom_diag_trace_do_not_send_to_uart1(uint32_t userData);
 
 //   // Testing utilities
 //   int hcom_developer_tests_setup(FAR struct mtd_dev_s *mtd);
@@ -623,16 +628,19 @@ extern "C"
 #define HCOM_BATTERY_BACKED_REGISTER_ID   31
 
 #define HCOM_BBREG_RESTART_ALL_32_BITS_MASK 0xffffffff
+// This mask defines the syslog level
 #define HCOM_BBREG_RESTART_SYSLOG_CONFIG_VALUE_MASK 0x000000ff
 // This bit indicates if the restart was initiated by hcom command
-#define HCOM_BBREG_RESTART_CONCLUDED_BIT_MASK 0x000100
+#define HCOM_BBREG_RESTART_INITIATED_BY_HOST_CMD_BIT 0x000100
 // This bit indicates if we are to send trace messages to the host PC
-#define HCOM_BBREG_TRACE_MSG_TO_HOST_BIT_MASK 0x00000200
+#define HCOM_BBREG_ROUTE_TRACE_MSG_TO_HOST_BIT 0x00000200
 // This bit indicates if we are to send trace messages to the uart1
-#define HCOM_BBREG_TRACE_MSG_TO_UART1_BIT_MASK 0x00000400
-#define HCOM_BBREG_TRACE_MSG_TO_HOST_AND_UART1_BIT_MASK (HCOM_BBREG_TRACE_MSG_TO_HOST_BIT_MASK | HCOM_BBREG_TRACE_MSG_TO_UART1_BIT_MASK)
+#define HCOM_BBREG_ROUTE_TRACE_MSG_TO_UART1_BIT 0x00000400
+#define HCOM_BBREG_TRACE_MSG_TO_HOST_AND_UART1_BIT_MASK (HCOM_BBREG_ROUTE_TRACE_MSG_TO_HOST_BIT | HCOM_BBREG_ROUTE_TRACE_MSG_TO_UART1_BIT)
 // This bit indicates if mono should be started during startup
-#define HCOM_BBREG_MONO_START_BIT_MASK 0x00000800
+#define HCOM_BBREG_USER_RQST_MONO_START_BIT 0x00000800
+// The last time mono was started did it run?
+#define HCOM_BBREG_MONO_LAST_RUN_LOCKUP_BIT 0x00001000
 
 // Diagnostic aids
 //=================================================================
