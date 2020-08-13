@@ -38,6 +38,7 @@
  ****************************************************************************/
 
 #include "hcom_common.h"
+#include <meadow/hcom_protocol.h>
 
 #define HCOM_MONO_RUNTIME_TASK_STACKSIZE 32768
 

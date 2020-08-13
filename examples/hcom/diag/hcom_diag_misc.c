@@ -38,6 +38,7 @@
  ****************************************************************************/
 
 #include "../hcom_common.h"
+#include <meadow/hcom_protocol.h>
 
 #include <nuttx/arch.h>
 #include <nuttx/mtd/mtd.h>

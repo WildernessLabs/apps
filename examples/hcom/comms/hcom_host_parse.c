@@ -41,8 +41,7 @@
  ****************************************************************************/
 
 #include "../hcom_common.h"
-
-//#include "../../../nuttx/configs/stm32f777zit6-meadow/src/hcom_proxy/hcom_proxy_shared.h"
+#include <meadow/hcom_protocol.h>
 
 #if defined (CONFIG_HCOM_ESP32_COMMS)
 #include "../esp32/hcom_esp32_comms.h"
@@ -117,7 +116,7 @@ int hcom_host_parse_process_raw_data(uint8_t recvBuff[], const ssize_t recvByteC
     result = hcom_cirbuf_add_bytes(_hcom_cbuf, recvBuff, recvByteCnt);
     if(result == HCOM_CIR_BUF_ADD_SUCCESS)
     {
-      hcom_comms_dbg(LOG_DEBUG, "%s@%d-%d bytes added to cir buf\n", thisFile, __LINE__, recvByteCnt);
+      hcom_logging_syslog(LOG_DEBUG, "%s@%d-%d bytes added to cir buf\n", thisFile, __LINE__, recvByteCnt);
 
       // In all valid cases pull all full packets and process them
       break;
@@ -227,7 +226,7 @@ int hcom_host_parse_process_packet(const uint8_t *packet, const size_t packetSiz
   if (seqNumb == HCOM_PROTOCOL_REQUEST_HEADER_SIMPLE_SEQ_NUMBER)
   {
     // A non-data packet i.e. command (sequence number == 0)
-    hcom_comms_dbg(LOG_DEBUG, "%s@%d-Non-data seq:%d, len:%d\n", thisFile, __LINE__, seqNumb, packetSize); 
+    hcom_logging_syslog(LOG_DEBUG, "%s@%d-Non-data seq:%d, len:%d\n", thisFile, __LINE__, seqNumb, packetSize); 
 #if HCOM_COMMS_DEBUG > 0
     hcom_diag_misc_print_buffer(packet, packetSize, LOG_DEBUG);
 #endif
@@ -236,7 +235,7 @@ int hcom_host_parse_process_packet(const uint8_t *packet, const size_t packetSiz
   else
   {
     // Data Packet (sequence number > 0) 
-    hcom_comms_dbg(LOG_DEBUG, "%s@%d-Data seq:%d, len:%d\n", thisFile, __LINE__, seqNumb, packetSize); 
+    hcom_logging_syslog(LOG_DEBUG, "%s@%d-Data seq:%d, len:%d\n", thisFile, __LINE__, seqNumb, packetSize); 
     hcom_dnld_proc_recvd_file_data(packet, packetSize, seqNumb);
   }
 

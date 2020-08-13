@@ -38,6 +38,7 @@
  ****************************************************************************/
 
 #include "hcom_common.h"
+#include <meadow/hcom_protocol.h>
 
 #include <sys/stat.h>
 #include <ctype.h>
@@ -384,7 +385,6 @@ int hcom_diag_ramlog_trace_save_recvd_data(uint8_t recvBuff[], const ssize_t rec
     result = hcom_cirbuf_add_bytes(_ramlog_cbuf, recvBuff, recvByteCnt);
     if(result == HCOM_CIR_BUF_ADD_SUCCESS)
     {
-      // hcom_comms_dbg(LOG_DEBUG, "%s@%d-%d bytes added to cir buf\n", thisFile, __LINE__, recvByteCnt);
       break;
     }
     else if (result == HCOM_CIR_BUF_ADD_WONT_FIT)

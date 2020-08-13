@@ -58,7 +58,7 @@
 #include <errno.h>
 #include <debug.h>
 
-#include "../../../nuttx/configs/stm32f777zit6-meadow/src/hcom_proxy/hcom_proxy_shared.h"
+#include <meadow/hcom_proxy_shared.h>
 
 #define HCOM_ESP32_ALLOW_BOOT_PIN_TO_BE_INPUT 1
 

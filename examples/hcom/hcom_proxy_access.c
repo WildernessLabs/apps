@@ -41,7 +41,8 @@
 #include <sys/ioctl.h>
 
 #include "hcom_common.h"
-#include "../../../nuttx/configs/stm32f777zit6-meadow/src/hcom_proxy/hcom_proxy_shared.h"
+#include <meadow/hcom_protocol.h>
+#include <meadow/hcom_proxy_shared.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -179,7 +180,7 @@ bool hcom_proxy_is_mounted(uint32_t partitionId)
 // This is a stub for restarting meadow
 int hcom_proxy_restart_meadow(void)
 {
-  hcom_proxy_forward_cmd_to_proxy(0, HCOM_PROXY_CLI_CMD_RESTART_MEADOW, 0);
+  hcom_proxy_forward_cmd_to_proxy(HCOM_MDOW_REQUEST_RESTART_PRIMARY_MCU, 0);
   return OK;
 }
 
@@ -228,12 +229,12 @@ int hcom_proxy_gpio_write(int gpioDefn, uint8_t cmdValue)
 //=============================================================
 // Those CLI requests that need to be executed on the OS side are
 // routed through here
-void hcom_proxy_forward_cmd_to_proxy(uint16_t cliCmd, uint32_t proxyCmd, uint32_t userData)
+void hcom_proxy_forward_cmd_to_proxy(uint16_t hcomCmd, uint32_t userData)
 {
   int ret;
   struct hcom_proxy_cmd_data cmdData;
 
-  cmdData.proxyCmd = proxyCmd;
+  cmdData.hcomCmd = hcomCmd;
   cmdData.userData = userData;
 
   cmdData.logLevel = LOG_NONE;
@@ -248,19 +249,19 @@ void hcom_proxy_forward_cmd_to_proxy(uint16_t cliCmd, uint32_t proxyCmd, uint32_
     {
       DEBUGASSERT(cmdData.logLevel != LOG_NONE);
       DEBUGASSERT(cmdData.logLen <= HCOM_PROXY_CMD_LOG_MSG_SIZE);
-      hcom_logging_syslog(cmdData.logLevel, "%s [cli cmd:0x%04x]", cmdData.logMsg, cliCmd);
+      hcom_logging_syslog(cmdData.logLevel, "%s [cli cmd:0x%04x]", cmdData.logMsg, hcomCmd);
     }
     else
     {
-      hcom_logging_syslog(LOG_ERR, "%s:%s()@%d-%s Failed to update reg, errno:%d, cli cmd:0x%04x\n",
-              thisFile, __func__, __LINE__, HCOM_PROXY_UPD_DRIVER_NAME, errno, cliCmd);
+      hcom_logging_syslog(LOG_ERR, "%s:%s()@%d-%s Failed to update reg, errno:%hcomCmd cmd:0x%04x\n",
+              thisFile, __func__, __LINE__, HCOM_PROXY_UPD_DRIVER_NAME, errno, hcomCmd);
       return;   // Returned data may not be reliable
     }
   }
 }
 
-
 // NO DIRECT ACCESS TO REGISTERS IF POSSIBLE
+// KEEP THE CODE IN THE CASE THIS GOAL IS NOT POSSIBLE
 // //=============================================================
 // int hcom_proxy_set_register(uint32_t address, uint32_t value)
 // {

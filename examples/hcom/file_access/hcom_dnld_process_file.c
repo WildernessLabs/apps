@@ -41,6 +41,7 @@
  ****************************************************************************/
 
 #include "../hcom_common.h"
+#include <meadow/hcom_protocol.h>
 
 #if defined (CONFIG_HCOM_ESP32_COMMS)
 #include "../esp32/hcom_esp32_comms.h"
@@ -244,7 +245,7 @@ void hcom_dnld_proc_recvd_file_data(const uint8_t *packet, const size_t packetSi
   const size_t recvOrigDataSize = packetSize - msgOffset;
 
   if(seqNumb % 250 == 0)
-    hcom_comms_dbg(LOG_DEBUG, "Sequence %d\n", seqNumb);
+    hcom_logging_syslog(LOG_DEBUG, "Sequence %d\n", seqNumb);
 
   // Compare _xferRecvFullFileSize with _xferCalcFullFileSize and send a message to host
   int percentDone = (_xferCalcFullFileSize  * 100) / _xferRecvFullFileSize;
@@ -418,7 +419,7 @@ void hcom_dnld_proc_end(uint32_t userData)
            _dbgNumbPacketsRecvd, ((_dbgReceptionEndedAt - _dbgReceptionBeganAt) / 1000000),
            _xferCalcPacketCrc, _xferMeadowCalcCrc);
 #else
-  hcom_comms_dbg(LOG_DEBUG, "Host has sent %d packets\n", _dbgNumbPacketsRecvd);
+  hcom_logging_syslog(LOG_DEBUG, "Host has sent %d packets\n", _dbgNumbPacketsRecvd);
 #endif
 
   _xferCalcPacketCrc = 0;

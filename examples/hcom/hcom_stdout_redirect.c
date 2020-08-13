@@ -41,6 +41,7 @@
  ****************************************************************************/
 
 #include "hcom_common.h"
+#include <meadow/hcom_protocol.h>
 
 #include <sys/stat.h>
 #include <ctype.h>
@@ -161,7 +162,7 @@ int hcom_mono_pipe_make_thread()
 
 //=================================================================
 // This thread reads all pipe messages received from stdout (mono)
-FAR void *hcom_mono_pipe_pthread(FAR void *arg)
+void *hcom_mono_pipe_pthread(FAR void *arg)
 {
   int ret;
 
@@ -170,7 +171,7 @@ FAR void *hcom_mono_pipe_pthread(FAR void *arg)
   if (ret < 0)
   {
     syslog(LOG_ERR, "redirect_writer: dup2 failed ret:%d errno:%d\n", ret, errno);
-    return;
+    return NULL;
   }
 
   // This loop runs forever
@@ -183,7 +184,7 @@ FAR void *hcom_mono_pipe_pthread(FAR void *arg)
     }
   }
 
-  return NULL;    // Keeps compiler happy
+  return NULL;
 }
 
 //=================================================================

@@ -39,6 +39,7 @@
  ****************************************************************************/
 
 #include "../hcom_common.h"
+#include <meadow/hcom_protocol.h>
 
 #include <sys/mount.h>
 #include <sys/stat.h>
@@ -176,7 +177,7 @@ int hcom_dnld_write_del_open_active_file(const uint32_t partitionId,
     return _fileDescriptor;
   }
 
-  hcom_comms_dbg(LOG_DEBUG, "Opened '%s'\n", _hcomActiveFileName);
+  hcom_logging_syslog(LOG_DEBUG, "Opened '%s'\n", _hcomActiveFileName);
 
   _activePartitionId = partitionId;
   return OK;
@@ -211,7 +212,7 @@ int hcom_dnld_write_del_add_to_active_file(const uint8_t *fileWriteData, const s
              thisFile, __LINE__, _hcomActiveFileName, nbytes, fileWriteSize);
   }
 
-  hcom_comms_dbg(LOG_DEBUG, "Wrote %d bytes to %s\n", nbytes, _hcomActiveFileName);
+  hcom_logging_syslog(LOG_DEBUG, "Wrote %d bytes to %s\n", nbytes, _hcomActiveFileName);
   return OK;
 }
 
@@ -235,7 +236,7 @@ int hcom_dnld_write_del_close_active_file()
     return ret;
   }
 
-  hcom_comms_dbg(LOG_DEBUG, "Closed %s\n", _hcomActiveFileName);
+  hcom_logging_syslog(LOG_DEBUG, "Closed %s\n", _hcomActiveFileName);
 
   _fileDescriptor = -1;
   _hcomActiveFileName[0] = '\0';
@@ -327,7 +328,7 @@ int hcom_dnld_write_del_remove_file_by_name(const uint32_t partitionId, const ch
     return ret;
   }
 
-  hcom_comms_dbg(LOG_DEBUG, "Deleted '%s'\n", fileName);
+  hcom_logging_syslog(LOG_DEBUG, "Deleted '%s'\n", fileName);
   free(fullPathAndFileName);
   return OK;
 }

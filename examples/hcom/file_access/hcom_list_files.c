@@ -39,6 +39,8 @@
  ****************************************************************************/
 
 #include "../hcom_common.h"
+#include <meadow/hcom_protocol.h>
+
 #include <nuttx/config.h>
 //#include <fcntl.h>
 #include <dirent.h>
@@ -319,7 +321,7 @@ uint32_t hcom_list_calc_crc_for_file(char *completeFilePath,
     return -errno;
   }
 
-  hcom_comms_dbg(LOG_DEBUG, "Opened %s for CRC\n", completeFilePath);
+  hcom_logging_syslog(LOG_DEBUG, "Opened %s for CRC\n", completeFilePath);
 
   // from nuttx stat.h
   // struct stat
@@ -390,7 +392,7 @@ uint32_t hcom_list_calc_crc_for_file(char *completeFilePath,
     return -Errno;
   }
 
-  hcom_comms_dbg(LOG_DEBUG, "%s@%d-Checksum for '%s' 0x%08x\n",
+  hcom_logging_syslog(LOG_DEBUG, "%s@%d-Checksum for '%s' 0x%08x\n",
             thisFile, __LINE__, completeFilePath, crc32Checksum);
   return crc32Checksum;
 }

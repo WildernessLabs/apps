@@ -39,6 +39,7 @@
  ****************************************************************************/
 
 #include "../hcom_common.h"
+#include <meadow/hcom_protocol.h>
 
 #include <fcntl.h>
 //#include <nuttx/fs/fs.h>
@@ -193,7 +194,7 @@ int hcom_host_recv_open_connection()
   if(_is_comms_read_open)
     return OK;
 
-  hcom_comms_dbg(LOG_DEBUG, "%s@%d-usb open read %s\n", thisFile, __LINE__,
+  hcom_logging_syslog(LOG_DEBUG, "%s@%d-usb open read %s\n", thisFile, __LINE__,
         HCOM_COMMUNICATIONS_DEVICE_NAME);
 
   while(!_shutting_down)
@@ -220,7 +221,7 @@ int hcom_host_recv_open_connection()
   }
 
   //--------------------------------------------------------------------------------
-  hcom_comms_dbg(LOG_DEBUG, "%s ready for host comms\n", deviceName);
+  hcom_logging_syslog(LOG_DEBUG, "%s ready for host comms\n", deviceName);
 
   return OK;
 }
@@ -230,7 +231,7 @@ int hcom_host_recv_open_connection()
 // needed. This thread is the only thread receiving via USB serial data.
 bool hcom_host_recv_received_data()
 {
-  hcom_comms_dbg(LOG_DEBUG, "Waiting for '%s' message\n", HCOM_COMMUNICATIONS_DEVICE_NAME);
+  hcom_logging_syslog(LOG_DEBUG, "Waiting for '%s' message\n", HCOM_COMMUNICATIONS_DEVICE_NAME);
 
   // Stay in this loop forever
   while (!_shutting_down)

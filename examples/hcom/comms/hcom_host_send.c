@@ -38,6 +38,7 @@
  ****************************************************************************/
 
 #include "../hcom_common.h"
+#include <meadow/hcom_protocol.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -372,7 +373,7 @@ int hcom_host_send_transmit_to_host(FAR uint8_t xmitBuffer[], size_t xmitLength)
       remainingBytes -= writeRet;   // Note: if remainingBytes == 0 will exit while loop
       toWriteOffset += writeRet;
 
-      hcom_comms_dbg_x(LOG_DEBUG, "%s@%d-Send %d bytes, sent %d (%d remaining) will %s\n\n",
+      hcom_logging_syslog_x(LOG_DEBUG, "%s@%d-Send %d bytes, sent %d (%d remaining) will %s\n\n",
           thisFile, __LINE__, encodedLength, writeRet, remainingBytes == 0 ? "exit" : "retry");
 
       continue;
@@ -395,13 +396,13 @@ int hcom_host_send_transmit_to_host(FAR uint8_t xmitBuffer[], size_t xmitLength)
       {
         blockedCount++;
         usleep(HCOM_XMIT_MAX_BLOCKED_TIME_DELAY);
-        hcom_comms_dbg_x(LOG_DEBUG, "%s@%d-Resend #%d\n", thisFile, __LINE__, blockedCount);
+        hcom_logging_syslog_x(LOG_DEBUG, "%s@%d-Resend #%d\n", thisFile, __LINE__, blockedCount);
         continue;
       }
 
       // Set the flag - seems the host isn't connected or CLI not running
       _lastXmitBlocked = true;
-      hcom_comms_dbg_x(LOG_DEBUG, "%d USB write attempts (wrote %d, %d remain of %d bytes), message not sent\n",
+      hcom_logging_syslog_x(LOG_DEBUG, "%d USB write attempts (wrote %d, %d remain of %d bytes), message not sent\n",
                     blockedCount, toWriteOffset, remainingBytes, encodedLength);
 
       // No reason to close fd. The caller can sort out what to do with partial data sent.

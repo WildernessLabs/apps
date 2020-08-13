@@ -162,7 +162,7 @@ int hcom_esp32_recv_handle_data(uint8_t *esp32_read_buffer, ssize_t bytesToAdd)
       {
           // The buffer to receive the message is too small? Probably 
           // corrupted data in buffer.
-          hcom_comms_dbg(LOG_DEBUG, "%s@%d-No room for new data. Need %d\n",
+          hcom_logging_syslog(LOG_DEBUG, "%s@%d-No room for new data. Need %d\n",
                   thisFile, __LINE__, bytesToAdd);
           usleep(10 * 1000);
           DEBUGASSERT(false);
@@ -208,7 +208,7 @@ int hcom_esp32_recv_pull_and_process()
       if (ret == HCOM_ESP32_BUF_GET_DEST_NO_ROOM)
       {
           // The buffer to accept the packets is too small! Need to enlarge
-          hcom_comms_dbg(LOG_DEBUG, "%s@%d-No room for data Need %d\n",
+          hcom_logging_syslog(LOG_DEBUG, "%s@%d-No room for data Need %d\n",
                   thisFile, __LINE__, packetLength);
           usleep(10 * 1000);
           DEBUGASSERT(false);
@@ -322,7 +322,7 @@ int hcom_esp32_recv_handle_bin_packet(uint8_t *binRecvdData, ssize_t binRecvdLen
   // binRecvdData[2] is the esp command
   if(binRecvdData[2] != _currentExpectRecvCommand)
   {
-    hcom_comms_dbg(LOG_DEBUG, "%s@%d-Recvd cmd 0x%02x-ignored\n", thisFile, __LINE__, binRecvdData[2]);
+    hcom_logging_syslog(LOG_DEBUG, "%s@%d-Recvd cmd 0x%02x-ignored\n", thisFile, __LINE__, binRecvdData[2]);
     return OK;    // Not an error. Just not needed.
   }
 
@@ -359,7 +359,7 @@ int hcom_esp32_recv_handle_bin_packet(uint8_t *binRecvdData, ssize_t binRecvdLen
   else
     mqRecvdData.espMqHdr.value = 0;
 
-  hcom_comms_dbg(LOG_DEBUG, "%s@%d-Recvd cmd:0x%02x, size:%d, value:0x%08x\n", thisFile, __LINE__,
+  hcom_logging_syslog(LOG_DEBUG, "%s@%d-Recvd cmd:0x%02x, size:%d, value:0x%08x\n", thisFile, __LINE__,
       mqRecvdData.espMqHdr.command, mqRecvdData.espMqHdr.size, mqRecvdData.espMqHdr.value);
 
   // Populate the mq data structure
@@ -578,7 +578,7 @@ int hcom_esp32_recv_buff_get_next_packet(struct hcom_esp32_cir_buffer_s *espbuf,
   // test and hope things stay in sync afterward.
     if(*found != delimiter && delimiter == 0x0a)
     {
-      hcom_comms_dbg(LOG_DEBUG, "%s@%d-Delimiter:0x%02x found, not expected:0x%02x\n",
+      hcom_logging_syslog(LOG_DEBUG, "%s@%d-Delimiter:0x%02x found, not expected:0x%02x\n",
               thisFile, __LINE__, *found, delimiter);
       DEBUGASSERT(sizeFoundTop + 1 <= packetDestBufSize);
       memcpy(packetDestBuf, espbuf->tail, sizeFoundTop);
@@ -621,7 +621,7 @@ int hcom_esp32_recv_buff_get_next_packet(struct hcom_esp32_cir_buffer_s *espbuf,
   // test and hope things stay in sync afterward.
   if(*found != delimiter && delimiter == 0x0a)
   {
-    hcom_comms_dbg(LOG_DEBUG, "%s@%d-Delimiter:0x%02x found, not expected:0x%02x\n",
+    hcom_logging_syslog(LOG_DEBUG, "%s@%d-Delimiter:0x%02x found, not expected:0x%02x\n",
             thisFile, __LINE__, *found, delimiter);
     DEBUGASSERT(sizeFoundTop + sizeFoundBottom + 1 <= packetDestBufSize);
     memcpy(packetDestBuf, espbuf->tail, sizeFoundTop);

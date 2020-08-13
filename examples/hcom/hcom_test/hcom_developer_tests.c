@@ -38,15 +38,7 @@
  ****************************************************************************/
 
 #include "../hcom_common.h"
-
-// #include <nuttx/arch.h>
-// #include <nuttx/mtd/mtd.h>
-// #include <nuttx/userspace.h>
-
-// #include <arch/board/boardctl.h>
-// #include <sys/boardctl.h>
-
-#include "../../../nuttx/configs/stm32f777zit6-meadow/src/hcom_proxy/hcom_proxy_shared.h"
+#include <meadow/hcom_proxy_shared.h>
 
 /****************************************************************************
  * Pre-processor Definitions

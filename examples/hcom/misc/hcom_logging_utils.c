@@ -38,6 +38,7 @@
  ****************************************************************************/
 #include <ctype.h>
 #include "hcom_common.h"
+#include <meadow/hcom_protocol.h>
 
 #include <nuttx/config.h>
 #include "syslog.h"

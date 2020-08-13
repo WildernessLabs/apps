@@ -38,6 +38,7 @@
  ****************************************************************************/
 
 #include "../hcom_common.h"
+#include <meadow/hcom_protocol.h>
 #include "hcom_esp32_comms.h"
 
 /****************************************************************************
@@ -257,7 +258,7 @@ int hcom_esp32_util_init_comms_enter_boot_mode()
     }
     else if(ret == -ETIMEDOUT)
     {
-      hcom_comms_dbg(LOG_DEBUG, "%s@%d-send sync Timed out will try again. ret:%d, %d tries left\n",
+      hcom_logging_syslog(LOG_DEBUG, "%s@%d-send sync Timed out will try again. ret:%d, %d tries left\n",
               thisFile, __LINE__, ret, currentNumbAttempts);
       continue;     // try again
     }
@@ -298,7 +299,7 @@ int hcom_esp32_util_read_register(uint32_t regAddr, uint32_t *regValue)
   regAddrBody[2] = (regAddr & 0x00ff0000) >> 16;
   regAddrBody[3] = (regAddr & 0xff000000) >> 24;
 
-  hcom_comms_dbg(LOG_DEBUG, "%s@%d-Register read at:%p\n", thisFile, __LINE__, regAddr);
+  hcom_logging_syslog(LOG_DEBUG, "%s@%d-Register read at:%p\n", thisFile, __LINE__, regAddr);
 
   struct HcomEsp32UserRecvdData_s recvdData[1];
   ret = hcom_esp32_xmit_build_and_send_msg(regAddrBody, sizeof(regAddrBody),
