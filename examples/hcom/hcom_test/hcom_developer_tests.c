@@ -60,7 +60,7 @@
  ****************************************************************************/
 void hcom_developer_tests_developer_1(uint32_t userData)
 {
-  // This will control gpio A0-misoports based on userData
+  // This will control gpio A0-MISO ports based on userData
   // userData = 1 to 9 turns on gpios
   // userData = -1 to -9 turns on gpios
 
@@ -70,21 +70,12 @@ void hcom_developer_tests_developer_1(uint32_t userData)
   uint8_t cmdValue;
   int32_t signedUserData = (int32_t)userData;
 
-  // HcomProxyGpioDefnA0___01,
-  // HcomProxyGpioDefnA1___02,
-  // HcomProxyGpioDefnA2___03,
-  // HcomProxyGpioDefnA3___04,
-  // HcomProxyGpioDefnA4___05,
-  // HcomProxyGpioDefnA5___06,
-  // HcomProxyGpioDefnSCK__07,
-  // HcomProxyGpioDefnMOSI_08,
-  // HcomProxyGpioDefnMISO_09,
   if(!isInitialized)
   {
     // Configure gpios in array offsets 2 - 10
     for(int gpioOffset = 2; gpioOffset < 11; gpioOffset++)
     {
-      ret = hcom_proxy_gpio_config(gpioOffset, HCOM_PROXY_GPIO_CONFIG_OUTPUT);
+      ret = hcom_proxy_gpio_config(gpioOffset, HCOM_GPIO_DIGITAL_CONFIG_OUTPUT);
       if(ret < 0)
       {
         syslog(1, "hcom_proxy_gpio_config value of:%d\n", gpioOffset);
@@ -102,12 +93,12 @@ void hcom_developer_tests_developer_1(uint32_t userData)
   if(signedUserData > 0)
   {
     gpioDefn = userData + 1;    // userData of 1 is offset of 2
-    cmdValue = HCOM_PROXY_GPIO_CMD_VALUE_HIGH;
+    cmdValue = HCOM_GPIO_DIGITAL_CMD_VALUE_HIGH;
   }
   else
   {
     gpioDefn = (signedUserData * -1) + 1;
-    cmdValue = HCOM_PROXY_GPIO_CMD_VALUE_LOW;
+    cmdValue = HCOM_GPIO_DIGITAL_CMD_VALUE_LOW;
   }
 
   ret = hcom_proxy_gpio_write(gpioDefn, cmdValue);
@@ -124,23 +115,12 @@ void hcom_developer_tests_developer_2(uint32_t userData)
   static bool isInitialized = false;
 
   // Step 1 configure gpios for output
-  // HcomProxyGpioDefnEspReset,
-  // HcomProxyGpioDefnEspBoot,
-  // HcomProxyGpioDefnA0___01,
-  // HcomProxyGpioDefnA1___02,
-  // HcomProxyGpioDefnA2___03,
-  // HcomProxyGpioDefnA3___04,
-  // HcomProxyGpioDefnA4___05,
-  // HcomProxyGpioDefnA5___06,
-  // HcomProxyGpioDefnSCK__07,
-  // HcomProxyGpioDefnMOSI_08,
-  // HcomProxyGpioDefnMISO_09,
   if(!isInitialized)
   {
     // Configure gpios in array offsets 2 - 10 whicn are only used for testing
     for(int gpioOffset = 2; gpioOffset < 11; gpioOffset++)
     {
-      ret = hcom_proxy_gpio_config(gpioOffset, HCOM_PROXY_GPIO_CONFIG_OUTPUT);
+      ret = hcom_proxy_gpio_config(gpioOffset, HCOM_GPIO_DIGITAL_CONFIG_OUTPUT);
       if(ret < 0)
       {
         syslog(1, "hcom_proxy_gpio_config value of:%d\n", gpioOffset);
@@ -150,17 +130,18 @@ void hcom_developer_tests_developer_2(uint32_t userData)
   }
   
   // TEST ESP32 GPIOs
-  ret = hcom_proxy_gpio_config(0, HCOM_PROXY_GPIO_CONFIG_OUTPUT);
+  ret = hcom_proxy_gpio_config(0, HCOM_GPIO_DIGITAL_CONFIG_OUTPUT);
   if(ret < 0)
   {
     syslog(1, "hcom_proxy_gpio_config value of:%d\n", 0);
   }
 
-  ret = hcom_proxy_gpio_config(1, HCOM_PROXY_GPIO_CONFIG_OUTPUT);
+  ret = hcom_proxy_gpio_config(1, HCOM_GPIO_DIGITAL_CONFIG_OUTPUT);
   if(ret < 0)
   {
     syslog(1, "hcom_proxy_gpio_config value of:%d\n", 1);
   }
+  // Just toggle 2 GPIOS
   hcom_proxy_gpio_write(0, 1);
   sleep(1);
   hcom_proxy_gpio_write(0, 0);

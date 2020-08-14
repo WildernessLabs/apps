@@ -45,11 +45,6 @@
 #include <ctype.h>
 #include <poll.h>
 
-#if HCOM_TASK_SHOW_CREATED_TASK_PID_NAME > 0
-#include <nuttx/sched.h>
-#include <../sched/sched/sched.h>
-#endif
-
 #if defined (CONFIG_RAMLOG_SYSLOG)
 /****************************************************************************
  * Pre-processor Definitions
@@ -231,11 +226,6 @@ FAR void *hcom_diag_ramlog_trace_pthread(FAR void *arg)
 {
   int ret;
   
-// #if HCOM_TASK_SHOW_CREATED_TASK_PID_NAME > 0
-//   struct tcb_s *rtcb = this_task();
-//   hcom_logging_syslog(LOG_NOTICE, "PID:%d is '%s'\n", getpid(), rtcb->name);
-// #endif
-
   while(!_shutting_down)
   {
     // Must have ramlog, it's the source of all trace data

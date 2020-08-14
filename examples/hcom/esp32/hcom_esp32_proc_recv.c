@@ -251,7 +251,7 @@ int hcom_esp32_recv_handle_text_packet(uint8_t *text_buffer, ssize_t length)
   // There are times when the ESP32 sends endless cr/lf very fast
   if(length == 2)
   {
-#if HCOM_COMMS_DEBUG == 0
+#if HCOM_SPECIAL_DEBUG == 0
     return OK;    // Just ignore
   }
 #else

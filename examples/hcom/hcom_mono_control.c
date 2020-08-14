@@ -98,18 +98,14 @@ int hcom_mono_ctrl_start_mono_main()
                       (FAR char * const *) NULL);
   if(mono_pid > 0)
   {
-    // p-m - not 1 but LOG_INFO
-    hcom_logging_syslog(1, "MONO started [pid:%d, pri:%d, stack size:%d]\n",
-    // hcom_logging_syslog(LOG_INFO, "MONO started [pid:%d, pri:%d, stack size:%d]\n",
+    hcom_logging_syslog(LOG_INFO, "MONO started [pid:%d, pri:%d, stack size:%d]\n",
             mono_pid, HCOM_MONO_RUNTIME_TASK_PRIORITY, HCOM_MONO_RUNTIME_TASK_STACKSIZE);
     hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0,
             "MONO started", thisFile, __LINE__);
   }
   else
   {
-    // p-m - not 1 but LOG_ERR
-    hcom_logging_syslog(1, "The mono task to run mono could not be created\n");
-    // hcom_logging_syslog(LOG_ERR, "The mono task to run mono could not be created\n");
+    hcom_logging_syslog(LOG_ERR, "The mono task to run mono could not be created\n");
     hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0,
             "Mono could not be started", thisFile, __LINE__);
     return -1;
@@ -122,8 +118,8 @@ int hcom_mono_ctrl_start_mono_main()
 // Mono calls the function after it is running correctly
 void hcom_mono_ctrl_clear_mono_is_running_flag()
 {
-  syslog(1, "mono clearing run flag\n"); usleep(50 * 1000);
   hcom_bb_reg_acc_clear_bbr_bits(HCOM_BBREG_MONO_LAST_RUN_LOCKUP_BIT);
+  syslog(1, "mono cleared run flag\n"); usleep(50 * 1000);
 }
 
 //====================================================================
@@ -210,6 +206,8 @@ bool hcom_mono_ctrl_is_mono_enabled()
   return (hcom_bb_reg_acc_read_bbr_and_right_justify(HCOM_BBREG_USER_RQST_MONO_START_BIT) != 0);
 }
 
+//=======================================================================================
+// The following are called from host 
 //=======================================================================================
 // Called from host to disable Mono from running on next MCU reset
 void hcom_mono_rqst_disable_mono(uint32_t userData)

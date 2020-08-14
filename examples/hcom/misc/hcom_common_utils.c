@@ -42,8 +42,6 @@
 #include <nuttx/config.h>
 #include "syslog.h"
 
-//#include <nuttx/userspace.h>
-
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
@@ -59,25 +57,11 @@
  * Private Function Prototypes
  ****************************************************************************/
 
-#if HCOM_COMMON_UTILS_GPIO_D00_D08_DOUT > 0
-static void hcom_utils_dbg_gpio_init_d0_d8(void);
-#endif
-#if HCOM_COMMON_UTILS_GPIO_A0_MISO_DOUT > 0
-static void hcom_utils_dbg_gpio_init_a0_miso(void);
-#endif
-
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 int hcom_common_utils_setup()
 {
-#if HCOM_COMMON_UTILS_GPIO_D00_D08_DOUT > 0
-  hcom_utils_dbg_gpio_init_d0_d8();
-#endif
-#if HCOM_COMMON_UTILS_GPIO_A0_MISO_DOUT > 0
-  hcom_utils_dbg_gpio_init_a0_miso();
-#endif
-
   return OK;
 }
 
@@ -103,88 +87,3 @@ void hcom_common_utils_shutdown()
 //     uint32_t *addr = (uint32_t *)QEMU_BOOT_INFO_ADDRESS; 
 //     return *addr == QEMU_BOOT_INFO_MAGIC;
 // }
-
-#if HCOM_COMMON_UTILS_GPIO_A0_MISO_DOUT > 0
-//=================================================================
-void hcom_utils_dbg_gpio_init_a0_miso()
-{
-  stm32_configgpio(MEADOW_DIAG_GPIO_A0___01_OUTPUT);
-  stm32_configgpio(MEADOW_DIAG_GPIO_A1___02_OUTPUT);
-  stm32_configgpio(MEADOW_DIAG_GPIO_A2___03_OUTPUT);
-  stm32_configgpio(MEADOW_DIAG_GPIO_A3___04_OUTPUT);
-  stm32_configgpio(MEADOW_DIAG_GPIO_A4___05_OUTPUT);
-  stm32_configgpio(MEADOW_DIAG_GPIO_A5___06_OUTPUT);
-  stm32_configgpio(MEADOW_DIAG_GPIO_SCK__07_OUTPUT);
-  stm32_configgpio(MEADOW_DIAG_GPIO_MOSI_08_OUTPUT);
-  stm32_configgpio(MEADOW_DIAG_GPIO_MISO_09_OUTPUT);
-  usleep(100 * 1000);
-  stm32_gpiowrite(MEADOW_DIAG_GPIO_A0___01_OUTPUT, false);
-  stm32_gpiowrite(MEADOW_DIAG_GPIO_A1___02_OUTPUT, false);
-  stm32_gpiowrite(MEADOW_DIAG_GPIO_A2___03_OUTPUT, false);
-  stm32_gpiowrite(MEADOW_DIAG_GPIO_A3___04_OUTPUT, false);
-  stm32_gpiowrite(MEADOW_DIAG_GPIO_A4___05_OUTPUT, false);
-  stm32_gpiowrite(MEADOW_DIAG_GPIO_A5___06_OUTPUT, false);
-  stm32_gpiowrite(MEADOW_DIAG_GPIO_SCK__07_OUTPUT, false);
-  stm32_gpiowrite(MEADOW_DIAG_GPIO_MOSI_08_OUTPUT, false);
-  stm32_gpiowrite(MEADOW_DIAG_GPIO_MISO_09_OUTPUT, false);
-}
-#endif
-
-#if HCOM_COMMON_UTILS_GPIO_D00_D08_DOUT > 0
-//=================================================================
-void hcom_utils_dbg_gpio_init_d0_d8()
-{
-  stm32_configgpio(MEADOW_DIAG_GPIO_D00__10_OUTPUT);
-  stm32_configgpio(MEADOW_DIAG_GPIO_D01__11_OUTPUT);
-  stm32_configgpio(MEADOW_DIAG_GPIO_D02__12_OUTPUT);
-  stm32_configgpio(MEADOW_DIAG_GPIO_D03__13_OUTPUT);
-  stm32_configgpio(MEADOW_DIAG_GPIO_D04__14_OUTPUT);
-  stm32_configgpio(MEADOW_DIAG_GPIO_D05__15_OUTPUT);
-  stm32_configgpio(MEADOW_DIAG_GPIO_D06__16_OUTPUT);
-  stm32_configgpio(MEADOW_DIAG_GPIO_D07__17_OUTPUT);
-  stm32_configgpio(MEADOW_DIAG_GPIO_D08__18_OUTPUT);
-  usleep(100 * 1000);
-}
-
-//=================================================================
-// Assumes gpio (D8 on meadow) can output as binary
-void hcom_utils_dbg_gpio_1led_update(bool ledOn)
-{
-  // Note: !ledOn because low (false) turns led on for an open drain
-  stm32_gpiowrite(MEADOW_DIAG_GPIO_D08__18_OUTPUT, !ledOn);
-}
-
-//=================================================================
-// Assumes gpio (D0-D7 on meadow) can output 8-bit as binary
-void hcom_utils_dbg_gpio_8bit_update(uint8_t newValue, bool ledOn)
-{ 
-  // Note: Low (false) turns led on for an open drain
-  stm32_gpiowrite(MEADOW_DIAG_GPIO_D00__10_OUTPUT, (newValue & 0x01) > 0 ?  false : true);
-  stm32_gpiowrite(MEADOW_DIAG_GPIO_D01__11_OUTPUT, (newValue & 0x02) > 0 ?  false : true);
-  stm32_gpiowrite(MEADOW_DIAG_GPIO_D02__12_OUTPUT, (newValue & 0x04) > 0 ?  false : true);
-  stm32_gpiowrite(MEADOW_DIAG_GPIO_D03__13_OUTPUT, (newValue & 0x08) > 0 ?  false : true);
-  stm32_gpiowrite(MEADOW_DIAG_GPIO_D04__14_OUTPUT, (newValue & 0x10) > 0 ?  false : true);
-  stm32_gpiowrite(MEADOW_DIAG_GPIO_D05__15_OUTPUT, (newValue & 0x20) > 0 ?  false : true);
-  stm32_gpiowrite(MEADOW_DIAG_GPIO_D06__16_OUTPUT, (newValue & 0x40) > 0 ?  false : true);
-  stm32_gpiowrite(MEADOW_DIAG_GPIO_D07__17_OUTPUT, (newValue & 0x80) > 0 ?  false : true);
-
-  hcom_utils_dbg_gpio_1led_update(ledOn);
-  usleep(50 * 1000);  // Give time to see the results
-
-  // if(ledOn)
-  // {
-  //   for(int i = 0; i < 5; i++)
-  //   {
-  //     // flash
-  //     hcom_utils_dbg_gpio_1led_update(i % 2 == 0 ? true : false);
-  //     usleep(100 * 1000);
-  //   }
-  //   hcom_utils_dbg_gpio_1led_update(false);
-  // }
-  // else
-  // {
-  //   hcom_utils_dbg_gpio_1led_update(false);
-  //   usleep(50 * 1000);
-  // }
-}
-#endif

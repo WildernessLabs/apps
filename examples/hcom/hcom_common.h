@@ -65,16 +65,6 @@
 #include <nuttx/mtd/mtd.h>
 #include <nuttx/userspace.h>
 
-// p-m MAY NOT BE NEEDED
-// // Need for battery backed registers
-// // Either define locally or call over to OS side to have work done
-// #if defined (CONFIG_ARCH_CHIP_STM32F7)
-// #include "../../../nuttx/arch/arm/src/stm32f7/chip/stm32f76xx77xx_memorymap.h"
-// #include "../../../nuttx/arch/arm/src/stm32f7/chip/stm32_rtcc.h"
-// #else
-// #error "This implementation only designed to work with STM32F7"
-// #endif
-
 #ifndef OK
   #define OK 0
 #endif
@@ -103,9 +93,6 @@
 //--------------------------------------------------------------------
 // The code not compiled by this #define could be removed
 #define HCOM_IGNORE_UNNECESSARY_FILE_SYSTEM_COMMANDS
-
-// When 0, removes some special diagnostic code
-#define HCOM_COMMS_DEBUG 0
 
 //---------------------------------------------------------------------
 // Thread priorities
@@ -159,7 +146,7 @@
 #define HCOM_FS_MONO_RAW_PARTITION_SIZE 0x200000 // 2MB
 #define HCOM_FS_MONO_RUNTIME_FILENAME "Meadow.OS.Runtime.bin"
 
-// Partitioning may postpend an to /meadow (i.e /meadow0)
+// Partition Id may postpend an to /meadow (i.e /meadow0)
 #define HCOM_FILE_MOUNT_POINT_TARGET "/meadow"
 
 #ifdef CONFIG_FS_LITTLEFS
@@ -169,7 +156,6 @@
 #endif
 
 #define HCOM_REMOTE_DBG_SOCKET_NAME "/dev/monodbg"
-
 
 // This defines the largest packet of data to be sent/received
 #define HCOM_PROTOCOL_PACKET_MAX_SIZE 512
@@ -241,7 +227,6 @@ enum hcom_download_data_packet_action
 #define HCOM_TRACE_LEVEL_NOTICE_INFO 2
 #define HCOM_TRACE_LEVEL_NOTICE_INFO_DEBUG 3
 
-
 #ifndef __ASSEMBLY__
 
 #ifdef __cplusplus
@@ -252,7 +237,7 @@ extern "C"
 #define EXTERN extern
 #endif
 
-  /****************************************************************************************************
+ /****************************************************************************************************
  * Public Functions
  ****************************************************************************************************/
 
@@ -433,48 +418,19 @@ extern "C"
   void hcom_developer_tests_developer_3(uint32_t userData);
   void hcom_developer_tests_developer_4(uint32_t userData);
 
-
-// Diagnostic aids
-//=================================================================
+//-------------------------------------------------------
+// Diagnostic
+// When 0, removes some special diagnostic code
 #define HCOM_INCLUDE_TESTS_BBR_IN_STARTUP 0
 
 #if HCOM_INCLUDE_TESTS_BBR_IN_STARTUP > 0
 void hcom_bbr_tests(void);
 #endif
 
-#define HCOM_TASK_SHOW_CREATED_TASK_PID_NAME  0
+#define HCOM_SPECIAL_DEBUG 0
 #define HCOM_COMMON_UTILS_DIAG_PRINT_BUFFER   1
-#define HCOM_COMMON_UTILS_GPIO_D00_D08_DOUT   0
-#define HCOM_COMMON_UTILS_GPIO_A0_MISO_DOUT   0
 
-#if HCOM_COMMON_UTILS_GPIO_A0_MISO_DOUT > 0
-//=================================================================
-// These for testing only
-#define MEADOW_DIAG_GPIO_A0___01_OUTPUT  (GPIO_OUTPUT | GPIO_PORTA | GPIO_PIN4 | GPIO_FLOAT | GPIO_PUSHPULL | GPIO_SPEED_100MHz)
-#define MEADOW_DIAG_GPIO_A1___02_OUTPUT  (GPIO_OUTPUT | GPIO_PORTA | GPIO_PIN5 | GPIO_FLOAT | GPIO_PUSHPULL | GPIO_SPEED_100MHz)
-#define MEADOW_DIAG_GPIO_A2___03_OUTPUT  (GPIO_OUTPUT | GPIO_PORTA | GPIO_PIN3 | GPIO_FLOAT | GPIO_PUSHPULL | GPIO_SPEED_100MHz)
-#define MEADOW_DIAG_GPIO_A3___04_OUTPUT  (GPIO_OUTPUT | GPIO_PORTA | GPIO_PIN7 | GPIO_FLOAT | GPIO_PUSHPULL | GPIO_SPEED_100MHz)
-#define MEADOW_DIAG_GPIO_A4___05_OUTPUT  (GPIO_OUTPUT | GPIO_PORTC | GPIO_PIN0 | GPIO_FLOAT | GPIO_PUSHPULL | GPIO_SPEED_100MHz)
-#define MEADOW_DIAG_GPIO_A5___06_OUTPUT  (GPIO_OUTPUT | GPIO_PORTC | GPIO_PIN1 | GPIO_FLOAT | GPIO_PUSHPULL | GPIO_SPEED_100MHz)
-#define MEADOW_DIAG_GPIO_SCK__07_OUTPUT  (GPIO_OUTPUT | GPIO_PORTC | GPIO_PIN10| GPIO_FLOAT | GPIO_PUSHPULL | GPIO_SPEED_100MHz)
-#define MEADOW_DIAG_GPIO_MOSI_08_OUTPUT  (GPIO_OUTPUT | GPIO_PORTB | GPIO_PIN5 | GPIO_FLOAT | GPIO_PUSHPULL | GPIO_SPEED_100MHz)
-#define MEADOW_DIAG_GPIO_MISO_09_OUTPUT  (GPIO_OUTPUT | GPIO_PORTC | GPIO_PIN11| GPIO_FLOAT | GPIO_PUSHPULL | GPIO_SPEED_100MHz)
-#endif
-
-#if HCOM_COMMON_UTILS_GPIO_D00_D08_DOUT > 0
-//=================================================================
-// These for testing only
-#define MEADOW_DIAG_GPIO_D00__10_OUTPUT  (GPIO_OUTPUT | GPIO_PORTI | GPIO_PIN9 | GPIO_PULLUP | GPIO_OPENDRAIN | GPIO_SPEED_100MHz)
-#define MEADOW_DIAG_GPIO_D01__11_OUTPUT  (GPIO_OUTPUT | GPIO_PORTH | GPIO_PIN13| GPIO_PULLUP | GPIO_OPENDRAIN | GPIO_SPEED_100MHz)
-#define MEADOW_DIAG_GPIO_D02__12_OUTPUT  (GPIO_OUTPUT | GPIO_PORTC | GPIO_PIN6 | GPIO_PULLUP | GPIO_OPENDRAIN | GPIO_SPEED_100MHz)
-#define MEADOW_DIAG_GPIO_D03__13_OUTPUT  (GPIO_OUTPUT | GPIO_PORTB | GPIO_PIN8 | GPIO_PULLUP | GPIO_OPENDRAIN | GPIO_SPEED_100MHz)
-#define MEADOW_DIAG_GPIO_D04__14_OUTPUT  (GPIO_OUTPUT | GPIO_PORTB | GPIO_PIN9 | GPIO_PULLUP | GPIO_OPENDRAIN | GPIO_SPEED_100MHz)
-#define MEADOW_DIAG_GPIO_D05__15_OUTPUT  (GPIO_OUTPUT | GPIO_PORTC | GPIO_PIN7 | GPIO_PULLUP | GPIO_OPENDRAIN | GPIO_SPEED_100MHz)
-#define MEADOW_DIAG_GPIO_D06__16_OUTPUT  (GPIO_OUTPUT | GPIO_PORTB | GPIO_PIN0 | GPIO_PULLUP | GPIO_OPENDRAIN | GPIO_SPEED_100MHz)
-#define MEADOW_DIAG_GPIO_D07__17_OUTPUT  (GPIO_OUTPUT | GPIO_PORTB | GPIO_PIN7 | GPIO_PULLUP | GPIO_OPENDRAIN | GPIO_SPEED_100MHz)
-#define MEADOW_DIAG_GPIO_D08__18_OUTPUT  (GPIO_OUTPUT | GPIO_PORTB | GPIO_PIN6 | GPIO_PULLUP | GPIO_OPENDRAIN | GPIO_SPEED_100MHz)
-#endif
-
+//------------------------------------------------
 #endif // __ASSEMBLY__
 
 #undef EXTERN

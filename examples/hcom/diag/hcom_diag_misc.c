@@ -51,7 +51,6 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-
 /* Configuration ************************************************************/
 /****************************************************************************
  * Private Data
@@ -82,6 +81,7 @@ void hcom_diag_misc_launch_nsh(uint32_t userData)
   // p-m Need to swap out the _nsh_enabled for pthread_join. That way we can
   // use NSH>exit and then restart it again. The way it is, once started the
   // _nsh_enabled flag once set true won't allow nsh to be restarted.
+  // mayby waitpid() or waitid() can do the job
 #if defined CONFIG_SYSTEM_NSH
   int _nsh_pid;
   static bool _nsh_enabled = false;
@@ -127,12 +127,11 @@ void hcom_diag_misc_launch_nsh(uint32_t userData)
 #endif
 }
 
+#if HCOM_COMMON_UTILS_DIAG_PRINT_BUFFER > 0
 //============================================================================
 // For diagnostic use only
 void hcom_diag_misc_print_buffer(const uint8_t buffer[], const int bufLen, uint8_t msgPriority)
 {
-#if HCOM_COMMON_UTILS_DIAG_PRINT_BUFFER > 0
-
 #define HCOM_UTIL_BYTES_PER_LINE 16
 #define HCOM_UTIL_LEADING_SPACES 2
 #define HCOM_UTIL_HEXADECIMAL_OFFSET (8 + HCOM_UTIL_LEADING_SPACES)
@@ -208,6 +207,9 @@ void hcom_diag_misc_print_buffer(const uint8_t buffer[], const int bufLen, uint8
   // Output one row at a time
   hcom_logging_syslog(msgPriority, lineBuff);
   }
-
-#endif
 }
+#else
+void hcom_diag_misc_print_buffer(const uint8_t buffer[], const int bufLen, uint8_t msgPriority)
+{
+}
+#endif

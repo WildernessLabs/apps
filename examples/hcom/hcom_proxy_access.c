@@ -87,7 +87,6 @@ int hcom_proxy_set_bbr(uint32_t value)
   int ret;
   struct hcom_proxy_upd_bbr_value bbr_value;
 
-  bbr_value.bbr_id = HCOM_BATTERY_BACKED_REGISTER_ID;
   bbr_value.value = value;
 
   ret = ioctl(_hcom_proxy_fd, HCOM_PROXY_UPD_SET_BBR_VALUE, (unsigned long)&bbr_value);
@@ -106,8 +105,6 @@ int hcom_proxy_get_bbr(uint32_t *value)
   int ret;
   struct hcom_proxy_upd_bbr_value bbr_value;
   
-  bbr_value.bbr_id = HCOM_BATTERY_BACKED_REGISTER_ID;
-
   ret = ioctl(_hcom_proxy_fd, HCOM_PROXY_UPD_GET_BBR_VALUE, (unsigned long)&bbr_value);
   if (ret < 0)
   {
@@ -126,7 +123,6 @@ int hcom_proxy_update_bbr(uint32_t clearBits, uint32_t setBits)
   int ret;
   struct hcom_proxy_upd_bbr_update bbr_update;
 
-  bbr_update.bbr_id = HCOM_BATTERY_BACKED_REGISTER_ID;
   bbr_update.clearBits = clearBits;
   bbr_update.setBits = setBits;
   

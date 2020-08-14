@@ -41,13 +41,6 @@
 #include "hcom_esp32_comms.h"
 
 #include <nuttx/board.h>
-//#include <arch/board/board.h>
-//#include "stm32_gpio.h"
-
-#if HCOM_TASK_SHOW_CREATED_TASK_PID_NAME > 0
-#include <nuttx/sched.h>
-#include <../sched/sched/sched.h>
-#endif
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -105,14 +98,14 @@ int hcom_esp32_uart_comms_setup()
   _is_esp32_write_open = false;
 
   // Only configured here and left as output
-  ret = hcom_proxy_gpio_config(HcomProxyGpioDefnEspReset, HCOM_PROXY_GPIO_CONFIG_OUTPUT);
+  ret = hcom_proxy_gpio_config(HCOM_GPIO_DIG_PROXY_ID_ESP_RESET, HCOM_GPIO_DIGITAL_CONFIG_OUTPUT);
   if(ret < 0)
   {
     hcom_logging_syslog(LOG_CRIT, "%s@%d-gpio config:%d\n", thisFile, __LINE__, ret);
     return ret;
   }
   
-  ret = hcom_proxy_gpio_write(HcomProxyGpioDefnEspReset, HCOM_PROXY_GPIO_CMD_VALUE_HIGH);
+  ret = hcom_proxy_gpio_write(HCOM_GPIO_DIG_PROXY_ID_ESP_RESET, HCOM_GPIO_DIGITAL_CMD_VALUE_HIGH);
   if(ret < 0)
   {
     hcom_logging_syslog(LOG_ERR, "%s@%d-gpio write:%d\n", thisFile, __LINE__, ret);
@@ -123,7 +116,7 @@ int hcom_esp32_uart_comms_setup()
   // The boot pin needs to be an output for the operations of this module. However,
   // the the boot pin servers as an input in other places. So, by default we leave
   // it configured as an input pin unless needed.
-  ret = hcom_proxy_gpio_config(HcomProxyGpioDefnEspBoot, HCOM_PROXY_GPIO_CONFIG_INPUT);
+  ret = hcom_proxy_gpio_config(HCOM_GPIO_DIG_PROXY_ID_ESP_BOOT, HCOM_GPIO_DIGITAL_CONFIG_INPUT);
   if(ret < 0)
   {
     hcom_logging_syslog(LOG_CRIT, "%s@%d-gpio config:%d\n", thisFile, __LINE__, ret);
@@ -131,7 +124,7 @@ int hcom_esp32_uart_comms_setup()
   }
 #else
   // This is the only place this gpio is configured
-  ret = hcom_proxy_gpio_config(HcomProxyGpioDefnEspBoot, HCOM_PROXY_GPIO_CONFIG_OUTPUT);
+  ret = hcom_proxy_gpio_config(HCOM_GPIO_DIG_PROXY_ID_ESP_BOOT, HCOM_GPIO_DIGITAL_CONFIG_OUTPUT);
   if(ret < 0)
   {
     hcom_logging_syslog(LOG_CRIT, "%s@%d-gpio config:%d\n", thisFile, __LINE__, ret);

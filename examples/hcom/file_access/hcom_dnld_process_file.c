@@ -167,7 +167,8 @@ void hcom_dnld_proc_begin(const uint8_t *recvPacketData, const size_t recvPacket
       memcpy(fileNameBuffer, recvPacketData + msgOffset + HCOM_PROTOCOL_REQUEST_MD5_HASH_LENGTH,
               fileNameLength);
       fileNameBuffer[fileNameLength] = '\0';
-      hcom_logging_syslog(LOG_INFO, "Meadow download (Size:%d, Crc:0x%08x, Name:%s)\n",
+
+      hcom_logging_syslog(LOG_INFO, "Meadow downloading file (Size:%d, Crc:0x%08x, Name:%s)\n",
               _xferRecvFullFileSize, _xferRecvFullFileCrc, fileNameBuffer);
       
       // Adding file to F7 file system
@@ -210,7 +211,7 @@ void hcom_dnld_proc_begin(const uint8_t *recvPacketData, const size_t recvPacket
   if (_fileSystemOpenFailed)
     sendStartMsg = "Failed to start file transfer";
   else
-    sendStartMsg = "File transfer has begun";
+    sendStartMsg = "Meadow file transfer has begun";
 
   hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0, sendStartMsg,
           thisFile, __LINE__);

@@ -73,11 +73,6 @@ int hcom_main(int argc, char *argv[])
 {
   int ret;
 
-// #if HCOM_TASK_SHOW_CREATED_TASK_PID_NAME > 0
-  syslog(1, "MGR-->The HCOM Main thread, \"init\" is running. It's PID:%d\n", getpid()); usleep(500 * 1000);
-// #endif
-
-  // syslog(1, "MGR--> 1\n"); usleep(20 * 1000);
   // First so hcom_logging_syslog can be used by during setup
   ret = hcom_logging_utils_setup();
   if (ret < 0)
@@ -87,7 +82,6 @@ int hcom_main(int argc, char *argv[])
     return ret;
   }
 
-  // syslog(1, "MGR--> 2\n"); usleep(20 * 1000);
  #if defined (CONFIG_RAMLOG_SYSLOG)
   // Sets up some basic initialization for ramlog, but may not create the
   // ramlog read thread etc. as this is not a commonly needed feature, some
@@ -100,7 +94,6 @@ int hcom_main(int argc, char *argv[])
   }
 #endif
 
-  // syslog(1, "MGR--> 3\n"); usleep(20 * 1000);
   ret = hcom_proxy_access_setup();
   if (ret < 0)
   {
@@ -110,7 +103,6 @@ int hcom_main(int argc, char *argv[])
   }
 
   // Allocates memory for logging buffer
-  // syslog(1, "MGR--> 4\n"); usleep(20 * 1000);
   ret = hcom_common_utils_setup();
   if (ret < 0)
   {
@@ -120,13 +112,11 @@ int hcom_main(int argc, char *argv[])
   }
 
 #if HCOM_INCLUDE_TESTS_BBR_IN_STARTUP > 0
-  // syslog(1, "MGR--> 5\n"); usleep(20 * 1000);
   hcom_bbr_tests();
 #endif
 
 #if defined(CONFIG_STM32F7_PWR)
   // Restore desired syslog mask from battery backed registers
-  // syslog(1, "MGR--> 6\n"); usleep(20 * 1000);
   ret = hcom_logging_syslog_mask_init();
   if(ret < 0)
   {
@@ -136,7 +126,6 @@ int hcom_main(int argc, char *argv[])
 #endif
 
   // Doesn't do anything
-  // syslog(1, "MGR--> 7\n"); usleep(20 * 1000);
   ret = hcom_diag_misc_setup();
   if (ret < 0)
   {
@@ -144,7 +133,6 @@ int hcom_main(int argc, char *argv[])
     return ret;
   }
   
-  // syslog(1, "MGR--> 8\n"); usleep(20 * 1000);
   ret = hcom_misc_rqst_setup();
   if (ret < 0)
   {
@@ -153,7 +141,6 @@ int hcom_main(int argc, char *argv[])
   }
 
   // Sets a few internal variable states
-  // syslog(1, "MGR--> 9\n"); usleep(20 * 1000);
   ret = hcom_dnld_proc_setup();
   if (ret < 0)
   {
@@ -162,7 +149,6 @@ int hcom_main(int argc, char *argv[])
   }
 
   // Sets a few internal variable states
-  // syslog(1, "MGR--> 10\n"); usleep(20 * 1000);
   ret = hcom_dnld_write_del_setup();
   if (ret < 0)
   {
@@ -171,7 +157,6 @@ int hcom_main(int argc, char *argv[])
   }
 
   // Allocates memory for the circular buffer
-  // syslog(1, "MGR--> 11\n"); usleep(20 * 1000);
   ret = hcom_host_parse_setup();
   if (ret < 0)
   {
@@ -179,7 +164,6 @@ int hcom_main(int argc, char *argv[])
     return ret;
   }
 
-  // syslog(1, "MGR--> 12\n"); usleep(20 * 1000);
   ret = hcom_host_route_setup();
   if (ret < 0)
   {
@@ -188,7 +172,6 @@ int hcom_main(int argc, char *argv[])
   }
 
 // #if defined(CONFIG_HCOM_MTD_STRESS_TEST)
-  // syslog(1, "MGR--> 13\n"); usleep(20 * 1000);
 //   ret = hcom_developer_tests_setup(mtd);
 //   if (ret < 0)
 //   {
@@ -197,7 +180,6 @@ int hcom_main(int argc, char *argv[])
 //   }
 // #endif
 
-  // syslog(1, "MGR--> 14\n"); usleep(20 * 1000);
   ret = hcom_host_recv_setup();
   if (ret < 0)
   {
@@ -205,7 +187,6 @@ int hcom_main(int argc, char *argv[])
     return ret;
   }
 
-  // syslog(1, "MGR--> 15\n"); usleep(20 * 1000);
   ret = hcom_host_send_setup();
   if (ret < 0)
   {
@@ -219,7 +200,6 @@ int hcom_main(int argc, char *argv[])
   // starting which includes mono. Therefore, mono cannot start until the file system
   // is at least initialized. This is the desired behavior since mono starting before
   // the file system would be a problem.
-  // syslog(1, "MGR--> 16\n"); usleep(20 * 1000);
   // ret = hcom_fs_init_file_system();
   // if (ret < 0)
   // {
@@ -240,7 +220,6 @@ int hcom_main(int argc, char *argv[])
 
 // #if defined(CONFIG_HCOM_MONO_DEBUG_PIPE)
 //   // Creates a unix domain socket and creates a receiving thread.
-  // syslog(1, "MGR--> 18\n"); usleep(20 * 1000);
 //   ret = hcom_remote_dbg_setup();
 //   if (ret < 0)
 //   {
@@ -250,7 +229,6 @@ int hcom_main(int argc, char *argv[])
 // #endif
 
 #if defined (CONFIG_HCOM_ESP32_COMMS)
-  // syslog(1, "MGR--> 19\n"); usleep(20 * 1000);
   ret = hcom_esp32_uart_comms_setup();
   if (ret < 0)
   {
@@ -261,9 +239,6 @@ int hcom_main(int argc, char *argv[])
 
   // Last we start mono, if it should be started
   hcom_mono_ctrl_start_mono_main();
-
-
-  syslog(1, "MGR-->The HCOM Main thread-all setup functions successful\n");
 
   //-------------------------------------------------------
   // This thread will now run hcom CLI receive. It only
@@ -284,9 +259,7 @@ int hcom_main(int argc, char *argv[])
 // Notify all interested children that we are shutting down. This closes the
 // comms file descriptor which will cause the worker thread to exit.
 void hcom_manager_shutdown()
-{
-  // syslog(1, "MGR-->%s@%d-Entered:%s hcom_diag_ramlog_trace_setup\n", thisFile, __LINE__, __func__); usleep(100 * 1000);
-  
+{  
   // p-m - confirm that all functions that need shutdown are called
   hcom_host_recv_shutdown();
   hcom_mono_pipe_shutdown();
