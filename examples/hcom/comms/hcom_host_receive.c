@@ -40,6 +40,7 @@
 
 #include "../hcom_common.h"
 #include <meadow/hcom_protocol.h>
+#include <meadow/hcom_bbreg_defn.h>
 
 #include <fcntl.h>
 //#include <nuttx/fs/fs.h>
@@ -166,7 +167,7 @@ int hcom_host_recv_restart_concluded()
 {
   // Check if a CLI command was responsible for this restart, If it was
   // then a `Concluded` message must be sent
-  if(hcom_utils_read_bbr_and_right_justify(HCOM_BBREG_RESTART_INITIATED_BY_HOST_CMD_BIT))
+  if(hcom_bb_reg_acc_read_bbr_and_right_justify(HCOM_BBREG_RESTART_INITIATED_BY_HOST_CMD_BIT))
   {
     hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
   }

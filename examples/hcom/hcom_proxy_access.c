@@ -43,6 +43,7 @@
 #include "hcom_common.h"
 #include <meadow/hcom_protocol.h>
 #include <meadow/hcom_proxy_shared.h>
+#include <meadow/hcom_bbreg_defn.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -239,7 +240,10 @@ void hcom_proxy_forward_cmd_to_proxy(uint16_t hcomCmd, uint32_t userData)
 
   cmdData.logLevel = LOG_NONE;
   cmdData.logLen = 0;
-  cmdData.send_host_text = hcom_host_send_simple_msg_no_rqst_type;
+
+  // void hcom_host_send_simple_string_msg(uint16_t requestType, uint32_t userData, char *shortText,
+  //       char *sourceFileName, int sourceLineNumber);
+  cmdData.send_host_msg = hcom_host_send_simple_string_msg;
 
   // Forward to hcom_proxy to complete command
   ret = ioctl(_hcom_proxy_fd, HCOM_PROXY_UPD_CLI_COMMAND, (unsigned long)&cmdData);

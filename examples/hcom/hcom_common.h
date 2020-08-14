@@ -270,8 +270,6 @@ extern "C"
   void hcom_host_send_shutdown(void);
   void hcom_host_send_header_msg(uint16_t requestType, uint32_t userData,
           char *sourceFileName, int sourceLineNumber);
-  void hcom_host_send_simple_msg_no_rqst_type(char *shortText, uint32_t userData, 
-          char *sourceFileName, int sourceLineNumber);
   void hcom_host_send_simple_string_msg(uint16_t requestType, uint32_t userData, char *shortText,
           char *sourceFileName, int sourceLineNumber);
   int hcom_host_send_raw_string_msg(uint16_t requestType, uint32_t userData, char *shortText,
@@ -393,15 +391,6 @@ extern "C"
   void hcom_utils_dbg_gpio_1led_update(bool ledOn);
   void hcom_utils_dbg_gpio_8bit_update(uint8_t newValue, bool ledOn);
 
-  uint32_t hcom_utils_read_bbr_and_right_justify(uint32_t bitMask);
-  uint32_t hcom_utils_bbr_read(void);
-  void hcom_utils_bbr_write(uint32_t value);
-  void hcom_utils_set_bbr_bits(uint32_t value);
-  void hcom_utils_clear_bbr_bits(uint32_t value);
-  void hcom_utils_clear_then_set_bbr_bits(uint32_t clearBits, uint32_t setBits);
-  bool hcom_utils_is_bbr_bits_set_n_clear(uint32_t value);
-  bool hcom_utils_is_bbr_bit_set(uint32_t value);
-
   // hcom_proxy_access.c
   // HCOM proxy access allows low-level access to the operating system
   int hcom_proxy_access_setup(void);
@@ -444,26 +433,6 @@ extern "C"
   void hcom_developer_tests_developer_3(uint32_t userData);
   void hcom_developer_tests_developer_4(uint32_t userData);
 
-//----------------------------------------------------------------
-// Redefine Battery Backed Registers so we know what's what
-// This defines which BBR register to use. There are 32 (0-31) in
-// the stm32f7
-#define HCOM_BATTERY_BACKED_REGISTER_ID   31
-
-#define HCOM_BBREG_RESTART_ALL_32_BITS_MASK 0xffffffff
-// This mask defines the syslog level
-#define HCOM_BBREG_RESTART_SYSLOG_CONFIG_VALUE_MASK 0x000000ff
-// This bit indicates if the restart was initiated by hcom command
-#define HCOM_BBREG_RESTART_INITIATED_BY_HOST_CMD_BIT 0x000100
-// This bit indicates if we are to send trace messages to the host PC
-#define HCOM_BBREG_ROUTE_TRACE_MSG_TO_HOST_BIT 0x00000200
-// This bit indicates if we are to send trace messages to the uart1
-#define HCOM_BBREG_ROUTE_TRACE_MSG_TO_UART1_BIT 0x00000400
-#define HCOM_BBREG_TRACE_MSG_TO_HOST_AND_UART1_BIT_MASK (HCOM_BBREG_ROUTE_TRACE_MSG_TO_HOST_BIT | HCOM_BBREG_ROUTE_TRACE_MSG_TO_UART1_BIT)
-// This bit indicates if mono should be started during startup
-#define HCOM_BBREG_USER_RQST_MONO_START_BIT 0x00000800
-// The last time mono was started did it run?
-#define HCOM_BBREG_MONO_LAST_RUN_LOCKUP_BIT 0x00001000
 
 // Diagnostic aids
 //=================================================================
@@ -472,7 +441,6 @@ extern "C"
 #if HCOM_INCLUDE_TESTS_BBR_IN_STARTUP > 0
 void hcom_bbr_tests(void);
 #endif
-
 
 #define HCOM_TASK_SHOW_CREATED_TASK_PID_NAME  0
 #define HCOM_COMMON_UTILS_DIAG_PRINT_BUFFER   1

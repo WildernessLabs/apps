@@ -53,7 +53,7 @@
 /****************************************************************************
  * Private Data
  ****************************************************************************/
-static char *thisFile = __FILE__;
+// static char *thisFile = __FILE__;
 
 /****************************************************************************
  * Private Function Prototypes
@@ -84,136 +84,6 @@ int hcom_common_utils_setup()
 //============================================================================
 void hcom_common_utils_shutdown()
 {
-}
-
-//===================================================================
-// This function takes a value (0-31) for the battery backed reg,
-// reads the value then based on the mask clears all other bits and
-// right justifies the remaining bit(s).
-uint32_t hcom_utils_read_bbr_and_right_justify(uint32_t bitMask)
-{
-  uint32_t regValue;
- 
-  if(bitMask == 0)
-    return 0;
-  
-  int ret = hcom_proxy_get_bbr(&regValue);
-  if(ret < 0)
-  {
-    hcom_logging_syslog(LOG_ERR, "%s:%s()@%d-%s Failed, errno:%d\n");
-  }
-
-  if(regValue == 0)
-    return 0;
-
-  regValue &= bitMask;    // Save only bit in mask
-
-  // We have the 32-bit value, shift right based on the mask
-  uint32_t tempMask = bitMask;
-  while((tempMask & 0x00000001) == 0)
-  {
-    tempMask >>= 1;
-    regValue >>= 1;
-  }
-
-  return regValue;
-}
-
-//===================================================================
-// Reads any of the 32 battery backed registers
-uint32_t hcom_utils_bbr_read()
-{
-  uint32_t regValue;
-  int ret = hcom_proxy_get_bbr(&regValue);
-  if(ret < 0)
-  {
-    hcom_logging_syslog(LOG_ERR, "%s@%d-%s Failed, ret:%d errno:%d\n",
-            thisFile, __LINE__, ret, errno);
-  }
-  return regValue;
-}
-
-//===================================================================
-// Writes any of the 32 battery backed registers
-void hcom_utils_bbr_write(uint32_t value)
-{
-  int ret = hcom_proxy_set_bbr(value);
-  if(ret < 0)
-  {
-    hcom_logging_syslog(LOG_ERR, "%s@%d-%s Failed, ret:%d errno:%d\n",
-            thisFile, __LINE__, ret, errno);
-  }
-}
-
-//===================================================================
-// Reads the state of a bit then clears that bit and returns it's
-// original state.
-bool hcom_utils_is_bbr_bits_set_n_clear(uint32_t value)
-{
-  uint32_t regValue;
-  int ret = hcom_proxy_get_bbr(&regValue);
-  if(ret < 0)
-  {
-    hcom_logging_syslog(LOG_ERR, "%s@%d-%s Failed, ret:%d errno:%d\n",
-            thisFile, __LINE__, ret, errno);
-  }
-  ret = hcom_proxy_set_bbr(regValue & (~value));
-  if(ret < 0)
-  {
-    hcom_logging_syslog(LOG_ERR, "%s@%d-%s Failed, ret:%d errno:%d\n",
-            thisFile, __LINE__, ret, errno);
-  }
-  return (value & regValue) != 0;
-}
-
-//===================================================================
-// Reads bits in register and returns their state
-bool hcom_utils_is_bbr_bit_set(uint32_t value)
-{
-  uint32_t regValue;
-  int ret = hcom_proxy_get_bbr(&regValue);
-  if(ret < 0)
-  {
-    hcom_logging_syslog(LOG_ERR, "%s@%d-%s Failed, ret:%d errno:%d\n",
-            thisFile, __LINE__, ret, errno);
-  }
-  return (value & regValue) != 0;
-}
-
-//===================================================================
-// Set bit(s) in any bit in battery backed register
-void hcom_utils_set_bbr_bits(uint32_t value)
-{
-  int ret = hcom_proxy_update_bbr(0, value);
-  if(ret < 0)
-  {
-    hcom_logging_syslog(LOG_ERR, "%s@%d-%s Failed, ret:%d errno:%d\n",
-            thisFile, __LINE__, ret, errno);
-  }
-}
-
-//===================================================================
-// Clears the specified bits
-void hcom_utils_clear_bbr_bits(uint32_t value)
-{
-  int ret = hcom_proxy_update_bbr(value, 0);
-  if(ret < 0)
-  {
-    hcom_logging_syslog(LOG_ERR, "%s@%d-%s Failed, ret:%d errno:%d\n",
-            thisFile, __LINE__, ret, errno);
-  }
-}
-
-//===================================================================
-// Clears then sets the specified bits
-void hcom_utils_clear_then_set_bbr_bits(uint32_t clearBits, uint32_t setBits)
-{
-  int ret = hcom_proxy_update_bbr(clearBits, setBits);
-  if(ret < 0)
-  {
-    hcom_logging_syslog(LOG_ERR, "%s@%d-%s Failed, ret:%d errno:%d\n",
-            thisFile, __LINE__, ret, errno);
-  }
 }
 
 //===================================================================

@@ -67,7 +67,8 @@ HCOM_SRCS = hcom_mono_control.c \
 	host_rqsts/hcom_misc_requests.c \
 	misc/hcom_circular_buffer.c \
 	misc/hcom_common_utils.c \
-	misc/hcom_logging_utils.c
+	misc/hcom_logging_utils.c \
+	misc/hcom_register_access.c
 
 ifeq ($(CONFIG_HCOM_ESP32_COMMS),y)
  HCOM_SRCS += esp32/hcom_esp32_execute.c \

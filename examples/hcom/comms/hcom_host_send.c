@@ -127,15 +127,6 @@ void hcom_host_send_header_msg(uint16_t requestType, uint32_t userData,
 }
 
 //=====================================================================
-// THIS IS THE FUNCTION TO USED WHEN THE REQUEST TYPE IS NOT AVAILABLE
-void hcom_host_send_simple_msg_no_rqst_type(char *shortText, uint32_t userData, 
-            char *sourceFileName, int sourceLineNumber)
-{
-  hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, userData,
-            shortText, sourceFileName, sourceLineNumber);
-}
-
-//=====================================================================
 // THIS IS THE FUNCTION THAT SHOULD BE USED
 // Prepare a simple line of text for transmission and output the error message here
 void hcom_host_send_simple_string_msg(uint16_t requestType, uint32_t userData,
