@@ -295,7 +295,7 @@ extern "C"
   int hcom_misc_rqst_setup(void);
   void hcom_misc_rqst_enter_dfu_mode(uint32_t user_data);
   void hcom_logging_utils_change_trace_level(uint32_t userData);
-  void hcom_proxy_forward_cmd_to_proxy(uint16_t hcomCmd, uint32_t userData);
+  void hcom_nx_forward_cmd_to_nx(uint16_t hcomCmd, uint32_t userData);
 
   void hcom_mono_rqst_disable_mono(uint32_t userData);
   void hcom_mono_rqst_enable_mono(uint32_t userData);
@@ -319,14 +319,14 @@ extern "C"
 //   int hcom_fs_init_partitions(FAR struct mtd_dev_s *master_flash_mtd, uint32_t partitionCount);
 //   int hcom_fs_mount_file_system(const char *sourceDevice, const char *targetDevice,
 //                                           const char *fileSystemType, uint32_t partitionId, const char *mountCommand);
-  bool hcom_proxy_is_mounted(uint32_t partitionId);
+  bool hcom_nx_is_mounted(uint32_t partitionId);
 //   int hcom_fs_1st_erase_sector_of_partition(uint32_t partitionId);
   int hcom_list_files_in_partition(uint32_t partitionId);
   int hcom_list_files_and_crc_in_partition(uint32_t partitionId);
   int hcom_list_all_dev_dir_and_files_start(uint32_t userData);
 
-//   int hcom_fs_initialize_proxy(uint32_t partitionId);
-//   int hcom_fs_format_proxy(uint32_t partitionId);
+//   int hcom_fs_initialize_nx(uint32_t partitionId);
+//   int hcom_fs_format_nx(uint32_t partitionId);
 
 //   // Support LittleFS
 // #ifdef CONFIG_FS_LITTLEFS
@@ -376,21 +376,21 @@ extern "C"
   void hcom_utils_dbg_gpio_1led_update(bool ledOn);
   void hcom_utils_dbg_gpio_8bit_update(uint8_t newValue, bool ledOn);
 
-  // hcom_proxy_access.c
-  // HCOM proxy access allows low-level access to the operating system
-  int hcom_proxy_access_setup(void);
-  int hcom_proxy_set_bbr(uint32_t value);
-  int hcom_proxy_get_bbr(uint32_t *value);
-  int hcom_proxy_update_bbr(uint32_t clearBits, uint32_t setBits);
-  int hcom_proxy_restart_meadow(void);
-  int hcom_proxy_get_mcu_id(uint8_t uniqueId[12]);
-  int hcom_proxy_gpio_config(int gpioDefn, uint8_t configValue);
-  int hcom_proxy_gpio_write(int gpioDefn, uint8_t cmdValue);
+  // hcom_nx_access.c
+  // HCOM nx access allows low-level access to the operating system
+  int hcom_nx_access_setup(void);
+  int hcom_nx_set_bbr(uint32_t value);
+  int hcom_nx_get_bbr(uint32_t *value);
+  int hcom_nx_update_bbr(uint32_t clearBits, uint32_t setBits);
+  int hcom_nx_restart_meadow(void);
+  int hcom_nx_get_mcu_id(uint8_t uniqueId[12]);
+  int hcom_nx_gpio_config(int gpioDefn, uint8_t configValue);
+  int hcom_nx_gpio_write(int gpioDefn, uint8_t cmdValue);
 
   // p-m LIKE TO REMOVE THESE GENERIC REGISTER QUERIES
-  // int hcom_proxy_set_register(uint32_t address, uint32_t value);
-  // int hcom_proxy_get_register(uint32_t address, uint32_t *value);
-  // int hcom_proxy_update_register(uint32_t address, uint32_t clearBits, uint32_t setBits);
+  // int hcom_nx_set_register(uint32_t address, uint32_t value);
+  // int hcom_nx_get_register(uint32_t address, uint32_t *value);
+  // int hcom_nx_update_register(uint32_t address, uint32_t clearBits, uint32_t setBits);
 
   // hcom_mono_control.c
   bool hcom_mono_ctrl_is_mono_enabled(void);

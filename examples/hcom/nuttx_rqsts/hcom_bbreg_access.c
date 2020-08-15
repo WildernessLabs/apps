@@ -37,7 +37,7 @@
  * Included Files
  ****************************************************************************/
 #include <ctype.h>
-#include "hcom_common.h"
+#include "../hcom_common.h"
 #include <meadow/hcom_bbreg_defn.h>
 
 /****************************************************************************
@@ -68,7 +68,7 @@ uint32_t hcom_bb_reg_acc_read_bbr_and_right_justify(uint32_t bitMask)
   if(bitMask == 0)
     return 0;
   
-  int ret = hcom_proxy_get_bbr(&regValue);
+  int ret = hcom_nx_get_bbr(&regValue);
   if(ret < 0)
   {
     hcom_logging_syslog(LOG_ERR, "%s:%s()@%d-%s Failed, errno:%d\n");
@@ -95,7 +95,7 @@ uint32_t hcom_bb_reg_acc_read_bbr_and_right_justify(uint32_t bitMask)
 uint32_t hcom_bb_reg_acc_read_bbr()
 {
   uint32_t regValue;
-  int ret = hcom_proxy_get_bbr(&regValue);
+  int ret = hcom_nx_get_bbr(&regValue);
   if(ret < 0)
   {
     hcom_logging_syslog(LOG_ERR, "%s@%d-%s Failed, ret:%d errno:%d\n",
@@ -108,7 +108,7 @@ uint32_t hcom_bb_reg_acc_read_bbr()
 // Writes any of the 32 battery backed registers
 void hcom_bb_reg_acc_write_bbr(uint32_t value)
 {
-  int ret = hcom_proxy_set_bbr(value);
+  int ret = hcom_nx_set_bbr(value);
   if(ret < 0)
   {
     hcom_logging_syslog(LOG_ERR, "%s@%d-%s Failed, ret:%d errno:%d\n",
@@ -122,13 +122,13 @@ void hcom_bb_reg_acc_write_bbr(uint32_t value)
 bool hcom_bb_reg_acc_is_bbr_bits_set_n_clear(uint32_t value)
 {
   uint32_t regValue;
-  int ret = hcom_proxy_get_bbr(&regValue);
+  int ret = hcom_nx_get_bbr(&regValue);
   if(ret < 0)
   {
     hcom_logging_syslog(LOG_ERR, "%s@%d-%s Failed, ret:%d errno:%d\n",
             thisFile, __LINE__, ret, errno);
   }
-  ret = hcom_proxy_set_bbr(regValue & (~value));
+  ret = hcom_nx_set_bbr(regValue & (~value));
   if(ret < 0)
   {
     hcom_logging_syslog(LOG_ERR, "%s@%d-%s Failed, ret:%d errno:%d\n",
@@ -142,7 +142,7 @@ bool hcom_bb_reg_acc_is_bbr_bits_set_n_clear(uint32_t value)
 bool hcom_bb_reg_acc_is_bbr_bit_set(uint32_t value)
 {
   uint32_t regValue;
-  int ret = hcom_proxy_get_bbr(&regValue);
+  int ret = hcom_nx_get_bbr(&regValue);
   if(ret < 0)
   {
     hcom_logging_syslog(LOG_ERR, "%s@%d-%s Failed, ret:%d errno:%d\n",
@@ -155,7 +155,7 @@ bool hcom_bb_reg_acc_is_bbr_bit_set(uint32_t value)
 // Set bit(s) in any bit in battery backed register
 void hcom_bb_reg_acc_set_bbr_bits(uint32_t value)
 {
-  int ret = hcom_proxy_update_bbr(0, value);
+  int ret = hcom_nx_update_bbr(0, value);
   if(ret < 0)
   {
     hcom_logging_syslog(LOG_ERR, "%s@%d-%s Failed, ret:%d errno:%d\n",
@@ -167,7 +167,7 @@ void hcom_bb_reg_acc_set_bbr_bits(uint32_t value)
 // Clears the specified bits
 void hcom_bb_reg_acc_clear_bbr_bits(uint32_t value)
 {
-  int ret = hcom_proxy_update_bbr(value, 0);
+  int ret = hcom_nx_update_bbr(value, 0);
   if(ret < 0)
   {
     hcom_logging_syslog(LOG_ERR, "%s@%d-%s Failed, ret:%d errno:%d\n",
@@ -179,7 +179,7 @@ void hcom_bb_reg_acc_clear_bbr_bits(uint32_t value)
 // Clears then sets the specified bits
 void hcom_bb_reg_acc_clear_then_set_bbr_bits(uint32_t clearBits, uint32_t setBits)
 {
-  int ret = hcom_proxy_update_bbr(clearBits, setBits);
+  int ret = hcom_nx_update_bbr(clearBits, setBits);
   if(ret < 0)
   {
     hcom_logging_syslog(LOG_ERR, "%s@%d-%s Failed, ret:%d errno:%d\n",

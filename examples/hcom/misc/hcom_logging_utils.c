@@ -83,14 +83,14 @@ int hcom_logging_utils_get_syslog_mask()
 }
 
 //============================================================
-// This function gets the syslog mast set by hcom_proxy
+// This function gets the syslog mast set by hcom_nx
 int hcom_logging_syslog_mask_init()
 {
   bool isPowerOnRestart;
 
 #if defined(CONFIG_STM32F7_PWR)
 
-  // This BBR was set by hcom proxy since it starts first
+  // This BBR was set by hcom nx since it starts first
   _syslogMask = hcom_bb_reg_acc_read_bbr_and_right_justify(HCOM_BBREG_RESTART_SYSLOG_CONFIG_VALUE_MASK);
   setlogmask(_syslogMask);
 

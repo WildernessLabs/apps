@@ -1,5 +1,5 @@
 /****************************************************************************
- * examples\hcom\host_rqsts\hcom_developer_tests.c
+ * examples\hcom\nuttx_rqsts\hcom_developer_tests.c
  * 
  *   Copyright (C) 2020 Wilderness Labs. All rights reserved.
  *   Author:  Wilderness Labs
@@ -38,7 +38,7 @@
  ****************************************************************************/
 
 #include "../hcom_common.h"
-#include <meadow/hcom_proxy_shared.h>
+#include <meadow/hcom_nx_shared.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -75,10 +75,10 @@ void hcom_developer_tests_developer_1(uint32_t userData)
     // Configure gpios in array offsets 2 - 10
     for(int gpioOffset = 2; gpioOffset < 11; gpioOffset++)
     {
-      ret = hcom_proxy_gpio_config(gpioOffset, HCOM_GPIO_DIGITAL_CONFIG_OUTPUT);
+      ret = hcom_nx_gpio_config(gpioOffset, HCOM_GPIO_DIGITAL_CONFIG_OUTPUT);
       if(ret < 0)
       {
-        syslog(1, "hcom_proxy_gpio_config value of:%d\n", gpioOffset);
+        syslog(1, "hcom_nx_gpio_config value of:%d\n", gpioOffset);
       }
     }
     isInitialized = true;
@@ -101,10 +101,10 @@ void hcom_developer_tests_developer_1(uint32_t userData)
     cmdValue = HCOM_GPIO_DIGITAL_CMD_VALUE_LOW;
   }
 
-  ret = hcom_proxy_gpio_write(gpioDefn, cmdValue);
+  ret = hcom_nx_gpio_write(gpioDefn, cmdValue);
   if(ret < 0)
   {
-    syslog(1, "hcom_proxy_gpio_write error:%d gpio:%d, value:%d\n", ret, gpioDefn,cmdValue);
+    syslog(1, "hcom_nx_gpio_write error:%d gpio:%d, value:%d\n", ret, gpioDefn,cmdValue);
   }
 }
 
@@ -120,51 +120,51 @@ void hcom_developer_tests_developer_2(uint32_t userData)
     // Configure gpios in array offsets 2 - 10 whicn are only used for testing
     for(int gpioOffset = 2; gpioOffset < 11; gpioOffset++)
     {
-      ret = hcom_proxy_gpio_config(gpioOffset, HCOM_GPIO_DIGITAL_CONFIG_OUTPUT);
+      ret = hcom_nx_gpio_config(gpioOffset, HCOM_GPIO_DIGITAL_CONFIG_OUTPUT);
       if(ret < 0)
       {
-        syslog(1, "hcom_proxy_gpio_config value of:%d\n", gpioOffset);
+        syslog(1, "hcom_nx_gpio_config value of:%d\n", gpioOffset);
       }
     }
     isInitialized = true;
   }
   
   // TEST ESP32 GPIOs
-  ret = hcom_proxy_gpio_config(0, HCOM_GPIO_DIGITAL_CONFIG_OUTPUT);
+  ret = hcom_nx_gpio_config(0, HCOM_GPIO_DIGITAL_CONFIG_OUTPUT);
   if(ret < 0)
   {
-    syslog(1, "hcom_proxy_gpio_config value of:%d\n", 0);
+    syslog(1, "hcom_nx_gpio_config value of:%d\n", 0);
   }
 
-  ret = hcom_proxy_gpio_config(1, HCOM_GPIO_DIGITAL_CONFIG_OUTPUT);
+  ret = hcom_nx_gpio_config(1, HCOM_GPIO_DIGITAL_CONFIG_OUTPUT);
   if(ret < 0)
   {
-    syslog(1, "hcom_proxy_gpio_config value of:%d\n", 1);
+    syslog(1, "hcom_nx_gpio_config value of:%d\n", 1);
   }
   // Just toggle 2 GPIOS
-  hcom_proxy_gpio_write(0, 1);
+  hcom_nx_gpio_write(0, 1);
   sleep(1);
-  hcom_proxy_gpio_write(0, 0);
+  hcom_nx_gpio_write(0, 0);
   sleep(1);
-  hcom_proxy_gpio_write(0, 1);
+  hcom_nx_gpio_write(0, 1);
   sleep(1);
-  hcom_proxy_gpio_write(0, 0);
+  hcom_nx_gpio_write(0, 0);
   sleep(1);
 
-  hcom_proxy_gpio_write(1, 1);
+  hcom_nx_gpio_write(1, 1);
   sleep(1);
-  hcom_proxy_gpio_write(1, 0);
+  hcom_nx_gpio_write(1, 0);
   sleep(1);
-  hcom_proxy_gpio_write(1, 1);
+  hcom_nx_gpio_write(1, 1);
   sleep(1);
-  hcom_proxy_gpio_write(1, 0);
+  hcom_nx_gpio_write(1, 0);
   sleep(1);
 
   // uint32_t gpioOffset4 = 4;
   // for(int cnt = 0; cnt < userData; cnt++)
   // {
-  //     ret = hcom_proxy_gpio_write(gpioOffset4, 1);
-  //     ret = hcom_proxy_gpio_write(gpioOffset4, 0);
+  //     ret = hcom_nx_gpio_write(gpioOffset4, 1);
+  //     ret = hcom_nx_gpio_write(gpioOffset4, 0);
   // }
   // return;
 
@@ -174,20 +174,20 @@ void hcom_developer_tests_developer_2(uint32_t userData)
     // Turn all on
     for(int gpioOffset = 2; gpioOffset < 11; gpioOffset++)
     {
-      ret = hcom_proxy_gpio_write(gpioOffset, 1);
+      ret = hcom_nx_gpio_write(gpioOffset, 1);
       if(ret < 0)
       {
-        syslog(1, "hcom_proxy_gpio_config value of:%d\n", gpioOffset);
+        syslog(1, "hcom_nx_gpio_config value of:%d\n", gpioOffset);
       }
     }
 
     // Turn all off
     for(int gpioOffset = 2; gpioOffset < 11; gpioOffset++)
     {
-      ret = hcom_proxy_gpio_write(gpioOffset, 0);
+      ret = hcom_nx_gpio_write(gpioOffset, 0);
       if(ret < 0)
       {
-        syslog(1, "hcom_proxy_gpio_config value of:%d\n", gpioOffset);
+        syslog(1, "hcom_nx_gpio_config value of:%d\n", gpioOffset);
       }
     }
     //usleep(1);

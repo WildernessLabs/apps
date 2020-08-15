@@ -94,10 +94,10 @@ int hcom_main(int argc, char *argv[])
   }
 #endif
 
-  ret = hcom_proxy_access_setup();
+  ret = hcom_nx_access_setup();
   if (ret < 0)
   {
-    syslog(LOG_CRIT, "%s@%d-setup hcom proxy access:%d\n", thisFile, __LINE__, ret);
+    syslog(LOG_CRIT, "%s@%d-setup hcom nx access:%d\n", thisFile, __LINE__, ret);
     // hcom_logging_syslog(LOG_CRIT, "%s@%d-setup hcom utils:%d\n", thisFile, __LINE__, ret);
     return ret;
   }
@@ -194,7 +194,7 @@ int hcom_main(int argc, char *argv[])
     return ret;
   }
 
-// p-m This define is in .config but not used within hcom_proxy where it should be used
+// p-m This define is in .config but not used within hcom_nx where it should be used
 #if defined(CONFIG_HCOM_FILESYSTEM_INIT)
   // This will format the file system as needed. This will prevent the nuttx OS from
   // starting which includes mono. Therefore, mono cannot start until the file system

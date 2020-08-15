@@ -41,7 +41,7 @@
 #include <meadow/hcom_bbreg_defn.h>
 
 /*******************************************************************
-* TESTS OF REGISTER ACCESS VIA THE PROXY
+* TESTS OF REGISTER ACCESS VIA THE NUTTX SIDE
  *******************************************************************/
 #if HCOM_INCLUDE_TESTS_BBR_IN_STARTUP > 0
 

@@ -67,6 +67,8 @@ void hcom_misc_rqst_get_device_info(uint32_t userData)
 {
   char *csvDevInfo;
   int stringLen;
+  // 96 bit unique chip id as 12 bytes
+  uint8_t uniqueId[12];
 
   csvDevInfo = malloc(HCOM_MAX_HOST_STRING_BUFF_LENGTH);
   if(csvDevInfo == NULL)
@@ -83,10 +85,8 @@ void hcom_misc_rqst_get_device_info(uint32_t userData)
     return;
   }
 
-  // 96 bit unique chip id as 12 bytes
-  uint8_t uniqueId[12];
-  //stm32_get_uniqueid(uniqueId);
-  int ret = hcom_proxy_get_mcu_id(uniqueId);
+  // nuttx access
+  int ret = hcom_nx_get_mcu_id(uniqueId);
   if(ret < 0)
   {
     hcom_logging_syslog(LOG_NOTICE, "Get device info error\n");
@@ -96,15 +96,17 @@ void hcom_misc_rqst_get_device_info(uint32_t userData)
   snprintf(strChipId, 128, "%02x-%02x-%02x-%02x-%02x-%02x-%02x-%02x-%02x-%02x-%02x-%02x", 
     uniqueId[0], uniqueId[1], uniqueId[2], uniqueId[3], uniqueId[4], uniqueId[5],
     uniqueId[6], uniqueId[7], uniqueId[8], uniqueId[9], uniqueId[10], uniqueId[11]);
-
+  
+  // Convert chip Id to serial number
   uint8_t serialNumb[6];
-  serialNumb[0] = uniqueId[11];                 // 95-88
-  serialNumb[1] = uniqueId[10] + uniqueId[2];   // 87-80 + 23-16
-  serialNumb[2] = uniqueId[9];                  // 79-72
-  serialNumb[3] = uniqueId[8] + uniqueId[0] + 10;    // 71-64 + 7-0 + magic 10
-  serialNumb[4] = uniqueId[7];                  // 63-56 
-  serialNumb[5] = uniqueId[6];                  // 55-48
+  serialNumb[0] = uniqueId[11];                     // 95-88
+  serialNumb[1] = uniqueId[10] + uniqueId[2];       // 87-80 + 23-16
+  serialNumb[2] = uniqueId[9];                      // 79-72
+  serialNumb[3] = uniqueId[8] + uniqueId[0] + 10;   // 71-64 + 7-0 + magic 10
+  serialNumb[4] = uniqueId[7];                      // 63-56 
+  serialNumb[5] = uniqueId[6];                      // 55-48
 
+  // Convert serial number elements to string
   char strChipSN1[128];
   snprintf(strChipSN1, 128, "%02X%02X%02X%02X%02X%02X", 
   serialNumb[0], serialNumb[1], serialNumb[2], serialNumb[3], serialNumb[4], serialNumb[5]);

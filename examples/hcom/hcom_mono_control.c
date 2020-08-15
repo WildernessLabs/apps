@@ -78,8 +78,6 @@ int hcom_mono_ctrl_start_mono_main()
 {
   int mono_pid;
 
-  syslog(1, "-->Entered  mono main startup function\n"); usleep(50 * 1000);
-
   // Don't start if there's a reason
   if(!hcom_mono_ctrl_should_mono_run())
   {
@@ -135,7 +133,7 @@ bool hcom_mono_ctrl_should_mono_run()
             noStartReason, thisFile, __LINE__);
     return false;
   }
-    
+
   // Does app.exe exist?
   if(!hcom_mono_ctrl_is_app_exe_available())
   {
@@ -170,7 +168,7 @@ bool hcom_mono_ctrl_did_mono_run_last_time()
   {
     // It should not be set unless mono locked up
     hcom_bb_reg_acc_clear_bbr_bits(HCOM_BBREG_MONO_LAST_RUN_LOCKUP_BIT);
-    
+
     return false;
   }
 
@@ -194,7 +192,7 @@ bool hcom_mono_ctrl_is_app_exe_available()
       app_path);
     return false;
   }
-  
+
   close(fd);
   return true;
 }
@@ -227,7 +225,7 @@ void hcom_mono_rqst_disable_mono(uint32_t userData)
           sendMsgToHost, thisFile, __LINE__);
 
   usleep(500 * 1000);
-  hcom_proxy_restart_meadow();
+  hcom_nx_restart_meadow();
 }
 
 //=======================================================================================
@@ -249,7 +247,7 @@ void hcom_mono_rqst_enable_mono(uint32_t userData)
           sendMsgToHost, thisFile, __LINE__);
 
   usleep(500 * 1000);
-  hcom_proxy_restart_meadow();
+  hcom_nx_restart_meadow();
 }
 
 //======================================================================================
