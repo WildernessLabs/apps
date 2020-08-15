@@ -421,10 +421,18 @@ extern "C"
 //-------------------------------------------------------
 // Diagnostic
 // When 0, removes some special diagnostic code
-#define HCOM_INCLUDE_TESTS_BBR_IN_STARTUP 0
+#define HCOM_INCLUDE_TESTS_BBR_IN_STARTUP 1
+#define HCOM_MONO_DEBUGGING_TEST_CODE 1
 
 #if HCOM_INCLUDE_TESTS_BBR_IN_STARTUP > 0
 void hcom_bbr_tests(void);
+#endif
+
+#if HCOM_MONO_DEBUGGING_TEST_CODE > 1
+int MonoVsRemoteDebugTests(uint32_t userData);
+int MonoDebugTestConnect(void);
+int MonoDebugTestSend(uint8_t *sendBuffer, int sendSize);
+int MonoDebugTestReceive(uint8_t *recvBuffer);
 #endif
 
 #define HCOM_SPECIAL_DEBUG 0

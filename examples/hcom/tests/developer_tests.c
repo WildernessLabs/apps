@@ -197,7 +197,10 @@ void hcom_developer_tests_developer_2(uint32_t userData)
 //==============================================================
 void hcom_developer_tests_developer_3(uint32_t userData)
 {
-
+  if(userData == 0)
+    hcom_bbr_tests();
+  else
+    MonoVsRemoteDebugTests(userData);  
 }
 
 //==============================================================

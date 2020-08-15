@@ -49,9 +49,7 @@ STACKSIZE = $(CONFIG_EXAMPLES_HCOM_STACKSIZE)
 
 HCOM_DIR = ../../../hcom/
 ASRCS =
-HCOM_SRCS = hcom_mono_control.c \
-	hcom_stdout_redirect.c \
-	comms/hcom_host_encode.c \
+HCOM_SRCS = comms/hcom_host_encode.c \
 	comms/hcom_host_parse.c \
 	comms/hcom_host_receive.c \
 	comms/hcom_host_route.c \
@@ -61,14 +59,18 @@ HCOM_SRCS = hcom_mono_control.c \
 	file_access/hcom_dnld_process_file.c \
 	file_access/hcom_dnld_write_delete.c \
 	file_access/hcom_list_files.c \
-	hcom_test/hcom_bbr_tests.c \
-	hcom_test/hcom_developer_tests.c \
+	mono_if/hcom_mono_control.c \
+	mono_if/hcom_stdout_redirect.c \
+	mono_if/hcom_mono_control.c \
 	nuttx_rqsts/hcom_bbreg_access.c \
 	nuttx_rqsts/hcom_misc_requests.c \
 	nuttx_rqsts/hcom_nx_access.c \
 	misc/hcom_circular_buffer.c \
 	misc/hcom_common_utils.c \
-	misc/hcom_logging_utils.c
+	misc/hcom_logging_utils.c \
+	tests/bbreg_tests.c \
+	tests/developer_tests.c \
+	tests/vs_debug_tests.c
 
 ifeq ($(CONFIG_HCOM_ESP32_COMMS),y)
  HCOM_SRCS += esp32/hcom_esp32_execute.c \

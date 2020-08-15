@@ -40,7 +40,7 @@
  * Included Files
  ****************************************************************************/
 
-#include "hcom_common.h"
+#include "../hcom_common.h"
 #include <meadow/hcom_protocol.h>
 
 #include <sys/stat.h>

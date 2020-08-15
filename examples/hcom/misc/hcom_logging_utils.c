@@ -83,7 +83,7 @@ int hcom_logging_utils_get_syslog_mask()
 }
 
 //============================================================
-// This function gets the syslog mast set by hcom_nx
+// This function gets the syslog mask set by hcom_nx
 int hcom_logging_syslog_mask_init()
 {
   bool isPowerOnRestart;

@@ -111,10 +111,6 @@ int hcom_main(int argc, char *argv[])
     return ret;
   }
 
-#if HCOM_INCLUDE_TESTS_BBR_IN_STARTUP > 0
-  hcom_bbr_tests();
-#endif
-
 #if defined(CONFIG_STM32F7_PWR)
   // Restore desired syslog mask from battery backed registers
   ret = hcom_logging_syslog_mask_init();
