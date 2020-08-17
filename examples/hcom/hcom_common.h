@@ -353,10 +353,10 @@ extern "C"
   int hcom_mono_pipe_setup(void);
   void hcom_mono_pipe_shutdown(void);
 
-//   // mono Visual Studio interactions
-//   int hcom_remote_dbg_setup(void);
-//   void hcom_remote_dbg_shutdown(void);
-//   void hcom_remote_dbg_recv_host_send_to_mono(const uint8_t *recvPayload, size_t recvPayloadSize, uint32_t userData);
+  // mono Visual Studio interactions
+  int hcom_remote_dbg_setup(void);
+  void hcom_remote_dbg_shutdown(void);
+  void hcom_remote_dbg_recv_host_send_to_mono(const uint8_t *recvPayload, size_t recvPayloadSize, uint32_t userData);
 
   // Common Utils and persistent (battery backed) storage functions
   int hcom_common_utils_setup(void);

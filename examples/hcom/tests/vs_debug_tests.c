@@ -33,25 +33,47 @@
  *
  ****************************************************************************/
 
+// This test code is intended to represent mono interacting via a UNIX socket
+// with hcom. This is a simple echo server that can exercise the hcom code
+// that will eventually be the intermediate between mono and the host.
+
+/****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
+#define HCOM_MONO_DEBUGGING_TEST_CODE 1
+#define MONO_DEBUG_TEST_RECV_BUFF_SIZE 500
+
 /****************************************************************************
  * Included Files
  ****************************************************************************/
 
 #include "../hcom_common.h"
 
-/****************************************************************************
- * Pre-processor Definitions
- ****************************************************************************/
+#if HCOM_MONO_DEBUGGING_TEST_CODE > 0
+// For network testing
+#include <sys/socket.h>
+#include <sys/un.h>
+#endif
 
 /* Configuration ************************************************************/
 /****************************************************************************
  * Private Data
  ****************************************************************************/
-// static char *thisFile = __FILE__;
+
+#if HCOM_MONO_DEBUGGING_TEST_CODE > 0
+static int _sockfd = -1;
+static bool _connected = false;
+#endif
 
 /****************************************************************************
  * Private Function Prototypes
  ****************************************************************************/
+
+static int MonoDebugTestExecute(void);
+static int MonoDebugTestConnect(void);
+static int MonoDebugTestSend(uint8_t *sendBuffer, int sendSize);
+static int MonoDebugTestReceive(uint8_t *recvBuffer);
 
 /****************************************************************************
  * Public Functions
@@ -60,13 +82,85 @@
 // to do.
 int MonoVsRemoteDebugTests(uint32_t userData)
 {
+#if HCOM_MONO_DEBUGGING_TEST_CODE > 0
+  switch(userData)
+  {
+    case 1:
+      return MonoDebugTestExecute();
+      break;
+
+  }
+#endif
   return OK;
 }
 
-#if HCOM_MONO_DEBUGGING_TEST_CODE > 1
-int 
+#if HCOM_MONO_DEBUGGING_TEST_CODE > 0
+//---------------------------------------------------
+// Receives and echos back to host n times
+int MonoDebugTestExecute()
+{
+  int ret;
+  FAR uint8_t *inbuf;
+  FAR uint8_t *outbuf;
+
+  outbuf = (uint8_t*)malloc(MONO_DEBUG_TEST_RECV_BUFF_SIZE);
+  if (outbuf == NULL)
+  {
+    syslog(0, "M->client:failed to allocate outbuf %d long must exit\n", MONO_DEBUG_TEST_RECV_BUFF_SIZE);
+    return -1;
+  }
+
+  inbuf  = (uint8_t*)malloc(MONO_DEBUG_TEST_RECV_BUFF_SIZE);
+  if (inbuf == NULL)
+  {
+    syslog(0, "M->client:failed to allocate inbuf %d long must exit\n", MONO_DEBUG_TEST_RECV_BUFF_SIZE);
+    return -1;
+  }
+
+  syslog(0, "M->client: inbuf and outbuf allocated\n");
+  
+  int xmitCount = 0;
+
+  while(true)
+  {
+    ret = MonoDebugTestConnect();
+    if(ret < 0)
+    {
+      syslog(0, "M->client:Connection could not be made\n");
+      return -1;
+    }
+    
+    // Loop forever
+    do
+    {
+      xmitCount++;
+
+      // Blocking call
+      ret = MonoDebugTestReceive(inbuf);
+      if(ret < 0)
+      {
+        syslog(0, "M->client:Receive failed\n");
+        continue;
+      }
+
+      // This is an echo client so we send whatever we receive
+      // Send
+      ret = MonoDebugTestSend(inbuf, ret);
+      if(ret < 0)
+      {
+        syslog(0, "M->client:Send failed\n");
+      }
+    } while(xmitCount % 5 != 0);
+    
+    syslog(0, "M->client:Closing socket. Will reconnect %d.\n", xmitCount);
+    close(_sockfd);
+  }
+
+  exit(1);
+}
+
 //====================================================
-// Called mono_main
+// 
 int MonoDebugTestConnect()
 {
   struct sockaddr_un myaddr;
@@ -169,67 +263,4 @@ errout_with_socket:
   return -1;
 }
 
-//---------------------------------------------------
-// Receives and echos back to host
-static int MonoDebugTestExecute(void)
-{
-  int ret;
-  FAR uint8_t *inbuf;
-  FAR uint8_t *outbuf;
-
-  outbuf = (uint8_t*)malloc(MONO_DEBUG_TEST_RECV_BUFF_SIZE);
-  if (outbuf == NULL)
-  {
-    syslog(0, "M->client:failed to allocate outbuf %d long must exit\n", MONO_DEBUG_TEST_RECV_BUFF_SIZE);
-    exit(1);
-  }
-
-  inbuf  = (uint8_t*)malloc(MONO_DEBUG_TEST_RECV_BUFF_SIZE);
-  if (inbuf == NULL)
-  {
-    syslog(0, "M->client:failed to allocate inbuf %d long must exit\n", MONO_DEBUG_TEST_RECV_BUFF_SIZE);
-    exit(1);
-  }
-
-  syslog(0, "M->client: inbuf and outbuf allocated\n");
-  
-  int xmitCount = 0;
-
-  while(true)
-  {
-    ret = MonoDebugTestConnect();
-    if(ret < 0)
-    {
-      syslog(0, "M->client:Connection could not be made\n");
-      return -1;
-    }
-    
-    // Loop forever
-    do
-    {
-      xmitCount++;
-
-      // Blocking call
-      ret = MonoDebugTestReceive(inbuf);
-      if(ret < 0)
-      {
-        syslog(0, "M->client:Receive failed\n");
-        continue;
-      }
-
-      // This is an echo client so we set whatever we receive
-      // Send
-      ret = MonoDebugTestSend(inbuf, ret);
-      if(ret < 0)
-      {
-        syslog(0, "M->client:Send failed\n");
-      }
-    } while(xmitCount % 5 != 0);
-    
-    syslog(0, "M->client:Closing socket. Will reconnect %d.\n", xmitCount);
-    close(_sockfd);
-  }
-
-  exit(1);
-}
 #endif

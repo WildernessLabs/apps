@@ -61,7 +61,7 @@ HCOM_SRCS = comms/hcom_host_encode.c \
 	file_access/hcom_list_files.c \
 	mono_if/hcom_mono_control.c \
 	mono_if/hcom_stdout_redirect.c \
-	mono_if/hcom_mono_control.c \
+	mono_if/hcom_remote_vs_debug.c \
 	nuttx_rqsts/hcom_bbreg_access.c \
 	nuttx_rqsts/hcom_misc_requests.c \
 	nuttx_rqsts/hcom_nx_access.c \

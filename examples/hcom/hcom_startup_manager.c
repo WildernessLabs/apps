@@ -214,15 +214,13 @@ int hcom_main(int argc, char *argv[])
   }
 #endif
 
-// #if defined(CONFIG_HCOM_MONO_DEBUG_PIPE)
-//   // Creates a unix domain socket and creates a receiving thread.
-//   ret = hcom_remote_dbg_setup();
-//   if (ret < 0)
-//   {
-//     hcom_logging_syslog(LOG_CRIT, "%s@%d-setup remote dbg %d\n", thisFile, __LINE__, ret);
-//     return ret;
-//   }
-// #endif
+  // Creates a unix domain socket and creates a receiving thread.
+  ret = hcom_remote_dbg_setup();
+  if (ret < 0)
+  {
+    hcom_logging_syslog(LOG_CRIT, "%s@%d-setup remote dbg %d\n", thisFile, __LINE__, ret);
+    return ret;
+  }
 
 #if defined (CONFIG_HCOM_ESP32_COMMS)
   ret = hcom_esp32_uart_comms_setup();
