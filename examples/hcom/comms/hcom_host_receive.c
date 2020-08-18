@@ -161,7 +161,7 @@ int hcom_host_recv_receiving_loop()
 }
 
 //=======================================================================
-// When Meadow is restarted by some CLI command we need to send the
+// When Meadow is restarted by some of the CLI commands we need to send the
 // "Concluded" message type
 int hcom_host_recv_restart_concluded()
 {

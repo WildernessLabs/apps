@@ -262,7 +262,7 @@ void hcom_manager_shutdown()
   hcom_host_parse_shutdown();
   hcom_host_send_shutdown();
   hcom_dnld_write_del_shutdown();
-//   hcom_remote_dbg_shutdown();
+  hcom_remote_dbg_shutdown();
 #if defined (CONFIG_HCOM_ESP32_COMMS)
   hcom_esp32_uart_comms_shutdown();
 #endif

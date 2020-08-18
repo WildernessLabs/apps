@@ -356,7 +356,7 @@ extern "C"
   // mono Visual Studio interactions
   int hcom_remote_dbg_setup(void);
   void hcom_remote_dbg_shutdown(void);
-  void hcom_remote_dbg_recv_host_send_to_mono(const uint8_t *recvPayload, size_t recvPayloadSize, uint32_t userData);
+  void hcom_remote_dbg_recv_host_sending_to_mono(const uint8_t *recvPayload, size_t recvPayloadSize, uint32_t userData);
 
   // Common Utils and persistent (battery backed) storage functions
   int hcom_common_utils_setup(void);
@@ -421,20 +421,18 @@ extern "C"
 //-------------------------------------------------------
 // Diagnostic
 // When 0, removes some special diagnostic code
-#define HCOM_INCLUDE_TESTS_BBR_IN_STARTUP 1
-#define HCOM_MONO_DEBUGGING_TEST_CODE 1
+#define HCOM_INCLUDE_BATTERY_BACKED_REG_TEST 1
+#define HCOM_INCLUDE_MONO_VS_DEBUG_TEST 1
 
-#if HCOM_INCLUDE_TESTS_BBR_IN_STARTUP > 0
+#if HCOM_INCLUDE_BATTERY_BACKED_REG_TEST > 0
 void hcom_bbr_tests(void);
 #endif
 
-#if HCOM_MONO_DEBUGGING_TEST_CODE > 1
+#if HCOM_INCLUDE_MONO_VS_DEBUG_TEST > 0
 int MonoVsRemoteDebugTests(uint32_t userData);
-int MonoDebugTestConnect(void);
-int MonoDebugTestSend(uint8_t *sendBuffer, int sendSize);
-int MonoDebugTestReceive(uint8_t *recvBuffer);
 #endif
 
+// p-m THESE NEEDS TO CHECKED IT MAY CONTROL DIFFERENT THINGS WHEN SET > 0
 #define HCOM_SPECIAL_DEBUG 0
 #define HCOM_COMMON_UTILS_DIAG_PRINT_BUFFER   1
 

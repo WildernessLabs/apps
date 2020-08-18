@@ -41,9 +41,9 @@
 #include <meadow/hcom_bbreg_defn.h>
 
 /*******************************************************************
-* TESTS OF REGISTER ACCESS ONJ THE NUTTX SIDE
+* TESTS OF REGISTER ACCESS ON THE NUTTX SIDE
  *******************************************************************/
-#if HCOM_INCLUDE_TESTS_BBR_IN_STARTUP > 0
+#if HCOM_INCLUDE_BATTERY_BACKED_REG_TEST > 0
 
 // Called from one of the Developer CLI commands
 void hcom_bbr_tests()

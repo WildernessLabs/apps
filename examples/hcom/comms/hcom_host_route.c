@@ -112,6 +112,9 @@ void hcom_host_route_request_by_type(const uint8_t *recvOrigData, const size_t r
   const uint8_t *recvPayload = recvOrigData + msgOffset;
   const size_t recvPayloadSize = recvOrigDataSize - msgOffset;
 
+  // syslog(1, "-->Received %d non-header bytes, Request Type:0x%04x route\n",
+  //           recvPayloadSize, requestType);
+
   switch (requestType)
   {
     case HCOM_MDOW_REQUEST_START_FILE_TRANSFER:
@@ -259,9 +262,9 @@ void hcom_host_route_request_by_type(const uint8_t *recvOrigData, const size_t r
       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
       break;
 
-    case HCOM_HOST_REQUEST_MONO_DEBUGGER_MSG:
-      // Accepted and concluded not needed here!
-//       hcom_remote_dbg_recv_host_send_to_mono(recvPayload, recvPayloadSize, userData);
+    case HCOM_MDOW_REQUEST_DEBUGGER_MSG:
+      // Accepted and concluded not needed here! This is not user facing message
+      hcom_remote_dbg_recv_host_sending_to_mono(recvPayload, recvPayloadSize, userData);
       break;
 
     case HCOM_MDOW_REQUEST_ENABLE_DISABLE_NSH:
