@@ -38,7 +38,7 @@
  ****************************************************************************/
 
 #include "../hcom_common.h"
-#include <meadow/hcom_nx_shared.h>
+#include <meadow/hcom_udp_shared.h>
 
 /****************************************************************************
  * Pre-processor Definitions

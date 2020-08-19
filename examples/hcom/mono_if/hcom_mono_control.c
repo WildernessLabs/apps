@@ -40,6 +40,7 @@
 #include "../hcom_common.h"
 #include <meadow/hcom_protocol.h>
 #include <meadow/hcom_bbreg_defn.h>
+#include <meadow/hcom_shared_common.h>
 
 #define HCOM_MONO_RUNTIME_TASK_STACKSIZE 32768
 
@@ -67,7 +68,8 @@ static char *thisFile = __FILE__;
 /****************************************************************************
  * Private Function Prototypes
  ****************************************************************************/
-bool hcom_mono_ctrl_is_app_exe_available(void);
+
+bool hcom_mono_ctrl_are_needed_files_here(void);
 bool hcom_mono_ctrl_should_mono_run(void);
 bool hcom_mono_ctrl_did_mono_run_last_time(void);
 
@@ -134,13 +136,9 @@ bool hcom_mono_ctrl_should_mono_run()
     return false;
   }
 
-  // Does app.exe exist?
-  if(!hcom_mono_ctrl_is_app_exe_available())
+  // Are the necessary files in place?
+  if(!hcom_mono_ctrl_are_needed_files_here())
   {
-    char *noStartReason = "MONO won't start, no App.exe could be found";
-    hcom_logging_syslog(LOG_WARNING, "%s\n", noStartReason);
-    hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0,
-            noStartReason, thisFile, __LINE__);
     return false;
   }
 
@@ -176,25 +174,60 @@ bool hcom_mono_ctrl_did_mono_run_last_time()
 }
 
 //===================================================================
-// Check of the file App.exe exists in the files system
-bool hcom_mono_ctrl_is_app_exe_available()
+// Check if the necessary files exist in the files system
+bool hcom_mono_ctrl_are_needed_files_here()
 {
-  // p-m need a common place to define these for here and mono_main
-#ifdef CONFIG_MTD_PARTITION
-  const char app_path[] = "/meadow0/App.exe";
-#else
-  const char app_path[] = "/meadow/App.exe";
-#endif
+  int i = 0;
+  char missingFiles[128];
+  int offset = 0;
+  char *neededApps[] = 
+  {
+    "mscorlib.dll",
+    "System.Core.dll",
+    "System.dll",
+    "Meadow.dll",
+    // "Meadow.Foundation.dll", don't think this is required
+    "App.exe",
+    NULL
+  };
 
-  int fd = open(app_path, O_RDONLY);
-  if (fd == -1) {
-    syslog(LOG_ERR, "Mono-managed app was not found in %s, skipping Mono initialization...\n",
-      app_path);
-    return false;
+  memset(missingFiles, 0, 128);
+
+  while(neededApps[i] != NULL)
+  {
+    char appPath[64];
+    snprintf(appPath, 64, "%s/%s", MONO_MEADOW_EXECUTABLE_PARTITION_NAME, neededApps[i]);
+
+    int fd = open(appPath, O_RDONLY);
+    if (fd == -1)
+    {
+      if(offset > 0)
+      {
+        missingFiles[offset++] = ',';
+        missingFiles[offset++] = ' ';
+      }
+
+      strcpy(missingFiles + offset, neededApps[i]);
+      offset += strlen(neededApps[i]);
+    }
+    else
+    {
+      close(fd);
+    }
+    i++;
   }
+  
+  if(offset == 0)
+    return true;
 
-  close(fd);
-  return true;
+  // Some file(s) is missing
+  char errReason[64];
+  snprintf(errReason, 64, "MONO won't start, the following files missing: %s", missingFiles);
+  hcom_logging_syslog(LOG_WARNING, "%s\n", errReason);
+  hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0,
+        errReason, thisFile, __LINE__);
+  
+  return false;
 }
 
 //===================================================================

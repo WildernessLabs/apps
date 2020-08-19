@@ -227,7 +227,7 @@ int hcom_host_parse_process_packet(const uint8_t *packet, const size_t packetSiz
   {
     // A non-data packet i.e. command (sequence number == 0)
     hcom_logging_syslog(LOG_DEBUG, "%s@%d-Non-data seq:%d, len:%d\n", thisFile, __LINE__, seqNumb, packetSize); 
-#if HCOM_SPECIAL_DEBUG > 0
+#if HCOM_SYSLOG_DATA_BUFFER_CONTENTS > 0
     hcom_diag_misc_print_buffer(packet, packetSize, LOG_DEBUG);
 #endif
     hcom_host_route_request_by_type(packet + msgOffset, packetSize - msgOffset);

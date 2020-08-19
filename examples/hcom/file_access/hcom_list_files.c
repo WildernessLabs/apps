@@ -40,6 +40,7 @@
 
 #include "../hcom_common.h"
 #include <meadow/hcom_protocol.h>
+#include <meadow/hcom_shared_common.h>
 
 #include <nuttx/config.h>
 //#include <fcntl.h>

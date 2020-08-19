@@ -43,7 +43,8 @@
 
 #include "../hcom_common.h"
 #include <meadow/hcom_protocol.h>
-#include <meadow/hcom_nx_shared.h>
+#include <meadow/hcom_udp_shared.h>
+#include <meadow/hcom_shared_common.h>
 #include <meadow/hcom_bbreg_defn.h>
 
 /****************************************************************************

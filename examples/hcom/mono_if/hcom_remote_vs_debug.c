@@ -69,6 +69,7 @@ static char *thisFile = __FILE__;
 
 static bool _shutting_down;
 static int _transmit_sd;
+static bool _hcom_remote_dbg_running;
 
 struct remote_dbg_session
 {
@@ -95,11 +96,21 @@ static int hcom_remote_dbg_read_mono_send_to_host_loop(struct remote_dbg_session
  ****************************************************************************/
 
 int hcom_remote_dbg_setup()
-{  
-  int ret;
-
+{
   _shutting_down = false;
   _transmit_sd = -1;
+  _hcom_remote_dbg_running = false;
+  
+  return OK;
+}
+
+//=======================================================================
+int hcom_remote_dbg_lazy_startup(void)
+{
+  int ret;
+
+  if(_hcom_remote_dbg_running)
+    return OK;
 
   // Create a thread to read and forward the debug data
   ret = hcom_remote_dbg_create_thread();
@@ -107,9 +118,10 @@ int hcom_remote_dbg_setup()
   {
     hcom_logging_syslog(LOG_ERR, "%s@%d-%s thread create, errno:%d\n",
       thisFile, __LINE__, HCOM_REMOTE_DBG_SOCKET_NAME, errno);
-    return -1;
+    return ret;
   }
-  
+
+  _hcom_remote_dbg_running = true;
   return OK;
 }
 
@@ -347,11 +359,11 @@ int hcom_remote_dbg_read_mono_send_to_host_loop(struct remote_dbg_session *dbgSo
     // syslog(1, "VSD->Server:Forwarding %d bytes to host PC for VS\n", nBytesRead);
 
     hcom_logging_syslog(LOG_DEBUG, "Forwarding %d bytes to host PC for VS\n", nBytesRead);
-#if HCOM_SPECIAL_DEBUG > 0
+#if HCOM_SYSLOG_DATA_BUFFER_CONTENTS > 0
     hcom_utils_diag_print_buffer(recvBuffer, nBytesRead, LOG_DEBUG);
 #endif
 
-    // Forward data as-is to host
+    // Forward data as-is to CLI to forward to VS
     ret = hcom_host_send_raw_string_msg(HCOM_HOST_REQUEST_MONO_DEBUGGER_MSG, 0, (char *)recvBuffer, nBytesRead,
             thisFile, __LINE__);
   }
@@ -360,14 +372,14 @@ int hcom_remote_dbg_read_mono_send_to_host_loop(struct remote_dbg_session *dbgSo
 }
 
 //==========================================================================
-// This call orginates with the host PC / Visual Studio debugging. HCOM
-// routes it here via CLI.
-// This function forwards VS data to mono.
+// This call is the result of a CLI command --VSDebug plus --VSDebugPort 4024.
+// This information is sent directly to mono to initiates host PC / Visual Studio debugging.
 void hcom_remote_dbg_recv_host_sending_to_mono(const uint8_t *recvPayload,
         size_t recvPayloadSize, uint32_t userData)
-{
-  // syslog(1, "VSD->%s@%d-Received debugging message for mono\n", thisFile, __LINE__);
-  
+{  
+  // If not already created, creates a thread to run debugging
+  hcom_remote_dbg_lazy_startup();
+
   if(_transmit_sd < 1)
   {
     hcom_logging_syslog(LOG_ERR, "%s@%d-message from host but no transmit_sd\n",
@@ -384,7 +396,7 @@ void hcom_remote_dbg_recv_host_sending_to_mono(const uint8_t *recvPayload,
 
   hcom_logging_syslog(LOG_DEBUG, "server: Received %d bytes from VS. forwarded to Mono.\n",
           recvPayloadSize); usleep(50 * 1000);
-#if HCOM_SPECIAL_DEBUG > 0
+#if HCOM_SYSLOG_DATA_BUFFER_CONTENTS > 0
   hcom_utils_diag_print_buffer(recvPayload, recvPayloadSize, LOG_DEBUG);
 #endif
 }

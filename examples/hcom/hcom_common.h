@@ -65,18 +65,6 @@
 #include <nuttx/mtd/mtd.h>
 #include <nuttx/userspace.h>
 
-#ifndef OK
-  #define OK 0
-#endif
-
-#ifndef MIN
-#  define MIN(a,b) (((a) < (b)) ? (a) : (b))
-#endif
-
-#ifndef MAX
-#  define MAX(a,b) (((a) > (b)) ? (a) : (b))
-#endif
-
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
@@ -135,26 +123,6 @@
 #define HCOM_TRACE_RAMLOG_DEVICE_NAME "/dev/ramlog"
 
 //---------------------------------------------------------------------
-#define HCOM_FLASH_FILE_PARTITION_COUNT_MAX 8
-
-#ifdef CONFIG_MTD_PARTITION
-#define HCOM_NUMBER_OF_FS_PARTITIONS 1    // Any number 2 - 8
-#else
-#define HCOM_NUMBER_OF_FS_PARTITIONS 1    // 1 if no partitions in use
-#endif
-
-#define HCOM_FS_MONO_RAW_PARTITION_SIZE 0x200000 // 2MB
-#define HCOM_FS_MONO_RUNTIME_FILENAME "Meadow.OS.Runtime.bin"
-
-// Partition Id may postpend an to /meadow (i.e /meadow0)
-#define HCOM_FILE_MOUNT_POINT_TARGET "/meadow"
-
-#ifdef CONFIG_FS_LITTLEFS
-#define HCOM_FILE_MOUNT_FILE_SYS_TYPE "littlefs"
-#define HCOM_FILE_MOUNT_POINT_SOURCE "/dev/little"
-#define HCOM_FILE_MOUNT_FORCE_FORMAT "forceformat"
-#endif
-
 #define HCOM_REMOTE_DBG_SOCKET_NAME "/dev/monodbg"
 
 // This defines the largest packet of data to be sent/received
@@ -421,6 +389,9 @@ extern "C"
 //-------------------------------------------------------
 // Diagnostic
 // When 0, removes some special diagnostic code
+#define HCOM_ESP32_PROCESS_CR_LF_ENDLESS_TEXT 0
+#define HCOM_SYSLOG_DATA_BUFFER_CONTENTS 0
+#define HCOM_COMMON_UTILS_DIAG_PRINT_BUFFER   1
 #define HCOM_INCLUDE_BATTERY_BACKED_REG_TEST 1
 #define HCOM_INCLUDE_MONO_VS_DEBUG_TEST 1
 
@@ -431,10 +402,6 @@ void hcom_bbr_tests(void);
 #if HCOM_INCLUDE_MONO_VS_DEBUG_TEST > 0
 int MonoVsRemoteDebugTests(uint32_t userData);
 #endif
-
-// p-m THESE NEEDS TO CHECKED IT MAY CONTROL DIFFERENT THINGS WHEN SET > 0
-#define HCOM_SPECIAL_DEBUG 0
-#define HCOM_COMMON_UTILS_DIAG_PRINT_BUFFER   1
 
 //------------------------------------------------
 #endif // __ASSEMBLY__

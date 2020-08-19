@@ -26,6 +26,8 @@
 
 #include "../../../mono/config.h"
 
+#include <meadow/hcom_shared_common.h>
+
 typedef struct {
   const char *name;
   void *addr;
@@ -83,15 +85,10 @@ int mono_main(int argc, char *argv[])
 
   boardctl(BIOC_EXIT_MEMMAP, 0);
 
-#ifdef CONFIG_MTD_PARTITION
-  const char app_path[] = "/meadow0/App.exe";
-#else
-  const char app_path[] = "/meadow/App.exe";
-#endif
-
   usleep(300 * 1000);
 
   int ret;
+  const char app_path[] = MONO_MEADOW_EXECUTABLE_APP_EXE;
   const char *mono_argv[] = {"mono", "--interp", app_path};
   const int mono_argc = sizeof(mono_argv) / sizeof(mono_argv[0]);
 
