@@ -56,15 +56,15 @@ HCOM_SRCS = comms/hcom_host_encode.c \
 	comms/hcom_host_send.c \
 	diag/hcom_diag_misc.c \
 	diag/hcom_diag_trace_processing.c \
-	file_access/hcom_dnld_process_file.c \
-	file_access/hcom_dnld_write_delete.c \
-	file_access/hcom_list_files.c \
-	mono_if/hcom_mono_control.c \
-	mono_if/hcom_stdout_redirect.c \
-	mono_if/hcom_remote_vs_debug.c \
-	nuttx_rqsts/hcom_bbreg_access.c \
-	nuttx_rqsts/hcom_misc_requests.c \
-	nuttx_rqsts/hcom_nx_access.c \
+	file/hcom_dnld_process_file.c \
+	file/hcom_dnld_write_delete.c \
+	file/hcom_list_files.c \
+	mono/hcom_mono_control.c \
+	mono/hcom_stdout_redirect.c \
+	mono/hcom_remote_vs_debug.c \
+	os_rqsts/hcom_bbreg_access.c \
+	os_rqsts/hcom_misc_requests.c \
+	os_rqsts/hcom_nx_access.c \
 	misc/hcom_circular_buffer.c \
 	misc/hcom_common_utils.c \
 	misc/hcom_logging_utils.c \

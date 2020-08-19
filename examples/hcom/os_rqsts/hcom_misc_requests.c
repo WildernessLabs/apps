@@ -80,8 +80,6 @@ void hcom_misc_rqst_get_device_info(uint32_t userData)
     DEBUGASSERT(stringLen < HCOM_SHORT_HOST_STRING_BUFF_LENGTH);
     hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_ERROR, 0,
             csvDevInfo, thisFile, __LINE__);
-
-    hcom_logging_syslog(LOG_NOTICE, "Get device info error\n");
     return;
   }
 
@@ -89,7 +87,7 @@ void hcom_misc_rqst_get_device_info(uint32_t userData)
   int ret = hcom_nx_get_mcu_id(uniqueId);
   if(ret < 0)
   {
-    hcom_logging_syslog(LOG_NOTICE, "Get device info error\n");
+    hcom_logging_syslog(LOG_NOTICE, "%s@%d-Get device info error:%d\n", thisFile, __LINE__, ret);
   }
 
   char strChipId[128];

@@ -104,11 +104,13 @@ int mono_main(int argc, char *argv[])
   mono_dl_register_library("System.Native", system_native_mappings);
   mono_dl_register_library("nuttx", meadow_mappings);
 
-  // Joao, this call needs to be somewhere within mono.
+  // Joao, this call may need to be somewhere within mono.
   // I put it here as a place holder.
+  //
   // Notify hcom that everything is running correctly
   hcom_mono_ctrl_clear_mono_is_running_flag();
-
+  syslog(1, "Entering mono_main_driver\n");
+  
   ret = mono_main_driver (mono_argc, mono_argv);
 
   return ret;

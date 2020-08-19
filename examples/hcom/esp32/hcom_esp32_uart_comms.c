@@ -190,7 +190,8 @@ int hcom_esp32_uart_lazy_initialization()
   esp32_read_buffer = malloc(HCOM_ESP32_FLASH_UART_READ_BUF_SIZE);
   if(esp32_read_buffer == NULL)
   {
-    hcom_logging_syslog(LOG_ERR, "%s@%d-mem alloc for esp read buffer. errno:%d\n", thisFile, __LINE__, errno);
+    hcom_logging_syslog(LOG_ERR, "%s@%d-mem alloc for esp read buffer. errno:%d\n",
+              thisFile, __LINE__, errno);
     _init_failed = -ENOMEM;
     return -ENOMEM;
   }
@@ -291,7 +292,7 @@ int hcom_esp32_uart_comms_make_thread()
     ret = pthread_create(&thread, &attr, hcom_esp32_uart_comms_pthread, NULL);
     if (ret < 0)
     {
-      hcom_logging_syslog(LOG_CRIT, "%s@%d-Failed to create thread. Error %s\n", thisFile, __LINE__, ret);
+      hcom_logging_syslog(LOG_CRIT, "%s@%d-Failed to create thread. Error:%d\n", thisFile, __LINE__, ret);
     }
     return ret;
 }
@@ -390,7 +391,7 @@ int hcom_esp32_uart_comms_write_serial(uint8_t* espWriteBuf, size_t espWriteSize
     if(remainingBytes == 0)
       return toWriteOffset;
 
-    hcom_logging_syslog(LOG_ERR, "%s@%d-ESP32 write errno %d\n", thisFile, __LINE__, errno);
+    hcom_logging_syslog(LOG_ERR, "%s@%d-ESP32 write errno:%d\n", thisFile, __LINE__, errno);
 
     return writeRet;
   }

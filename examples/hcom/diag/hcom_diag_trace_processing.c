@@ -221,7 +221,8 @@ int hcom_diag_ramlog_trace_make_thread()
 }
 
 //=================================================================
-// This thread receives all ramlog messages received from syslog
+// This thread reads all ramlog messages received via syslog from
+// the ramlog buffer
 FAR void *hcom_diag_ramlog_trace_pthread(FAR void *arg)
 {
   int ret;

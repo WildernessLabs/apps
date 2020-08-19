@@ -73,8 +73,8 @@ int hcom_nx_access_setup()
   _hcom_nx_fd = open(HCOM_NX_UPD_DRIVER_NAME, O_RDONLY);
   if(_hcom_nx_fd == -1)
   {
-    hcom_logging_syslog(LOG_ERR, "%s:%s()@%d-%s Failed to open, errno:%d\n",
-            thisFile, __func__, __LINE__, HCOM_NX_UPD_DRIVER_NAME, errno);
+    hcom_logging_syslog(LOG_ERR, "%s@%d-%s Failed to open, errno:%d\n",
+            thisFile, __LINE__, HCOM_NX_UPD_DRIVER_NAME, errno);
     return _hcom_nx_fd;
   }
 
@@ -94,8 +94,8 @@ int hcom_nx_set_bbr(uint32_t value)
   ret = ioctl(_hcom_nx_fd, HCOM_NX_UPD_SET_BBR_VALUE, (unsigned long)&bbr_value);
   if (ret < 0)
   {
-    hcom_logging_syslog(LOG_ERR, "%s:%s()@%d-%s Failed to set reg, errno:%d\n",
-            thisFile, __func__, __LINE__, HCOM_NX_UPD_DRIVER_NAME, errno);
+    hcom_logging_syslog(LOG_ERR, "%s)@%d-%s Failed to set reg, errno:%d\n",
+            thisFile, __LINE__, HCOM_NX_UPD_DRIVER_NAME, errno);
     return ret;
   }
   return OK;
@@ -110,8 +110,8 @@ int hcom_nx_get_bbr(uint32_t *value)
   ret = ioctl(_hcom_nx_fd, HCOM_NX_UPD_GET_BBR_VALUE, (unsigned long)&bbr_value);
   if (ret < 0)
   {
-    hcom_logging_syslog(LOG_ERR, "%s:%s()@%d-%s Failed to get reg, errno:%d\n",
-            thisFile, __func__, __LINE__, HCOM_NX_UPD_DRIVER_NAME, errno);
+    hcom_logging_syslog(LOG_ERR, "%s@%d-%s Failed to get reg, errno:%d\n",
+            thisFile, __LINE__, HCOM_NX_UPD_DRIVER_NAME, errno);
     return ret;
   }
 
@@ -131,8 +131,8 @@ int hcom_nx_update_bbr(uint32_t clearBits, uint32_t setBits)
   ret = ioctl(_hcom_nx_fd, HCOM_NX_UPD_UPDATE_BBR_VALUE, (unsigned long)&bbr_update);
   if (ret < 0)
   {
-    hcom_logging_syslog(LOG_ERR, "%s:%s()@%d-%s Failed to update reg, errno:%d\n",
-            thisFile, __func__, __LINE__, HCOM_NX_UPD_DRIVER_NAME, errno);
+    hcom_logging_syslog(LOG_ERR, "%s@%d-%s Failed to update reg, errno:%d\n",
+            thisFile, __LINE__, HCOM_NX_UPD_DRIVER_NAME, errno);
     return ret;
   }
   return OK;
@@ -147,8 +147,8 @@ int hcom_nx_get_mcu_id(uint8_t uniqueId[12])
   ret = ioctl(_hcom_nx_fd, HCOM_NX_UPD_GET_MCU_ID, (unsigned long)uniqueId);
   if (ret < 0)
   {
-    hcom_logging_syslog(LOG_ERR, "%s:%s()@%d-%s Failed to get mcu id, ret:%d, errno:%d\n",
-            thisFile, __func__, __LINE__, HCOM_NX_UPD_DRIVER_NAME, ret, errno);
+    hcom_logging_syslog(LOG_ERR, "%s@%d-%s Failed to get mcu id, ret:%d, errno:%d\n",
+            thisFile, __LINE__, HCOM_NX_UPD_DRIVER_NAME, ret, errno);
     return ret;
   }
 
@@ -167,8 +167,8 @@ bool hcom_nx_is_mounted(uint32_t partitionId)
   ret = ioctl(_hcom_nx_fd, HCOM_NX_UPD_IS_PART_MOUNTED, (unsigned long) &is_mounted);
   if (ret < 0)
   {
-    hcom_logging_syslog(LOG_ERR, "%s:%s()@%d-%s Failed nx mount, ret:%d, errno:%d\n",
-            thisFile, __func__, __LINE__, HCOM_NX_UPD_DRIVER_NAME, ret, errno);
+    hcom_logging_syslog(LOG_ERR, "%s@%d-%s Failed nx mount, ret:%d, errno:%d\n",
+            thisFile, __LINE__, HCOM_NX_UPD_DRIVER_NAME, ret, errno);
     return ret;
   }
 
@@ -196,8 +196,8 @@ int hcom_nx_gpio_config(int gpioDefn, uint8_t configValue)
   ret = ioctl(_hcom_nx_fd, HCOM_NX_UPD_GPIO_CONFIG, (unsigned long) &gpioConfig);
   if (ret < 0)
   {
-    hcom_logging_syslog(LOG_ERR, "%s:%s()@%d-%s Failed gpio config, ret:%d, errno:%d\n",
-            thisFile, __func__, __LINE__, HCOM_NX_UPD_DRIVER_NAME, ret, errno);
+    hcom_logging_syslog(LOG_ERR, "%s@%d-%s Failed gpio config, ret:%d, errno:%d\n",
+            thisFile, __LINE__, HCOM_NX_UPD_DRIVER_NAME, ret, errno);
     return ret;
   }
 
@@ -217,8 +217,8 @@ int hcom_nx_gpio_write(int gpioDefn, uint8_t cmdValue)
   ret = ioctl(_hcom_nx_fd, HCOM_NX_UPD_GPIO_COMMAND, (unsigned long) &gpioCommand);
   if (ret < 0)
   {
-    hcom_logging_syslog(LOG_ERR, "%s:%s()@%d-%s Failed gpio write, ret:%d, errno:%d\n",
-            thisFile, __func__, __LINE__, HCOM_NX_UPD_DRIVER_NAME, ret, errno);
+    hcom_logging_syslog(LOG_ERR, "%s@%d-%s Failed gpio write, ret:%d, errno:%d\n",
+            thisFile, __LINE__, HCOM_NX_UPD_DRIVER_NAME, ret, errno);
     return ret;
   }
 
@@ -247,6 +247,7 @@ void hcom_nx_forward_cmd_to_nx(uint16_t hcomCmd, uint32_t userData)
   ret = ioctl(_hcom_nx_fd, HCOM_NX_UPD_CLI_COMMAND, (unsigned long)&cmdData);
   if (ret < 0)
   {
+    // Call resulted in a log request
     if(cmdData.logLen > 0)
     {
       DEBUGASSERT(cmdData.logLevel != LOG_NONE);

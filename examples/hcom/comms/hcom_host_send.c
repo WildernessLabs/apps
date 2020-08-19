@@ -127,7 +127,7 @@ void hcom_host_send_header_msg(uint16_t requestType, uint32_t userData,
 }
 
 //=====================================================================
-// THIS IS THE FUNCTION THAT SHOULD BE USED
+// THIS IS THE FUNCTION THAT SHOULD BE USED FOR ALL SIMPLE TEXT MESSAGE
 // Prepare a simple line of text for transmission and output the error message here
 void hcom_host_send_simple_string_msg(uint16_t requestType, uint32_t userData,
            char *shortText, char *sourceFileName, int sourceLineNumber)
@@ -157,9 +157,10 @@ int hcom_host_send_raw_string_msg(uint16_t requestType, uint32_t userData, char 
 }
 
 //=====================================================================
-// This function is intended to be the sole entry point to messages
-// that needed to be sent to Meadow.CLI.
-// The following needs to efficiently handle both ramlog and syslog
+// This function is intended to be the sole and final entry point for
+// messages that needed to be sent to Meadow.CLI. Use one of the above
+// to access this function.
+// Requirements: needs to efficiently handle both ramlog and syslog
 // configurations in 3 situations: 1) actively communicating with the
 // CLI, 2) connected to host PC and CLI is not communicating and 3) 
 // Meadow is not connected to a host PC, this is the most usually
@@ -393,8 +394,8 @@ int hcom_host_send_transmit_to_host(FAR uint8_t xmitBuffer[], size_t xmitLength)
 
       // Set the flag - seems the host isn't connected or CLI not running
       _lastXmitBlocked = true;
-      hcom_logging_syslog_x(LOG_DEBUG, "%d USB write attempts (wrote %d, %d remain of %d bytes), message not sent\n",
-                    blockedCount, toWriteOffset, remainingBytes, encodedLength);
+      hcom_logging_syslog_x(LOG_DEBUG, "%s@%d-%d USB write attempts (wrote %d of %d bytes), message not sent\n",
+                thisFile, __LINE__, blockedCount, remainingBytes, encodedLength);
 
       // No reason to close fd. The caller can sort out what to do with partial data sent.
       return writeRet;

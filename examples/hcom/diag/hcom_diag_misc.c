@@ -103,14 +103,14 @@ void hcom_diag_misc_launch_nsh(uint32_t userData)
     if(_nsh_pid > 0)
     {
       _nsh_enabled = true;
-      syslog(1, "NSH now enabled [pid:%d, pri:%d, stack:%d]\n",
-              _nsh_pid, CONFIG_SYSTEM_NSH_PRIORITY, CONFIG_SYSTEM_NSH_STACKSIZE);
+      hcom_logging_syslog(LOG_INFO, "%s@%d-NSH now enabled [pid:%d, pri:%d, stack:%d]\n",
+              thisFile, __LINE__, _nsh_pid, CONFIG_SYSTEM_NSH_PRIORITY, CONFIG_SYSTEM_NSH_STACKSIZE);
       hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0,
               "NSH now enabled until Meadow restart", thisFile, __LINE__);
     }
     else
     {
-      syslog(1, "NSH could not be created\n");
+      hcom_logging_syslog(LOG_ERR, "%s@%d-NSH could not be created\n", thisFile, __LINE__);
       hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0,
               "NSH could not be created", thisFile, __LINE__);
     }
@@ -143,13 +143,15 @@ void hcom_diag_misc_print_buffer(const uint8_t buffer[], const int bufLen, uint8
 
   if(bufLen <= 0)
   {
-    hcom_logging_syslog(msgPriority, "hcom_diag_misc_print_buffer() called with 'bufLen:%d'\n", bufLen);
+    hcom_logging_syslog(msgPriority, "%s@%d-hcom_diag_misc_print_buffer() but 'bufLen:%d'\n",
+              thisFile, __LINE__, bufLen);
     return;
   }
 
   if(buffer == NULL)
   {
-    hcom_logging_syslog(msgPriority, "hcom_diag_misc_print_buffer() called with 'buffer == NULL'\n");
+    hcom_logging_syslog(msgPriority, "%s@%d-hcom_diag_misc_print_buffer() but 'buffer == NULL'\n",
+              thisFile, __LINE__);
     return;
   }
 

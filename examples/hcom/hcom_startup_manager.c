@@ -77,8 +77,8 @@ int hcom_main(int argc, char *argv[])
   ret = hcom_logging_utils_setup();
   if (ret < 0)
   {
+    // Revert to syslog as there may be problems with hcom_logging_syslog
     syslog(LOG_CRIT, "%s@%d-setup logging utils:%d\n", thisFile, __LINE__, ret);
-    // hcom_logging_syslog(LOG_CRIT, "%s@%d-setup hcom utils:%d\n", thisFile, __LINE__, ret);
     return ret;
   }
 
@@ -89,7 +89,7 @@ int hcom_main(int argc, char *argv[])
   ret = hcom_diag_ramlog_trace_setup();
   if (ret < 0)
   {
-    hcom_logging_syslog(LOG_CRIT, "%s@%d-setup log tracing %d\n", thisFile, __LINE__, ret);
+    syslog(LOG_CRIT, "%s@%d-setup log tracing %d\n", thisFile, __LINE__, ret);
     return ret;
   }
 #endif
@@ -98,7 +98,6 @@ int hcom_main(int argc, char *argv[])
   if (ret < 0)
   {
     syslog(LOG_CRIT, "%s@%d-setup hcom nx access:%d\n", thisFile, __LINE__, ret);
-    // hcom_logging_syslog(LOG_CRIT, "%s@%d-setup hcom utils:%d\n", thisFile, __LINE__, ret);
     return ret;
   }
 
@@ -107,12 +106,11 @@ int hcom_main(int argc, char *argv[])
   if (ret < 0)
   {
     syslog(LOG_CRIT, "%s@%d-setup hcom utils:%d\n", thisFile, __LINE__, ret);
-    // hcom_logging_syslog(LOG_CRIT, "%s@%d-setup hcom utils:%d\n", thisFile, __LINE__, ret);
     return ret;
   }
 
 #if defined(CONFIG_STM32F7_PWR)
-  // Restore desired syslog mask from battery backed registers
+  // Attempt to restore syslog mask from battery backed register
   ret = hcom_logging_syslog_mask_init();
   if(ret < 0)
   {
@@ -121,7 +119,7 @@ int hcom_main(int argc, char *argv[])
   }
 #endif
 
-  // Doesn't do anything
+  // Doesn't do anything special
   ret = hcom_diag_misc_setup();
   if (ret < 0)
   {
@@ -152,7 +150,7 @@ int hcom_main(int argc, char *argv[])
     return ret;
   }
 
-  // Allocates memory for the circular buffer
+  // Allocates memory for circular buffer
   ret = hcom_host_parse_setup();
   if (ret < 0)
   {

@@ -63,6 +63,7 @@ int mono_main(int argc, char *argv[]);
 /****************************************************************************
  * Private Data
  ****************************************************************************/
+
 static char *thisFile = __FILE__;
 
 /****************************************************************************
@@ -83,7 +84,8 @@ int hcom_mono_ctrl_start_mono_main()
   // Don't start if there's a reason
   if(!hcom_mono_ctrl_should_mono_run())
   {
-    syslog(1, "-->Sorry, won't be creating mono main task\n"); usleep(100 * 1000);
+    hcom_logging_syslog(LOG_INFO, "%s@%d-->Sorry, mono main will not be started\n",
+              thisFile, __LINE__);
     return OK;    // Reason has been reported already
   }
 
@@ -98,16 +100,17 @@ int hcom_mono_ctrl_start_mono_main()
                       (FAR char * const *) NULL);
   if(mono_pid > 0)
   {
-    hcom_logging_syslog(LOG_INFO, "MONO started [pid:%d, pri:%d, stack size:%d]\n",
-            mono_pid, HCOM_MONO_RUNTIME_TASK_PRIORITY, HCOM_MONO_RUNTIME_TASK_STACKSIZE);
+    hcom_logging_syslog(LOG_INFO, "%s@%d-MONO started [pid:%d, pri:%d, stack size:%d]\n",
+            thisFile, __LINE__, mono_pid, HCOM_MONO_RUNTIME_TASK_PRIORITY,
+            HCOM_MONO_RUNTIME_TASK_STACKSIZE);
     hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0,
             "MONO started", thisFile, __LINE__);
   }
   else
   {
-    hcom_logging_syslog(LOG_ERR, "The mono task to run mono could not be created\n");
+    hcom_logging_syslog(LOG_ERR, "%s@%d-The task to run mono failed in create\n", thisFile, __LINE__);
     hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0,
-            "Mono could not be started", thisFile, __LINE__);
+            "Mono task could not be created", thisFile, __LINE__);
     return -1;
   }
 
@@ -119,7 +122,6 @@ int hcom_mono_ctrl_start_mono_main()
 void hcom_mono_ctrl_clear_mono_is_running_flag()
 {
   hcom_bb_reg_acc_clear_bbr_bits(HCOM_BBREG_MONO_LAST_RUN_LOCKUP_BIT);
-  syslog(1, "mono cleared run flag\n"); usleep(50 * 1000);
 }
 
 //====================================================================
@@ -130,7 +132,7 @@ bool hcom_mono_ctrl_should_mono_run()
   if(!hcom_mono_ctrl_is_mono_enabled())
   {
     char *noStartReason = "MONO won't start, it's not enabled";
-    hcom_logging_syslog(LOG_WARNING, "%s\n", noStartReason);
+    hcom_logging_syslog(LOG_WARNING, "%s@%d-%s\n", thisFile, __LINE__, noStartReason);
     hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0,
             noStartReason, thisFile, __LINE__);
     return false;
@@ -146,7 +148,7 @@ bool hcom_mono_ctrl_should_mono_run()
   if(!hcom_mono_ctrl_did_mono_run_last_time())
   {
     char *noStartReason = "MONO won't start, it didn't run correctly last time";
-    hcom_logging_syslog(LOG_WARNING, "%s\n", noStartReason);
+    hcom_logging_syslog(LOG_WARNING, "%s@%d-%s\n", thisFile, __LINE__, noStartReason);
     hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0,
             noStartReason, thisFile, __LINE__);
     return false;
@@ -223,7 +225,7 @@ bool hcom_mono_ctrl_are_needed_files_here()
   // Some file(s) is missing
   char errReason[64];
   snprintf(errReason, 64, "MONO won't start, the following files missing: %s", missingFiles);
-  hcom_logging_syslog(LOG_WARNING, "%s\n", errReason);
+  hcom_logging_syslog(LOG_WARNING, "%s@%d-%s\n", thisFile, __LINE__, errReason);
   hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0,
         errReason, thisFile, __LINE__);
   

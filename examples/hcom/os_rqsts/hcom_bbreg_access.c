@@ -71,7 +71,8 @@ uint32_t hcom_bb_reg_acc_read_bbr_and_right_justify(uint32_t bitMask)
   int ret = hcom_nx_get_bbr(&regValue);
   if(ret < 0)
   {
-    hcom_logging_syslog(LOG_ERR, "%s:%s()@%d-%s Failed, errno:%d\n");
+    hcom_logging_syslog(LOG_ERR, "%s@%d-%s() Failed, ret:%d, errno:%d\n",
+              thisFile, __LINE__, __func__, ret, errno);
   }
 
   if(regValue == 0)
@@ -98,8 +99,8 @@ uint32_t hcom_bb_reg_acc_read_bbr()
   int ret = hcom_nx_get_bbr(&regValue);
   if(ret < 0)
   {
-    hcom_logging_syslog(LOG_ERR, "%s@%d-%s Failed, ret:%d errno:%d\n",
-            thisFile, __LINE__, ret, errno);
+    hcom_logging_syslog(LOG_ERR, "%s@%d-%s() failed, ret:%d errno:%d\n",
+            thisFile, __LINE__, __func__, ret, errno);
   }
   return regValue;
 }
@@ -111,8 +112,8 @@ void hcom_bb_reg_acc_write_bbr(uint32_t value)
   int ret = hcom_nx_set_bbr(value);
   if(ret < 0)
   {
-    hcom_logging_syslog(LOG_ERR, "%s@%d-%s Failed, ret:%d errno:%d\n",
-            thisFile, __LINE__, ret, errno);
+    hcom_logging_syslog(LOG_ERR, "%s@%d-%s() failed, ret:%d errno:%d\n",
+            thisFile, __LINE__, __func__, ret, errno);
   }
 }
 
@@ -125,14 +126,15 @@ bool hcom_bb_reg_acc_is_bbr_bits_set_n_clear(uint32_t value)
   int ret = hcom_nx_get_bbr(&regValue);
   if(ret < 0)
   {
-    hcom_logging_syslog(LOG_ERR, "%s@%d-%s Failed, ret:%d errno:%d\n",
-            thisFile, __LINE__, ret, errno);
+    hcom_logging_syslog(LOG_ERR, "%s@%d-%s() #1 Failed, ret:%d errno:%d\n",
+            thisFile, __LINE__, __func__, ret, errno);
   }
+
   ret = hcom_nx_set_bbr(regValue & (~value));
   if(ret < 0)
   {
-    hcom_logging_syslog(LOG_ERR, "%s@%d-%s Failed, ret:%d errno:%d\n",
-            thisFile, __LINE__, ret, errno);
+    hcom_logging_syslog(LOG_ERR, "%s@%d-%s() #2 Failed, ret:%d errno:%d\n",
+            thisFile, __LINE__, __func__, ret, errno);
   }
   return (value & regValue) != 0;
 }
@@ -145,8 +147,8 @@ bool hcom_bb_reg_acc_is_bbr_bit_set(uint32_t value)
   int ret = hcom_nx_get_bbr(&regValue);
   if(ret < 0)
   {
-    hcom_logging_syslog(LOG_ERR, "%s@%d-%s Failed, ret:%d errno:%d\n",
-            thisFile, __LINE__, ret, errno);
+    hcom_logging_syslog(LOG_ERR, "%s@%d-%s() Failed, ret:%d errno:%d\n",
+            thisFile, __LINE__, __func__, ret, errno);
   }
   return (value & regValue) != 0;
 }
@@ -158,8 +160,8 @@ void hcom_bb_reg_acc_set_bbr_bits(uint32_t value)
   int ret = hcom_nx_update_bbr(0, value);
   if(ret < 0)
   {
-    hcom_logging_syslog(LOG_ERR, "%s@%d-%s Failed, ret:%d errno:%d\n",
-            thisFile, __LINE__, ret, errno);
+    hcom_logging_syslog(LOG_ERR, "%s@%d-%s() Failed, ret:%d errno:%d\n",
+            thisFile, __LINE__, __func__, ret, errno);
   }
 }
 
@@ -170,8 +172,8 @@ void hcom_bb_reg_acc_clear_bbr_bits(uint32_t value)
   int ret = hcom_nx_update_bbr(value, 0);
   if(ret < 0)
   {
-    hcom_logging_syslog(LOG_ERR, "%s@%d-%s Failed, ret:%d errno:%d\n",
-            thisFile, __LINE__, ret, errno);
+    hcom_logging_syslog(LOG_ERR, "%s@%d-%s() Failed, ret:%d errno:%d\n",
+            thisFile, __LINE__, __func__, ret, errno);
   }
 }
 
@@ -182,7 +184,7 @@ void hcom_bb_reg_acc_clear_then_set_bbr_bits(uint32_t clearBits, uint32_t setBit
   int ret = hcom_nx_update_bbr(clearBits, setBits);
   if(ret < 0)
   {
-    hcom_logging_syslog(LOG_ERR, "%s@%d-%s Failed, ret:%d errno:%d\n",
-            thisFile, __LINE__, ret, errno);
+    hcom_logging_syslog(LOG_ERR, "%s@%d-%s() Failed, ret:%d errno:%d\n",
+            thisFile, __LINE__, __func__, ret, errno);
   }
 }

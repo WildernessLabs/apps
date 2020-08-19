@@ -182,7 +182,8 @@ void hcom_logging_utils_change_trace_level(uint32_t userData)
           thisFile, __LINE__);
 
 
-  hcom_logging_syslog(LOG_NOTICE, "Trace from 0x%02x to 0x%02x\n\n", oldTraceLevel, newSyslogMask);
+  hcom_logging_syslog(LOG_NOTICE, "%s@%d-Trace from 0x%02x to 0x%02x\n\n",
+            thisFile, __LINE__, oldTraceLevel, newSyslogMask);
 }
 
 //===================================================================

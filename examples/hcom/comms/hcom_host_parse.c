@@ -133,7 +133,7 @@ int hcom_host_parse_process_raw_data(uint8_t recvBuff[], const ssize_t recvByteC
 
       if (result == HCOM_CIR_BUF_GET_NONE_FOUND || result == HCOM_CIR_BUF_GET_DEST_NO_ROOM)
       {
-        hcom_logging_syslog(LOG_ERR, "%s@%d-pull packets from cir buf %d\n",
+        hcom_logging_syslog(LOG_ERR, "%s@%d-pull packets from cir buf. Result:%d\n",
                  thisFile, __LINE__, result);
         return OK;    // Report and throw data away.
       }

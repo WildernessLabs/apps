@@ -310,7 +310,7 @@ int hcom_esp32_exec_add_flash_data(const uint8_t *packet, const size_t packetSiz
     {
       // This IS the last packet (i.e. no more chances to download).
       hcom_logging_syslog(LOG_DEBUG, "%s@%d-Last Packet, %s\n", thisFile, __LINE__,
-            tempSaveBufLen == 0 ? "save buf empty, bye" : "must send saved");
+            tempSaveBufLen == 0 ? "save buf empty, exit" : "must send saved");
 
       if(tempSaveBufLen == 0)
         return OK;              // Nothing saved, we're done!
@@ -388,7 +388,8 @@ int hcom_esp32_exec_buffer_to_esp32(uint8_t *downloadData, size_t dnldDataSize, 
     }
   }
 
-  hcom_logging_syslog(LOG_DEBUG, "SENDING DATA PACKET, seq:%d\n", _espSeqNumb - 1);
+  hcom_logging_syslog(LOG_DEBUG, "%s@%d-SENDING DATA PACKET, seq:%d\n",
+            thisFile, __LINE__, _espSeqNumb - 1);
 #if HCOM_SYSLOG_DATA_BUFFER_CONTENTS > 0
   hcom_diag_misc_print_buffer(_downloadBuffer, dataDnldOffset, LOG_DEBUG);
 #endif
@@ -485,7 +486,7 @@ int hcom_esp32_exec_add_flash_end()
   }
   else if(recvdData.esp32Status)
   {
-    hcom_logging_syslog(LOG_ERR, "%s@%d-FLASH_END:%d \n", thisFile, __LINE__, recvdData.esp32Error);
+    hcom_logging_syslog(LOG_ERR, "%s@%d-FLASH_END:%d\n", thisFile, __LINE__, recvdData.esp32Error);
   }
 
   DEBUGASSERT(recvdData.espHdr.direction == 1);

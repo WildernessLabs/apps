@@ -100,7 +100,7 @@ int hcom_esp32_util_hardware_restart(void)
   ret = hcom_nx_gpio_config(HCOM_GPIO_DIG_NX_ID_ESP_BOOT, HCOM_GPIO_DIGITAL_CONFIG_OUTPUT);
   if(ret < 0)
   {
-    hcom_logging_syslog(LOG_ERR, "%s@%d-gpio config:%d\n", thisFile, __LINE__, ret);
+    hcom_logging_syslog(LOG_ERR, "%s@%d-gpio config 1:%d\n", thisFile, __LINE__, ret);
     return ret;
   }
   usleep(10 * 1000);
@@ -110,21 +110,21 @@ int hcom_esp32_util_hardware_restart(void)
   ret = hcom_nx_gpio_write(HCOM_GPIO_DIG_NX_ID_ESP_BOOT, HCOM_GPIO_DIGITAL_CMD_VALUE_HIGH);
   if(ret < 0)
   {
-    hcom_logging_syslog(LOG_ERR, "%s@%d-gpio write:%d\n", thisFile, __LINE__, ret);
+    hcom_logging_syslog(LOG_ERR, "%s@%d-gpio write 1:%d\n", thisFile, __LINE__, ret);
     return ret;
   }
 
   ret = hcom_nx_gpio_write(HCOM_GPIO_DIG_NX_ID_ESP_RESET, HCOM_GPIO_DIGITAL_CMD_VALUE_LOW);
   if(ret < 0)
   {
-    hcom_logging_syslog(LOG_ERR, "%s@%d-gpio write:%d\n", thisFile, __LINE__, ret);
+    hcom_logging_syslog(LOG_ERR, "%s@%d-gpio write 2:%d\n", thisFile, __LINE__, ret);
     return ret;
   }
 
   ret = hcom_nx_gpio_write(HCOM_GPIO_DIG_NX_ID_ESP_RESET, HCOM_GPIO_DIGITAL_CMD_VALUE_HIGH);
   if(ret < 0)
   {
-    hcom_logging_syslog(LOG_ERR, "%s@%d-gpio write:%d\n", thisFile, __LINE__, ret);
+    hcom_logging_syslog(LOG_ERR, "%s@%d-gpio write 3:%d\n", thisFile, __LINE__, ret);
     return ret;
   }
 
@@ -132,7 +132,7 @@ int hcom_esp32_util_hardware_restart(void)
   ret = hcom_nx_gpio_config(HCOM_GPIO_DIG_NX_ID_ESP_BOOT, HCOM_GPIO_DIGITAL_CONFIG_INPUT);
   if(ret < 0)
   {
-    hcom_logging_syslog(LOG_ERR, "%s@%d-gpio config:%d\n", thisFile, __LINE__, ret);
+    hcom_logging_syslog(LOG_ERR, "%s@%d-gpio config 2:%d\n", thisFile, __LINE__, ret);
     return ret;
   }
 #endif
@@ -151,7 +151,7 @@ void hcom_esp32_util_gpio_enter_prog_mode(void)
   ret = hcom_nx_gpio_config(HCOM_GPIO_DIG_NX_ID_ESP_BOOT, HCOM_GPIO_DIGITAL_CONFIG_OUTPUT);
   if(ret < 0)
   {
-    hcom_logging_syslog(LOG_ERR, "%s@%d-gpio config:%d\n", thisFile, __LINE__, ret);
+    hcom_logging_syslog(LOG_ERR, "%s@%d-gpio config 1:%d\n", thisFile, __LINE__, ret);
     return;
   }
   usleep(20 * 1000);
@@ -162,14 +162,14 @@ void hcom_esp32_util_gpio_enter_prog_mode(void)
   ret = hcom_nx_gpio_write(HCOM_GPIO_DIG_NX_ID_ESP_BOOT, HCOM_GPIO_DIGITAL_CMD_VALUE_LOW);
   if(ret < 0)
   {
-    hcom_logging_syslog(LOG_ERR, "%s@%d-gpio write:%d\n", thisFile, __LINE__, ret);
+    hcom_logging_syslog(LOG_ERR, "%s@%d-gpio write 1:%d\n", thisFile, __LINE__, ret);
     return;
   }
 
   ret = hcom_nx_gpio_write(HCOM_GPIO_DIG_NX_ID_ESP_RESET, HCOM_GPIO_DIGITAL_CMD_VALUE_LOW);
   if(ret < 0)
   {
-    hcom_logging_syslog(LOG_ERR, "%s@%d-gpio write:%d\n", thisFile, __LINE__, ret);
+    hcom_logging_syslog(LOG_ERR, "%s@%d-gpio write 2:%d\n", thisFile, __LINE__, ret);
     return;
   }
   usleep(10 * 1000);
@@ -177,7 +177,7 @@ void hcom_esp32_util_gpio_enter_prog_mode(void)
   ret = hcom_nx_gpio_write(HCOM_GPIO_DIG_NX_ID_ESP_RESET, HCOM_GPIO_DIGITAL_CMD_VALUE_HIGH);
   if(ret < 0)
   {
-    hcom_logging_syslog(LOG_ERR, "%s@%d-gpio write:%d\n", thisFile, __LINE__, ret);
+    hcom_logging_syslog(LOG_ERR, "%s@%d-gpio write 3:%d\n", thisFile, __LINE__, ret);
     return;
   }
   usleep(20 * 1000);
@@ -186,7 +186,7 @@ void hcom_esp32_util_gpio_enter_prog_mode(void)
   ret = hcom_nx_gpio_write(HCOM_GPIO_DIG_NX_ID_ESP_BOOT, HCOM_GPIO_DIGITAL_CMD_VALUE_HIGH);
   if(ret < 0)
   {
-    hcom_logging_syslog(LOG_ERR, "%s@%d-gpio write:%d\n", thisFile, __LINE__, ret);
+    hcom_logging_syslog(LOG_ERR, "%s@%d-gpio write 4:%d\n", thisFile, __LINE__, ret);
     return;
   }
 
@@ -194,7 +194,7 @@ void hcom_esp32_util_gpio_enter_prog_mode(void)
   ret = hcom_nx_gpio_config(HCOM_GPIO_DIG_NX_ID_ESP_BOOT, HCOM_GPIO_DIGITAL_CONFIG_INPUT);
   if(ret < 0)
   {
-    hcom_logging_syslog(LOG_ERR, "%s@%d-gpio config:%d\n", thisFile, __LINE__, ret);
+    hcom_logging_syslog(LOG_ERR, "%s@%d-gpio config 2:%d\n", thisFile, __LINE__, ret);
     return;
   }
 #endif
@@ -367,7 +367,8 @@ void hcom_esp32_util_read_esp32_mac(uint32_t userData)
   ret = hcom_esp32_util_read_register(Esp32RegAddrUART_DATE_REG_ADDR, &chipIdInfo);
   if(ret < 0)
   {
-    hcom_logging_syslog(LOG_ERR, "%s@%d-Read Reg 0x%08x err:%d\n", thisFile, __LINE__, Esp32RegAddrUART_DATE_REG_ADDR, ret);
+    hcom_logging_syslog(LOG_ERR, "%s@%d-Read Reg 0x%08x err:%d\n",
+              thisFile, __LINE__, Esp32RegAddrUART_DATE_REG_ADDR, ret);
     return;
   }
 
@@ -378,14 +379,16 @@ void hcom_esp32_util_read_esp32_mac(uint32_t userData)
   ret = hcom_esp32_util_read_register(Esp32RegAddrEFUSE_REG_BASE + 4, &chipMac1);
   if(ret < 0)
   {
-    hcom_logging_syslog(LOG_ERR, "%s@%d-Read Reg 0x%08x err:%d\n", thisFile, __LINE__, Esp32RegAddrEFUSE_REG_BASE + 4, ret);
+    hcom_logging_syslog(LOG_ERR, "%s@%d-Read Reg 0x%08x err:%d\n",
+              thisFile, __LINE__, Esp32RegAddrEFUSE_REG_BASE + 4, ret);
     return;
   }
 
   ret = hcom_esp32_util_read_register(Esp32RegAddrEFUSE_REG_BASE + 8, &chipMac2);
   if(ret < 0)
   {
-    hcom_logging_syslog(LOG_ERR, "%s@%d-Read Reg 0x%08x err:%d\n", thisFile, __LINE__, Esp32RegAddrEFUSE_REG_BASE + 8, ret);
+    hcom_logging_syslog(LOG_ERR, "%s@%d-Read Reg 0x%08x err:%d\n",
+              thisFile, __LINE__, Esp32RegAddrEFUSE_REG_BASE + 8, ret);
     return;
   }
 

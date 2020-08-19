@@ -178,7 +178,7 @@ int hcom_dnld_write_del_open_active_file(const uint32_t partitionId,
     return _fileDescriptor;
   }
 
-  hcom_logging_syslog(LOG_DEBUG, "Opened '%s'\n", _hcomActiveFileName);
+  hcom_logging_syslog(LOG_DEBUG, "%s@%d-Opened '%s'\n", thisFile, __LINE__, _hcomActiveFileName);
 
   _activePartitionId = partitionId;
   return OK;
@@ -213,7 +213,8 @@ int hcom_dnld_write_del_add_to_active_file(const uint8_t *fileWriteData, const s
              thisFile, __LINE__, _hcomActiveFileName, nbytes, fileWriteSize);
   }
 
-  hcom_logging_syslog(LOG_DEBUG, "Wrote %d bytes to %s\n", nbytes, _hcomActiveFileName);
+  hcom_logging_syslog(LOG_DEBUG, "%s@%d-Wrote %d bytes to %s\n", 
+            thisFile, __LINE__, nbytes, _hcomActiveFileName);
   return OK;
 }
 
@@ -237,7 +238,7 @@ int hcom_dnld_write_del_close_active_file()
     return ret;
   }
 
-  hcom_logging_syslog(LOG_DEBUG, "Closed %s\n", _hcomActiveFileName);
+  hcom_logging_syslog(LOG_DEBUG, "%s@%d-Closed %s\n", thisFile, __LINE__, _hcomActiveFileName);
 
   _fileDescriptor = -1;
   _hcomActiveFileName[0] = '\0';
@@ -314,7 +315,7 @@ int hcom_dnld_write_del_remove_file_by_name(const uint32_t partitionId, const ch
   // is non-negative and less than buf_size. Otherwise, the string may be truncated.
   if (filePathAndNameLen < 0 || filePathAndNameLen >= HCOM_MAX_HOST_STRING_BUFF_LENGTH - 1)
   {
-    hcom_logging_syslog(LOG_ERR, "%s@%d-Delete '%s' (truncated) but name too long.\n",
+    hcom_logging_syslog(LOG_ERR, "%s@%d-Delete '%s' (truncated) but file name too long.\n",
              thisFile, __LINE__, fullPathAndFileName);
     free(fullPathAndFileName);
     return -ENAMETOOLONG; // File name too long

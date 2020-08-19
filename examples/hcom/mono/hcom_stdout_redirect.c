@@ -33,8 +33,9 @@
  *
  ****************************************************************************/
 
-// Note: a fifo is a special file (a named pipe) and is similar to a pipe, except that
-//       it is accessed as part of the filesystem.
+// This module is responsible for creating a pipe and redirecting stdout to
+// this pipe. It then reads the pipe and routes this information to the host 
+// PC / Mac for display via Meadow.CLI
 
 /****************************************************************************
  * Included Files
@@ -75,7 +76,6 @@ static int _pipefd[2];
 static FAR void *hcom_mono_pipe_pthread(FAR void *arg);
 static int hcom_mono_pipe_create_infrastructure(void);
 static int hcom_mono_pipe_make_thread(void);
-// static int hcom_mono_pipe_open_fifo(void);
 static int hcom_mono_pipe_read_pipe_loop(void);
 static int hcom_mono_pipe_route_mono_text_stdout(uint8_t *recvBuff, int numbBytes);
 
@@ -170,7 +170,7 @@ void *hcom_mono_pipe_pthread(FAR void *arg)
   ret = dup2(_pipefd[HCOM_PIPE_WRITE_OFFSET], STDOUT_FILENO);
   if (ret < 0)
   {
-    syslog(LOG_ERR, "redirect_writer: dup2 failed ret:%d errno:%d\n", ret, errno);
+    hcom_logging_syslog(LOG_ERR, "redirect_writer: dup2 failed ret:%d errno:%d\n", ret, errno);
     return NULL;
   }
 

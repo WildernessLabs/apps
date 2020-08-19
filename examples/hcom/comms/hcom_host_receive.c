@@ -142,7 +142,7 @@ int hcom_host_recv_receiving_loop()
     if (ret < 0)
     {
       // TODO - should not output messages every second.
-      hcom_logging_syslog(LOG_ERR, "%s@%d-connection not made, %d\n", thisFile, __LINE__, ret);
+      hcom_logging_syslog(LOG_ERR, "%s@%d-connection not made, error:%d\n", thisFile, __LINE__, ret);
       sleep(1);   // Can't leave this loop or all hcom will stop
       continue;
     }
@@ -222,7 +222,8 @@ int hcom_host_recv_open_connection()
   }
 
   //--------------------------------------------------------------------------------
-  hcom_logging_syslog(LOG_DEBUG, "%s ready for host comms\n", deviceName);
+  hcom_logging_syslog(LOG_DEBUG, "%s@%d-%s ready for host comms\n",
+            thisFile, __LINE__, deviceName);
 
   return OK;
 }
@@ -232,7 +233,8 @@ int hcom_host_recv_open_connection()
 // needed. This thread is the only thread receiving via USB serial data.
 bool hcom_host_recv_received_data()
 {
-  hcom_logging_syslog(LOG_DEBUG, "Waiting for '%s' message\n", HCOM_COMMUNICATIONS_DEVICE_NAME);
+  hcom_logging_syslog(LOG_DEBUG, "%s@%d-Waiting for '%s' message\n",
+            thisFile, __LINE__, HCOM_COMMUNICATIONS_DEVICE_NAME);
 
   // Stay in this loop forever
   while (!_shutting_down)
@@ -248,7 +250,7 @@ bool hcom_host_recv_received_data()
       int result = hcom_host_parse_process_raw_data(_tempRecvBuff, readResult);
       if (result < 0)
       {
-        hcom_logging_syslog(LOG_WARNING, "%s@%d-%d received\n", thisFile, __LINE__, result);
+        hcom_logging_syslog(LOG_WARNING, "%s@%d-received result:%d \n", thisFile, __LINE__, result);
       }
       continue;
     }
@@ -265,13 +267,15 @@ bool hcom_host_recv_received_data()
     {
       if (hcom_dnld_proc_is_active())
       {
-        hcom_logging_syslog(LOG_WARNING, "%s@%d-Comms stopped. Recvd:%d of msg\n", thisFile, __LINE__, readResult);
+        hcom_logging_syslog(LOG_WARNING, "%s@%d-Comms stopped. Recvd:%d bytes of msg\n",
+                  thisFile, __LINE__, readResult);
       }
       else
       {
         // Timeout received while waiting for a host communication. This is normal as we will
         // almost always be waiting and not receiving.
-        hcom_logging_syslog(LOG_INFO, "%s thread running\n", HCOM_THREAD_NAME_HCOM_RECEIVE);
+        hcom_logging_syslog(LOG_INFO, "%s@%d-%s thread running\n",
+                  thisFile, __LINE__, HCOM_THREAD_NAME_HCOM_RECEIVE);
       }
     }
     else
@@ -426,9 +430,8 @@ int hcom_host_recv_timer_init()
   ret = timer_create(CLOCK_REALTIME, &toevent, &_recv_timerid);
   if (ret < 0)
   {
-    int errorcode = errno;
-    hcom_logging_syslog(LOG_ERR, "%s@%d-create timer errno:%d\n", thisFile, __LINE__, errorcode);
-    return -errorcode;
+    hcom_logging_syslog(LOG_ERR, "%s@%d-create timer errno:%d\n", thisFile, __LINE__, errno);
+    return -errno;
   }
 
   /* Attach a signal handler to catch the timeout */
@@ -439,9 +442,8 @@ int hcom_host_recv_timer_init()
   ret = sigaction(SIGALRM, &act, NULL);
   if (ret < 0)
   {
-    int errorcode = errno;
-    hcom_logging_syslog(LOG_ERR, "%s@%d-attach signal errno:%d\n", thisFile, __LINE__, errorcode);
-    return -errorcode;
+    hcom_logging_syslog(LOG_ERR, "%s@%d-attach signal errno:%d\n", thisFile, __LINE__, errno);
+    return -errno;
   }
   return OK;
 }

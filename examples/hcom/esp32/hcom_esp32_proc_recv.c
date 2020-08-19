@@ -99,7 +99,7 @@ int hcom_esp32_recv_setup_lazy()
   int ret = hcom_esp32_recv_buff_init(_esp_cir_buf, HCOM_ESP_COMMS_MAX_ESP_PACKET_SIZE * 4);
   if (ret == HCOM_ESP32_BUF_INIT_FAILED)
   {
-    hcom_logging_syslog(LOG_ERR, "%s@%d-hcom_esp32_recv_buff_init failed:%D\n", thisFile, __LINE__, ret);
+    hcom_logging_syslog(LOG_ERR, "%s@%d-hcom_esp32_recv_buff_init failed:%d\n", thisFile, __LINE__, ret);
     return -1;
   }
 
@@ -110,7 +110,8 @@ int hcom_esp32_recv_setup_lazy()
   if (recvMsgQueue == (mqd_t)-1)
   {
     int errcode = get_errno();
-    hcom_logging_syslog(LOG_ERR, "%s@%d-mq_open(%s) failed: %d\n", thisFile, __LINE__, HCOM_ESP_COMMS_MSG_QUEUE_NAME, errcode);
+    hcom_logging_syslog(LOG_ERR, "%s@%d-mq_open(%s) failed:%d\n",
+              thisFile, __LINE__, HCOM_ESP_COMMS_MSG_QUEUE_NAME, errcode);
     return -errcode;
   }
 
@@ -162,9 +163,8 @@ int hcom_esp32_recv_handle_data(uint8_t *esp32_read_buffer, ssize_t bytesToAdd)
       {
           // The buffer to receive the message is too small? Probably 
           // corrupted data in buffer.
-          hcom_logging_syslog(LOG_DEBUG, "%s@%d-No room for new data. Need %d\n",
+          hcom_logging_syslog(LOG_DEBUG, "%s@%d-No room for new data, need:%d\n",
                   thisFile, __LINE__, bytesToAdd);
-          usleep(10 * 1000);
           DEBUGASSERT(false);
       }
     }
@@ -208,9 +208,8 @@ int hcom_esp32_recv_pull_and_process()
       if (ret == HCOM_ESP32_BUF_GET_DEST_NO_ROOM)
       {
           // The buffer to accept the packets is too small! Need to enlarge
-          hcom_logging_syslog(LOG_DEBUG, "%s@%d-No room for data Need %d\n",
+          hcom_logging_syslog(LOG_DEBUG, "%s@%d-No room for additional data, need:%d\n",
                   thisFile, __LINE__, packetLength);
-          usleep(10 * 1000);
           DEBUGASSERT(false);
       }
 
@@ -232,7 +231,8 @@ int hcom_esp32_recv_pull_and_process()
       }
       else
       {
-        hcom_logging_syslog(LOG_ERR, "%s@%d-Orphan Data: 0x%02x\n", thisFile, __LINE__, packetBuffer[packetLength-1]);
+        hcom_logging_syslog(LOG_ERR, "%s@%d-Orphan Data:0x%02x\n",
+                  thisFile, __LINE__, packetBuffer[packetLength-1]);
       }
     }
 
@@ -259,7 +259,8 @@ int hcom_esp32_recv_handle_text_packet(uint8_t *text_buffer, ssize_t length)
 
     if(_cr_lf_esp32_crlf_counter % 500000 == 0)
     {
-      hcom_logging_syslog(LOG_DEBUG, "Another 500,000 cr/lf %d\n", _cr_lf_esp32_crlf_counter);
+      hcom_logging_syslog(LOG_DEBUG, "%s@%d-Another 500,000 cr/lf %d\n",
+                thisFile, __LINE__, _cr_lf_esp32_crlf_counter);
       return OK;
     }
 
@@ -268,7 +269,8 @@ int hcom_esp32_recv_handle_text_packet(uint8_t *text_buffer, ssize_t length)
 
     if(_cr_lf_esp32_crlf_counter == 4)
     {
-      hcom_logging_syslog(LOG_DEBUG, "Appears to be endless stream of cr/lf\n");
+      hcom_logging_syslog(LOG_DEBUG, "%s@%d-Appears to be endless stream of cr/lf\n",
+                thisFile, __LINE__);
       return OK;
     }
   }
@@ -291,7 +293,7 @@ int hcom_esp32_recv_handle_text_packet(uint8_t *text_buffer, ssize_t length)
   text_buffer[length] = '\0';   // null terminate
   
   // This cannot be routed to Meadow.CLI so send directly to syslog
-  syslog(LOG_INFO, "ESP32 Text:'%s'\n", text_buffer);
+  hcom_logging_syslog(LOG_INFO, "ESP32 Text:'%s'\n", text_buffer);
   return OK;
 }
 
@@ -322,7 +324,8 @@ int hcom_esp32_recv_handle_bin_packet(uint8_t *binRecvdData, ssize_t binRecvdLen
   // binRecvdData[2] is the esp command
   if(binRecvdData[2] != _currentExpectRecvCommand)
   {
-    hcom_logging_syslog(LOG_DEBUG, "%s@%d-Recvd cmd 0x%02x-ignored\n", thisFile, __LINE__, binRecvdData[2]);
+    hcom_logging_syslog(LOG_DEBUG, "%s@%d-Recvd cmd 0x%02x-ignored\n",
+              thisFile, __LINE__, binRecvdData[2]);
     return OK;    // Not an error. Just not needed.
   }
 
@@ -387,7 +390,8 @@ int hcom_esp32_recv_handle_bin_packet(uint8_t *binRecvdData, ssize_t binRecvdLen
     int errn = get_errno();
     if(errn == EAGAIN)
     {
-      hcom_logging_syslog(LOG_WARNING, "%s@%d-mq full, cmd:0x%02x not added\n", thisFile, __LINE__, mqRecvdData.espMqHdr.command);
+      hcom_logging_syslog(LOG_WARNING, "%s@%d-mq full, cmd:0x%02x not added\n",
+                thisFile, __LINE__, mqRecvdData.espMqHdr.command);
     }
     else
     {
@@ -397,7 +401,7 @@ int hcom_esp32_recv_handle_bin_packet(uint8_t *binRecvdData, ssize_t binRecvdLen
       // EPERM (1). Message queue not opened for writing.
       // EMSGSIZE (122). 'msglen' was greater than the maxmsgsize attribute of the message queue.
       // EINTR (4). The call was interrupted by a signal handler.
-      hcom_logging_syslog(LOG_ERR, "%s@%d-mq_send %d\n", thisFile, __LINE__, errn);
+      hcom_logging_syslog(LOG_ERR, "%s@%d-mq_send errno:%d\n", thisFile, __LINE__, errn);
     }
   }
 
@@ -580,11 +584,13 @@ int hcom_esp32_recv_buff_get_next_packet(struct hcom_esp32_cir_buffer_s *espbuf,
     {
       hcom_logging_syslog(LOG_DEBUG, "%s@%d-Delimiter:0x%02x found, not expected:0x%02x\n",
               thisFile, __LINE__, *found, delimiter);
+
       DEBUGASSERT(sizeFoundTop + 1 <= packetDestBufSize);
       memcpy(packetDestBuf, espbuf->tail, sizeFoundTop);
       packetDestBuf[sizeFoundTop - 1] = 0x0d;   // Over write 0xc0 with CR
       packetDestBuf[sizeFoundTop] = 0x0a;       // Postpend text with LF
       *(found - 1) = 0x0a;                      // So next time can pass sanity check
+      
       // Set tail just before unexpected so the following message can be found next time
       espbuf->tail = found;
       *packetLength = sizeFoundTop + 1;         // Account for LF

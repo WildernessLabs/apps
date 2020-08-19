@@ -108,9 +108,10 @@ int hcom_list_files_in_partition(uint32_t partitionId)
 
       // Get the next file name
 #ifdef CONFIG_MTD_PARTITION
-      hcom_logging_syslog(LOG_INFO, "Found file '%s' in part %d\n", direntry->d_name, partitionId);
+      hcom_logging_syslog(LOG_INFO, "%s@%d-Found file '%s' in part %d\n",
+                thisFile, __LINE__, direntry->d_name, partitionId);
 #else
-      hcom_logging_syslog(LOG_INFO, "Found file '%s'\n", direntry->d_name);
+      hcom_logging_syslog(LOG_INFO, "%s@%d-Found file '%s'\n", thisFile, __LINE__, direntry->d_name);
 #endif
       int fileNameLen;
       fileNameLen = snprintf(singleFileFound, HCOM_MAX_PATH_AND_FILE_BUFF_LENGTH, "%s/%s", fullMountPtName, direntry->d_name);
@@ -183,7 +184,8 @@ int hcom_list_files_and_crc_in_partition(uint32_t partitionId)
     if(DIRENT_ISFILE(direntry->d_type))
     {
       fileCount++;
-      stringLen = snprintf(completeNameBuf, HCOM_MAX_PATH_AND_FILE_BUFF_LENGTH, "%s/%s", fullMountPtName, direntry->d_name);
+      stringLen = snprintf(completeNameBuf, HCOM_MAX_PATH_AND_FILE_BUFF_LENGTH, "%s/%s", 
+                fullMountPtName, direntry->d_name);
       DEBUGASSERT(stringLen < HCOM_MAX_PATH_AND_FILE_BUFF_LENGTH);
       
       // Find the CRC checksum
@@ -194,9 +196,11 @@ int hcom_list_files_and_crc_in_partition(uint32_t partitionId)
       totalFlashSizeKB += blockSizeKB;
 
 #ifdef CONFIG_MTD_PARTITION
-      hcom_logging_syslog(LOG_INFO, "'%s' in part %d checksum 0x%08x\n", direntry->d_name, partitionId, crcChecksum);
+      hcom_logging_syslog(LOG_INFO, "%s@%d-'%s' in part %d checksum 0x%08x\n",
+                thisFile, __LINE__, direntry->d_name, partitionId, crcChecksum);
 #else
-      hcom_logging_syslog(LOG_INFO, "'%s' checksum 0x%08x\n", direntry->d_name, crcChecksum);
+      hcom_logging_syslog(LOG_INFO, "%s@%d-'%s' checksum 0x%08x\n",
+                thisFile, __LINE__, direntry->d_name, crcChecksum);
 #endif
 
       // Add this file to the csv list 
@@ -254,7 +258,8 @@ int hcom_list_all_dev_dir_and_files(const char *name, int indent, uint32_t userD
 
   if (!(dir = opendir(name)))
   {
-    syslog(1, "Could not open:%s as a directory\n", name);
+    hcom_logging_syslog(LOG_ERR, "%s@%d-Could not open:%s as a directory\n",
+              thisFile, __LINE__, name);
     return -1;
   }
 
@@ -346,7 +351,7 @@ uint32_t hcom_list_calc_crc_for_file(char *completeFilePath,
   ret = fstat(fd, &fileStatus);
   if (ret < 0)
   {
-    hcom_logging_syslog(LOG_ERR, "%s@%d-fstat of %s failed:%s errno:%d\n",
+    hcom_logging_syslog(LOG_ERR, "%s@%d-fstat of %s failed errno:%d\n",
            thisFile, __LINE__, completeFilePath, errno);
     return -errno;
   }
@@ -358,7 +363,8 @@ uint32_t hcom_list_calc_crc_for_file(char *completeFilePath,
   off_t offset = lseek(fd, 0, SEEK_SET);
   if (offset == (off_t)-1)
   {
-    hcom_logging_syslog(LOG_ERR, "%s@%d-lseek failed %s, errno:%d\n", thisFile, __LINE__, completeFilePath, errno);
+    hcom_logging_syslog(LOG_ERR, "%s@%d-lseek failed %s, errno:%d\n",
+              thisFile, __LINE__, completeFilePath, errno);
     return -errno;
   }
 
@@ -372,7 +378,8 @@ uint32_t hcom_list_calc_crc_for_file(char *completeFilePath,
     nbytes = read(fd, crcReadBuff, HCOM_FILE_READ_BUFF_SIZE_FOR_CRC);
     if (nbytes < 0)
     {
-      hcom_logging_syslog(LOG_ERR, "%s@%d-read %s, errno:%d\n", thisFile, __LINE__, completeFilePath, errno);
+      hcom_logging_syslog(LOG_ERR, "%s@%d-read %s, errno:%d\n",
+                thisFile, __LINE__, completeFilePath, errno);
       free(crcReadBuff);
       return -errno;
     }

@@ -169,8 +169,8 @@ void hcom_dnld_proc_begin(const uint8_t *recvPacketData, const size_t recvPacket
               fileNameLength);
       fileNameBuffer[fileNameLength] = '\0';
 
-      hcom_logging_syslog(LOG_INFO, "Meadow downloading file (Size:%d, Crc:0x%08x, Name:%s)\n",
-              _xferRecvFullFileSize, _xferRecvFullFileCrc, fileNameBuffer);
+      hcom_logging_syslog(LOG_INFO, "%s@%d-Meadow downloading file (Size:%d, Crc:0x%08x, Name:%s)\n",
+              thisFile, __LINE__, _xferRecvFullFileSize, _xferRecvFullFileCrc, fileNameBuffer);
       
       // Adding file to F7 file system
       ret = hcom_dnld_write_del_open_active_file(partitionId, HCOM_FILE_MOUNT_POINT_TARGET, fileNameBuffer);
@@ -189,8 +189,8 @@ void hcom_dnld_proc_begin(const uint8_t *recvPacketData, const size_t recvPacket
       memcpy(_md5FileHash, recvPacketData + msgOffset, HCOM_PROTOCOL_REQUEST_MD5_HASH_LENGTH);
       _md5FileHash[HCOM_PROTOCOL_REQUEST_MD5_HASH_LENGTH] = '\0';
 
-      hcom_logging_syslog(LOG_INFO, "ESP32 download start (Size:%d, Crc:0x%08x, MCUAddr:0x%08x, MD5Hash:%s)\n",
-              _xferRecvFullFileSize, _xferRecvFullFileCrc, _xferTargetMcuAddr, _md5FileHash);
+      hcom_logging_syslog(LOG_INFO, "%s@%d-ESP32 download start (Size:%d, Crc:0x%08x, MCUAddr:0x%08x, MD5Hash:%s)\n",
+              thisFile, __LINE__, _xferRecvFullFileSize, _xferRecvFullFileCrc, _xferTargetMcuAddr, _md5FileHash);
 
       // Adding file to ESP32-pico-d4 flash
       ret = hcom_esp32_exec_download_flash_start(_xferRecvFullFileSize, _xferTargetMcuAddr, _md5FileHash);
@@ -292,7 +292,7 @@ void hcom_dnld_proc_recvd_file_data(const uint8_t *packet, const size_t packetSi
   if (ret < 0)
   {
     hcom_logging_syslog(LOG_ERR, "%s@%d-Data packet file write failed:%d seq:%d\n",
-             thisFile, __LINE__, ret, seqNumb); usleep(10 * 1000);
+             thisFile, __LINE__, ret, seqNumb);
   }
 }
 
@@ -364,7 +364,8 @@ void hcom_dnld_proc_end(uint32_t userData)
       // Compare the two MD5 hashs
       espCalculatedMd5 = hcom_esp32_exec_get_md5_file_hash();
       int md5CmpResult = strcmp(espCalculatedMd5, _md5FileHash);
-      hcom_logging_syslog(LOG_INFO, "Esp32 MD5 hash:'%s', CLI MD5 hash:'%s', %s\n", espCalculatedMd5, _md5FileHash,
+      hcom_logging_syslog(LOG_INFO, "%s@%d-Esp32 MD5 hash:'%s', CLI MD5 hash:'%s', %s\n",
+                thisFile, __LINE__, espCalculatedMd5, _md5FileHash,
               md5CmpResult == 0 ? "Success" : "Error");
       
       if(md5CmpResult == 0 && _xferCalcFullFileSize == _xferRecvFullFileSize)
@@ -406,7 +407,8 @@ void hcom_dnld_proc_end(uint32_t userData)
       break;
 
       default:
-        hcom_logging_syslog(LOG_ERR, "%s@%d-unknown end data packet action:%d \n", thisFile, __LINE__, _currentHcomDataPacketAction);
+        hcom_logging_syslog(LOG_ERR, "%s@%d-unknown end data packet action:%d\n",
+                  thisFile, __LINE__, _currentHcomDataPacketAction);
         //DEBUGASSERT(false); //Unknown file download request
         break;
   }
@@ -417,11 +419,11 @@ void hcom_dnld_proc_end(uint32_t userData)
 
 #if HCOM_RECV_DEBUG_TIMING
   _dbgReceptionEndedAt = get_current_time64();
-  hcom_logging_syslog(LOG_DEBUG, "File transfer %d packets, took %llu mSec, CalcPacketCRC:0x%08x CalcFileCRC:0x%08x\n",
-           _dbgNumbPacketsRecvd, ((_dbgReceptionEndedAt - _dbgReceptionBeganAt) / 1000000),
+  hcom_logging_syslog(LOG_DEBUG, "%s@%d-File transfer %d packets, took %llu mSec, CalcPacketCRC:0x%08x CalcFileCRC:0x%08x\n",
+           thisFile, __LINE__, _dbgNumbPacketsRecvd, ((_dbgReceptionEndedAt - _dbgReceptionBeganAt) / 1000000),
            _xferCalcPacketCrc, _xferMeadowCalcCrc);
 #else
-  hcom_logging_syslog(LOG_DEBUG, "Host has sent %d packets\n", _dbgNumbPacketsRecvd);
+  hcom_logging_syslog(LOG_DEBUG, "%s@%d-Host has sent %d packets\n", thisFile, __LINE__, _dbgNumbPacketsRecvd);
 #endif
 
   _xferCalcPacketCrc = 0;

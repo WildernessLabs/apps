@@ -112,7 +112,7 @@ void hcom_host_route_request_by_type(const uint8_t *recvOrigData, const size_t r
   const uint8_t *recvPayload = recvOrigData + msgOffset;
   const size_t recvPayloadSize = recvOrigDataSize - msgOffset;
 
-  // syslog(1, "-->Received %d non-header bytes, Request Type:0x%04x route\n",
+  // syslog(1, "-->Received %d bytes beyond header. Request Type:0x%04x\n",
   //           recvPayloadSize, requestType);
 
   switch (requestType)
@@ -359,7 +359,7 @@ void hcom_host_route_request_by_type(const uint8_t *recvOrigData, const size_t r
       hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_REJECTED, 0, hostMsg,
               thisFile, __LINE__);
 
-      hcom_logging_syslog(LOG_ERR, "%s@%d-Received unsupported cmd:0x%04x\n",
+      hcom_logging_syslog(LOG_ERR, "%s@%d-Received unsupported request type:0x%04x\n",
              thisFile, __LINE__, requestType);
       hcom_diag_misc_print_buffer(recvOrigData, recvOrigDataSize, LOG_ERR);
       
