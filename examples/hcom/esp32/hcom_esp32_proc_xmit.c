@@ -1,5 +1,5 @@
 /****************************************************************************
- * examples\hcom\esp32\hcom_esp32_proc_xmit.c
+ * \apps\examples\hcom\esp32\hcom_esp32_proc_xmit.c
  * 
  *   Copyright (C) 2020 Wilderness Labs. All rights reserved.
  *   Author:  Wilderness Labs

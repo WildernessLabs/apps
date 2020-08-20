@@ -1,5 +1,5 @@
 /****************************************************************************
- * examples\hcom\comms\host_comms_support.c
+ * apps\examples\hcom\comms\hcom_host_encode.c
  * 
  *   Copyright (C) 2019 - 2020 Wilderness Labs. All rights reserved.
  *   Author:  Wilderness Labs

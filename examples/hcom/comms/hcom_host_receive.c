@@ -1,5 +1,5 @@
 /****************************************************************************
- * \examples\hcom\comms\hcom_comms_receive.c
+ * \apps\examples\hcom\comms\hcom_host_receive.c
  * 
  *   Copyright (C) 2019 - 2020 Wilderness Labs. All rights reserved.
  *   Author:  Wilderness Labs
@@ -32,8 +32,10 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *
  ****************************************************************************/
-// The low level receiver and transmitter live here. These are the functions that
+
+// The low level hcom receiver lives here. These are the functions that
 // need use the connections file descriptor.
+
 /****************************************************************************
  * Included Files
  ****************************************************************************/
@@ -90,13 +92,14 @@ int hcom_host_recv_setup()
   _firstTimeToConnect = true;
   _tempRecvBuff = malloc(HCOM_SAFE_PACKET_BUF_SIZE);  
 
-  // p-m - Should this really be configurable via menuconfig?
+  // Should this really be configurable via menuconfig?
+  // Currently it must be '/dev/ttyACM0' and is defined by
+  // HCOM_COMMUNICATIONS_DEVICE_NAME
   deviceName = CONFIG_HCOM_COMMS_DEVICE_NAME;
 
   /* If we detect that we are booting into QEMU, then use serial comms
      instead of the configured device name (USB ACM) */
 
-  // p-m - qemu support, not yet implemented
   // if (hcom_utils_boot_time_qemu_check())
   //   deviceName = "/dev/ttyS1";
 
@@ -133,18 +136,17 @@ int hcom_host_recv_receiving_loop()
   // This loop only runs initially and when we loose a host connection
   while(! _shutting_down)
   {
-    // todo - This is a poor solution. Is this really a problem?
+    // This is a poor solution. Is this really a problem?
     if(wait_before_retry)
-      sleep(1);    // Delay for certain return values. Thus limiting error messages
+      sleep(1);    // Delay for some return values, thus limiting error messages
       
     // Attempt to establish the connection
     ret = hcom_host_recv_open_connection();
     if (ret < 0)
     {
-      // TODO - should not output messages every second.
       hcom_logging_syslog(LOG_ERR, "%s@%d-connection not made, error:%d\n", thisFile, __LINE__, ret);
-      sleep(1);   // Can't leave this loop or all hcom will stop
-      continue;
+      sleep(1);
+      continue;   // Can't leave this loop or all hcom will stop
     }
 
     if(_firstTimeToConnect)
@@ -200,7 +202,7 @@ int hcom_host_recv_open_connection()
 
   while(!_shutting_down)
   {
-    // Open reader.
+    // Open reader
     _comms_read_fd = open(deviceName, O_RDONLY);
     if(_comms_read_fd >= 0)
     {
@@ -208,8 +210,7 @@ int hcom_host_recv_open_connection()
       break;
     }
 
-    // TODO - consider inspecting ret for problems?
-    // p-m - IS THIS REALLY NECESSARY?
+    // Is this really necessary? Could this be based on the ret/errno?
     // After x attempts switch to a slower attempt rate
     if (hostConnectionAttemptCount > 0)
     {
@@ -221,7 +222,6 @@ int hcom_host_recv_open_connection()
       HCOM_CONNECTION_TIMEOUT_STARTUP : HCOM_CONNECTION_TIMEOUT_RUNNING);
   }
 
-  //--------------------------------------------------------------------------------
   hcom_logging_syslog(LOG_DEBUG, "%s@%d-%s ready for host comms\n",
             thisFile, __LINE__, deviceName);
 
@@ -240,7 +240,7 @@ bool hcom_host_recv_received_data()
   while (!_shutting_down)
   {
     ssize_t readResult = hcom_host_recv_wait_until_change(_tempRecvBuff,
-              hcom_dnld_proc_is_active() ?
+              hcom_file_dnld_proc_is_active() ?
                 HCOM_RECV_TIMEOUT_ACTIVE_SECONDS : HCOM_RECV_TIMEOUT_DEFAULT_SECONDS);
 
     // Return > 0 valid data received and this is the length
@@ -265,7 +265,7 @@ bool hcom_host_recv_received_data()
     // readResult < 0
     if (readResult == -ETIMEDOUT) // Time out is usually not a problem
     {
-      if (hcom_dnld_proc_is_active())
+      if (hcom_file_dnld_proc_is_active())
       {
         hcom_logging_syslog(LOG_WARNING, "%s@%d-Comms stopped. Recvd:%d bytes of msg\n",
                   thisFile, __LINE__, readResult);

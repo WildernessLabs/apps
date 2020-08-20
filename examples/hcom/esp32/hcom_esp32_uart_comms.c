@@ -1,5 +1,5 @@
 /****************************************************************************
- * examples\hcom\esp32\hcom_esp32_uart_comms.c
+ * \apps\examples\hcom\esp32\hcom_esp32_uart_comms.c
  * 
  *   Copyright (C) 2020 Wilderness Labs. All rights reserved.
  *   Author:  Wilderness Labs
@@ -50,6 +50,7 @@
 // esp32 chip is UART5 and has been registered with Nuttx as /dev/ttyS2.
 // See ...nuttx\arch\arm\src\stm32f7\stm32_serial.c @ 3100 and following
 // for where this assignment is made.
+
 #define HCOM_ESP32_FLASH_UART_DEV_NAME "/dev/ttyS2"
 #define HCOM_ESP32_FLASH_UART_READ_BUF_SIZE 512
 
@@ -292,7 +293,8 @@ int hcom_esp32_uart_comms_make_thread()
     ret = pthread_create(&thread, &attr, hcom_esp32_uart_comms_pthread, NULL);
     if (ret < 0)
     {
-      hcom_logging_syslog(LOG_CRIT, "%s@%d-Failed to create thread. Error:%d\n", thisFile, __LINE__, ret);
+      hcom_logging_syslog(LOG_CRIT, "%s@%d-Failed to create %s thread. Error:%d\n",
+                thisFile, __LINE__, HCOM_THREAD_NAME_ESP32_RECEIVE, ret);
     }
     return ret;
 }

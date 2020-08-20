@@ -1,5 +1,5 @@
 /****************************************************************************
- * \examples\hcom\hcom_test\hcom_vs_debug.c
+ * \apps\examples\hcom\tests\vs_debug_tests.c
  * 
  *   Copyright (C) 2020 Wilderness Labs. All rights reserved.
  *   Author:  Wilderness Labs
@@ -228,7 +228,6 @@ int MonoDebugTestConnect()
   } while(ret < 0);
 
   // syslog(1, "MTst->hcom connect attempted:%d SUCCESSFUL\n", attemptCnt);
-  usleep(50 * 1000);
   _connected = true;  
   return OK;
 

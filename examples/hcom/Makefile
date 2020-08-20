@@ -56,18 +56,18 @@ HCOM_SRCS = comms/hcom_host_encode.c \
 	comms/hcom_host_send.c \
 	diag/hcom_diag_misc.c \
 	diag/hcom_diag_trace_processing.c \
-	file/hcom_dnld_process_file.c \
-	file/hcom_dnld_write_delete.c \
-	file/hcom_list_files.c \
-	mono/hcom_mono_control.c \
-	mono/hcom_stdout_redirect.c \
-	mono/hcom_remote_vs_debug.c \
-	os_rqsts/hcom_bbreg_access.c \
-	os_rqsts/hcom_misc_requests.c \
-	os_rqsts/hcom_nx_access.c \
+	file/hcom_file_dnld_proc.c \
+	file/hcom_file_lists.c \
+	file/hcom_file_write_delete.c \
 	misc/hcom_circular_buffer.c \
 	misc/hcom_common_utils.c \
 	misc/hcom_logging_utils.c \
+	mono/hcom_mono_control.c \
+	mono/hcom_remote_vs_debug.c \
+	mono/hcom_stdout_redirect.c \
+	os_rqsts/hcom_bbreg_access.c \
+	os_rqsts/hcom_misc_requests.c \
+	os_rqsts/hcom_nx_access.c \
 	tests/bbreg_tests.c \
 	tests/developer_tests.c \
 	tests/vs_debug_tests.c
@@ -78,7 +78,6 @@ ifeq ($(CONFIG_HCOM_ESP32_COMMS),y)
  esp32/hcom_esp32_proc_util.c \
  esp32/hcom_esp32_proc_xmit.c \
  esp32/hcom_esp32_uart_comms.c
- 
 endif
 
 MAINSRC = hcom_startup_manager.c

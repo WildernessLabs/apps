@@ -1,5 +1,5 @@
 /****************************************************************************
- * \examples\hcom\hcom_startup_manager.c
+ * \apps\examples\hcom\hcom_startup_manager.c
  * 
  *   Copyright (C) 2019 - 2020 Wilderness Labs. All rights reserved.
  *   Author:  Wilderness Labs
@@ -46,6 +46,7 @@
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
+
 extern int hcom_main (int argc, char* argv[]);
 
 /****************************************************************************
@@ -63,8 +64,8 @@ static void hcom_manager_shutdown(void);
  * Public Functions
  ****************************************************************************/
 // This is the hcom tasks main thread, created by Nuttx when it has finished
-// starting the OS. This thread will do all initialization of hcom, then
-// becomes the thread that receives CLI messages.
+// starting the OS. This thread will do all the following initialization of
+// hcom, then becomes the thread that receives CLI messages.
 // All other threads are created by this thread or one of it's child threads.
 // This means that they are all in the same "task group." See the following
 // https://cwiki.apache.org/confluence/display/NUTTX/Tasks+vs.+Threads+FAQ
@@ -86,7 +87,7 @@ int hcom_main(int argc, char *argv[])
   // Sets up some basic initialization for ramlog, but may not create the
   // ramlog read thread etc. as this is not a commonly needed feature, some
   // setup is postponed until needed.
-  ret = hcom_diag_ramlog_trace_setup();
+  ret = hcom_diag_trace_ramlog_setup();
   if (ret < 0)
   {
     syslog(LOG_CRIT, "%s@%d-setup log tracing %d\n", thisFile, __LINE__, ret);
@@ -109,7 +110,6 @@ int hcom_main(int argc, char *argv[])
     return ret;
   }
 
-#if defined(CONFIG_STM32F7_PWR)
   // Attempt to restore syslog mask from battery backed register
   ret = hcom_logging_syslog_mask_init();
   if(ret < 0)
@@ -117,7 +117,6 @@ int hcom_main(int argc, char *argv[])
     syslog(LOG_CRIT, "%s@%d-hcom_logging_syslog_mask_init failed:%d\n", thisFile, __LINE__, ret);
     return ret; 
   }
-#endif
 
   // Doesn't do anything special
   ret = hcom_diag_misc_setup();
@@ -135,7 +134,7 @@ int hcom_main(int argc, char *argv[])
   }
 
   // Sets a few internal variable states
-  ret = hcom_dnld_proc_setup();
+  ret = hcom_file_dnld_proc_setup();
   if (ret < 0)
   {
     hcom_logging_syslog(LOG_CRIT, "%s@%d-setup file download %d\n", thisFile, __LINE__, ret);
@@ -143,7 +142,7 @@ int hcom_main(int argc, char *argv[])
   }
 
   // Sets a few internal variable states
-  ret = hcom_dnld_write_del_setup();
+  ret = hcom_file_write_del_setup();
   if (ret < 0)
   {
     hcom_logging_syslog(LOG_CRIT, "%s@%d-setup file cmds %d\n", thisFile, __LINE__, ret);
@@ -165,15 +164,6 @@ int hcom_main(int argc, char *argv[])
     return ret;
   }
 
-// #if defined(CONFIG_HCOM_MTD_STRESS_TEST)
-//   ret = hcom_developer_tests_setup(mtd);
-//   if (ret < 0)
-//   {
-//     hcom_logging_syslog(LOG_CRIT, "%s@%d-setup testing %d\n", thisFile, __LINE__, ret);
-//     return ret;
-//   }
-// #endif
-
   ret = hcom_host_recv_setup();
   if (ret < 0)
   {
@@ -188,23 +178,9 @@ int hcom_main(int argc, char *argv[])
     return ret;
   }
 
-// p-m This define is in .config but not used within hcom_nx where it should be used
-#if defined(CONFIG_HCOM_FILESYSTEM_INIT)
-  // This will format the file system as needed. This will prevent the nuttx OS from
-  // starting which includes mono. Therefore, mono cannot start until the file system
-  // is at least initialized. This is the desired behavior since mono starting before
-  // the file system would be a problem.
-  // ret = hcom_fs_init_file_system();
-  // if (ret < 0)
-  // {
-  //   hcom_logging_syslog(LOG_CRIT, "%s@%d-setup F/S helper %d\n", thisFile, __LINE__, ret);
-  //   return ret;
-  // }
-#endif
-
 #if defined(CONFIG_HCOM_MONO_OUTPUT_PIPE)
   // Creates a pipe and a receiving thread.
-  ret = hcom_mono_pipe_setup();
+  ret = hcom_mono_stdout_setup();
   if (ret < 0)
   {
     hcom_logging_syslog(LOG_CRIT, "%s@%d-setup mono pipe %d\n", thisFile, __LINE__, ret);
@@ -213,7 +189,7 @@ int hcom_main(int argc, char *argv[])
 #endif
 
   // Creates a unix domain socket and creates a receiving thread.
-  ret = hcom_remote_dbg_setup();
+  ret = hcom_mono_remote_dbg_setup();
   if (ret < 0)
   {
     hcom_logging_syslog(LOG_CRIT, "%s@%d-setup remote dbg %d\n", thisFile, __LINE__, ret);
@@ -252,19 +228,19 @@ int hcom_main(int argc, char *argv[])
 // comms file descriptor which will cause the worker thread to exit.
 void hcom_manager_shutdown()
 {  
-  // p-m - confirm that all functions that need shutdown are called
   hcom_host_recv_shutdown();
-  hcom_mono_pipe_shutdown();
+  hcom_mono_stdout_shutdown();
   hcom_common_utils_shutdown();
+  hcom_logging_utils_shutdown();
   hcom_host_route_shutdown();  
   hcom_host_parse_shutdown();
   hcom_host_send_shutdown();
-  hcom_dnld_write_del_shutdown();
-  hcom_remote_dbg_shutdown();
+  hcom_file_write_del_shutdown();
+  hcom_mono_remote_dbg_shutdown();
 #if defined (CONFIG_HCOM_ESP32_COMMS)
   hcom_esp32_uart_comms_shutdown();
 #endif
 #if defined (CONFIG_RAMLOG_SYSLOG)
-  hcom_diag_ramlog_trace_shutdown();
+  hcom_diag_trace_ramlog_shutdown();
 #endif
 }

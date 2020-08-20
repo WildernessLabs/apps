@@ -1,5 +1,5 @@
 /****************************************************************************
- *  \examples\hcom\commands\proc_dnld_rqst_download.c
+ * \apps\examples\hcom\file\hcom_file_dnld_proc.c
  * 
  *   Copyright (C) 2019-2020 Wilderness Labs. All rights reserved.
  *   Author:  Wilderness Labs
@@ -33,7 +33,7 @@
  *
  ****************************************************************************/
 
-// The 3 functions in the file setup to write a file, write the file and
+// The functions in the file setup to write a file, write the file and
 // end the download process while verifying file integrity.
 
 /****************************************************************************
@@ -104,7 +104,7 @@ static uint64_t get_current_time64(void)
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
-int hcom_dnld_proc_setup()
+int hcom_file_dnld_proc_setup()
 {
     _fileDownloadFailedNoted = false;
     _currentHcomDataPacketAction = HcomDnldActionNone;
@@ -113,13 +113,13 @@ int hcom_dnld_proc_setup()
 
 //==========================================================================
 // Are we actively receiving a file?
-bool hcom_dnld_proc_is_active()
+bool hcom_file_dnld_proc_is_active()
 {
   return (_currentHcomDataPacketAction != HcomDnldActionNone);
 }
 
 //==========================================================================
-void hcom_dnld_proc_begin(const uint8_t *recvPacketData, const size_t recvPacketDataSize,
+void hcom_file_dnld_proc_begin(const uint8_t *recvPacketData, const size_t recvPacketDataSize,
                                                 uint32_t partitionId, uint16_t requestType)
 {
   off_t msgOffset = 0;
@@ -173,7 +173,7 @@ void hcom_dnld_proc_begin(const uint8_t *recvPacketData, const size_t recvPacket
               thisFile, __LINE__, _xferRecvFullFileSize, _xferRecvFullFileCrc, fileNameBuffer);
       
       // Adding file to F7 file system
-      ret = hcom_dnld_write_del_open_active_file(partitionId, HCOM_FILE_MOUNT_POINT_TARGET, fileNameBuffer);
+      ret = hcom_file_write_del_open_active_file(partitionId, HCOM_FILE_MOUNT_POINT_TARGET, fileNameBuffer);
       if (ret < 0)
       {
         _fileSystemOpenFailed = true;
@@ -220,10 +220,8 @@ void hcom_dnld_proc_begin(const uint8_t *recvPacketData, const size_t recvPacket
 
 //============================================================================
 // Process data packet based on currently active state
-void hcom_dnld_proc_recvd_file_data(const uint8_t *packet, const size_t packetSize, uint16_t seqNumb)
+void hcom_file_dnld_proc_recvd_file_data(const uint8_t *packet, const size_t packetSize, uint16_t seqNumb)
 {
-  // TODO - verify that packets are numbered sequentially
-
   int ret;
   int msgOffset = sizeof(uint16_t); // size of sequence number
 
@@ -231,7 +229,8 @@ void hcom_dnld_proc_recvd_file_data(const uint8_t *packet, const size_t packetSi
   {
     if(!_fileDownloadFailedNoted)
     {
-      // ToDo - Someday when nothing else to do - This should send a message to host to stop sending
+      // Someday, when nothing else to do, modify the protocol so that the
+      // host knows to not send data that's going to be trashed sending.
       hcom_logging_syslog(LOG_ERR, "%s@%d-Data packets ignored, previous error.\n", thisFile, __LINE__);
       _fileDownloadFailedNoted = true;
     }
@@ -271,7 +270,7 @@ void hcom_dnld_proc_recvd_file_data(const uint8_t *packet, const size_t packetSi
       // Calculate CRC checksum of the payload without sequence number
       _xferMeadowCalcCrc = crc32part(recvOrigData, recvOrigDataSize, _xferMeadowCalcCrc);
 
-      ret = hcom_dnld_write_del_add_to_active_file(recvOrigData, recvOrigDataSize);
+      ret = hcom_file_write_del_add_to_active_file(recvOrigData, recvOrigDataSize);
       break;
 
     case HcomDnldActionEsp32FileXfer:
@@ -301,7 +300,7 @@ void hcom_dnld_proc_recvd_file_data(const uint8_t *packet, const size_t packetSi
 // Note: The the userData is 0 unless it's last file to be sent by the CLI command.
 // For F7 this value is not used but the ESP32 uses this to reboot the ESP32.
 // Only after a reboot will the ESP32 attempt to execute the program.
-void hcom_dnld_proc_end(uint32_t userData)
+void hcom_file_dnld_proc_end(uint32_t userData)
 {
   int ret;
   char hostMsg[HCOM_SHORT_HOST_STRING_BUFF_LENGTH];
@@ -319,7 +318,7 @@ void hcom_dnld_proc_end(uint32_t userData)
   switch(_currentHcomDataPacketAction)
   {
     case HcomDnldActionMeadowFileXfer:
-      ret = hcom_dnld_write_del_close_active_file();
+      ret = hcom_file_write_del_close_active_file();
       if (ret < 0)
       {
         hcom_logging_syslog(LOG_ERR, "%s@%d-File close:%d\n", thisFile, __LINE__, ret);

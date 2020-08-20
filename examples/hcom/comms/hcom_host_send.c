@@ -1,5 +1,5 @@
 /****************************************************************************
- * \examples\hcom\comms\hcom_comms_send.c
+ * \apps\examples\hcom\comms\hcom_host_send.c
  * 
  *   Copyright (C) 2019 - 2020 Wilderness Labs. All rights reserved.
  *   Author:  Wilderness Labs
@@ -32,6 +32,10 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *
  ****************************************************************************/
+
+// Both high level functions that prepare a message to be successfully sent
+// and low level functions that do the transmission to the host PC or Mac
+// are in this module.
 
 /****************************************************************************
  * Included Files
@@ -188,12 +192,9 @@ static int hcom_host_send_buffered_msg(uint16_t requestType, uint16_t extraData,
   }
 
   int fullMsgLen = msgLen + HCOM_PROTOCOL_REQUEST_HEADER_LENGTH;
-
- // DEBUGASSERT(fullMsgLen <= HCOM_PROTOCOL_REQUEST_MAX_SIMPLE_DATA_LEN);
   if(fullMsgLen > HCOM_PROTOCOL_REQUEST_MAX_SIMPLE_DATA_LEN)
   {
     // Truncate to fit
-    // todo - is this a good idea?
     fullMsgLen = HCOM_PROTOCOL_PACKET_MAX_SIZE;
   }
 

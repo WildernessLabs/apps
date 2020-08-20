@@ -1,5 +1,5 @@
 /****************************************************************************
- * configs/stm32f777-zit6-meadow/src/hcom/hcom_exec_utility_request.c
+ * \apps\examples\hcom\os_rqsts\hcom_misc_requests.c
  * 
  *   Copyright (C) 2019 - 2020 Wilderness Labs. All rights reserved.
  *   Author:  Wilderness Labs
@@ -48,6 +48,7 @@
 /****************************************************************************
  * Private Data
  ****************************************************************************/
+
 static char *thisFile = __FILE__;
 
 /****************************************************************************
@@ -63,6 +64,8 @@ int hcom_misc_rqst_setup()
 }
 
 //======================================================================================
+// Most of the device information is available from here but not
+// the MCU unique identifier.
 void hcom_misc_rqst_get_device_info(uint32_t userData)
 {
   char *csvDevInfo;
@@ -133,6 +136,7 @@ void hcom_misc_rqst_get_device_info(uint32_t userData)
 }
 //======================================================================================
 // Enter the dfu mode so the user can flash the internal flash with the OS
+// THIS HAS NEVER BEEN IMPLEMENTED
 void hcom_misc_rqst_enter_dfu_mode(uint32_t userData)
 {
   hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_DEVICE_INFO, 0,

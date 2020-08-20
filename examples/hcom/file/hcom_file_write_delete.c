@@ -1,5 +1,5 @@
 /****************************************************************************
- * \examples\hcom\file_access\hcom_file_commands.c
+ * \apps\examples\hcom\file\hcom_file_write_delete.c
  * 
  *   Copyright (C) 2019 - 2020 Wilderness Labs. All rights reserved.
  *   Author:  Wilderness Labs
@@ -66,7 +66,7 @@ static char *_hcomActiveFileName;
  * Private Functions
  ****************************************************************************/
 
-static int hcom_dnld_write_del_remove_file_by_name(const uint32_t partitionId, const char *mountPoint, const char *fileName);
+static int hcom_file_write_del_remove_file_by_name(const uint32_t partitionId, const char *mountPoint, const char *fileName);
 
 /****************************************************************************
  * Public Types
@@ -75,7 +75,7 @@ static int hcom_dnld_write_del_remove_file_by_name(const uint32_t partitionId, c
 /****************************************************************************
  * Public Functions
  ***************************************************************************/
-int hcom_dnld_write_del_setup()
+int hcom_file_write_del_setup()
 {
   _shutting_down = false;
 
@@ -91,26 +91,19 @@ int hcom_dnld_write_del_setup()
 //=======================================================================
 // Called before hcom mgr closes _hcom_communications_fd which, forces a receive
 // error which, causes the thread to return.
-void hcom_dnld_write_del_shutdown()
+void hcom_file_write_del_shutdown()
 {
   _shutting_down = true;
 
   if (_fileDescriptor != -1)
-    hcom_dnld_write_del_close_active_file();
+    hcom_file_write_del_close_active_file();
     
   free(_hcomActiveFileName);
 }
 
-// //=======================================================================
-// // Returns true if there is an active file
-// bool hcom_dnld_write_del_is_active_file()
-// {
-//   return _hcomActiveFileName[0] != '\0';
-// }
-
 //==================================================================
 // This is the activefile is the file currently being downloaded
-int hcom_dnld_write_del_open_active_file(const uint32_t partitionId,
+int hcom_file_write_del_open_active_file(const uint32_t partitionId,
           const char *mountPoint, const char *fileName)
 {
   int filePathAndNameLen;
@@ -186,7 +179,7 @@ int hcom_dnld_write_del_open_active_file(const uint32_t partitionId,
 
 //==================================================================
 // When data to be added to a file is received it arrives here.
-int hcom_dnld_write_del_add_to_active_file(const uint8_t *fileWriteData, const size_t fileWriteSize)
+int hcom_file_write_del_add_to_active_file(const uint8_t *fileWriteData, const size_t fileWriteSize)
 {
   if (_shutting_down)
     return OK;
@@ -221,7 +214,7 @@ int hcom_dnld_write_del_add_to_active_file(const uint8_t *fileWriteData, const s
 //==================================================================
 // When downloading to a file and the end of file message is received
 // this function is called to close the file and clean up.
-int hcom_dnld_write_del_close_active_file()
+int hcom_file_write_del_close_active_file()
 {
   if (!hcom_nx_is_mounted(_activePartitionId))
     return -ENOENT; // No such file or directory
@@ -250,7 +243,7 @@ int hcom_dnld_write_del_close_active_file()
 //=====================================================================
 // When a request to delete a file by name arrives it first is processed
 // in this function
-void hcom_dnld_write_del_remove_file_start(const uint8_t *recvPacketData, const size_t recvPacketDataSize,
+void hcom_file_write_del_remove_file_start(const uint8_t *recvPacketData, const size_t recvPacketDataSize,
     uint32_t partitionId)
 {
   int ret;
@@ -262,7 +255,7 @@ void hcom_dnld_write_del_remove_file_start(const uint8_t *recvPacketData, const 
 
   memcpy(fileNameBuffer, recvPacketData + HCOM_PROTOCOL_REQUEST_HEADER_FILE_NAME_OFFSET, fileNameLength);
 
-  ret = hcom_dnld_write_del_remove_file_by_name(partitionId, HCOM_FILE_MOUNT_POINT_TARGET, fileNameBuffer);
+  ret = hcom_file_write_del_remove_file_by_name(partitionId, HCOM_FILE_MOUNT_POINT_TARGET, fileNameBuffer);
   if (ret != OK)
   {
     hcom_logging_syslog(LOG_ERR, "%s@%d-Error from call to delete:%d\n",
@@ -284,7 +277,7 @@ void hcom_dnld_write_del_remove_file_start(const uint8_t *recvPacketData, const 
 
 //=====================================================================
 // Remove the file specified
-int hcom_dnld_write_del_remove_file_by_name(const uint32_t partitionId, const char *mountPoint, const char *fileName)
+int hcom_file_write_del_remove_file_by_name(const uint32_t partitionId, const char *mountPoint, const char *fileName)
 {
   int filePathAndNameLen;
   char *fullPathAndFileName = malloc(HCOM_MAX_HOST_STRING_BUFF_LENGTH);

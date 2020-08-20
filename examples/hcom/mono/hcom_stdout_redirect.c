@@ -50,6 +50,7 @@
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
+
 #define HCOM_PIPE_READ_OFFSET 0
 #define HCOM_PIPE_WRITE_OFFSET 1
 
@@ -73,25 +74,25 @@ static int _pipefd[2];
  * Private Function Prototypes
  ****************************************************************************/
 
-static FAR void *hcom_mono_pipe_pthread(FAR void *arg);
-static int hcom_mono_pipe_create_infrastructure(void);
-static int hcom_mono_pipe_make_thread(void);
-static int hcom_mono_pipe_read_pipe_loop(void);
-static int hcom_mono_pipe_route_mono_text_stdout(uint8_t *recvBuff, int numbBytes);
+static FAR void *hcom_mono_stdout_pthread(FAR void *arg);
+static int hcom_mono_stdout_create_infrastructure(void);
+static int hcom_mono_stdout_make_thread(void);
+static int hcom_mono_stdout_read_pipe_loop(void);
+static int hcom_mono_stdout_route_mono_text_stdout(uint8_t *recvBuff, int numbBytes);
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
-int hcom_mono_pipe_setup()
+int hcom_mono_stdout_setup()
 {
   _shutting_down = false;
 
-  return hcom_mono_pipe_create_infrastructure();
+  return hcom_mono_stdout_create_infrastructure();
 }
 
 //==========================================================================
 // Closing connection forces a receive error which, causes the thread to return.
-void hcom_mono_pipe_shutdown()
+void hcom_mono_stdout_shutdown()
 {
   _shutting_down = true;
 
@@ -108,11 +109,10 @@ void hcom_mono_pipe_shutdown()
     hcom_logging_syslog(LOG_ERR, "%s@%d close write, errno:%d\n",
       thisFile, __LINE__, errno);
   }
-  // _read_pipe_fd = -1;
-  }
+}
 
 //==========================================================================
-int hcom_mono_pipe_create_infrastructure()
+int hcom_mono_stdout_create_infrastructure()
 {
   int ret;
 
@@ -126,7 +126,7 @@ int hcom_mono_pipe_create_infrastructure()
   }
 
   // Create a thread to read the pipe
-  ret = hcom_mono_pipe_make_thread();
+  ret = hcom_mono_stdout_make_thread();
   if (ret < 0)
   {
     hcom_logging_syslog(LOG_ERR, "%s@%d-thread create, errno:%d\n",
@@ -138,22 +138,23 @@ int hcom_mono_pipe_create_infrastructure()
 }
 
 //=============================================================
-int hcom_mono_pipe_make_thread()
+int hcom_mono_stdout_make_thread()
 {
     int ret;
     pthread_t thread;
     pthread_attr_t attr;
     struct sched_param param;
 
-    param.sched_priority = HCOM_THREAD_PRIORITY_STDOUT_PIPE;
+    param.sched_priority = HCOM_THREAD_PRIORITY_STDOUT_REDIRECT;
     (void)pthread_attr_init(&attr);
     (void)pthread_attr_setschedparam(&attr, &param);
     (void)pthread_attr_setstacksize(&attr, 2048);
 
-    ret = pthread_create(&thread, &attr, hcom_mono_pipe_pthread, NULL);
+    ret = pthread_create(&thread, &attr, hcom_mono_stdout_pthread, NULL);
     if (ret < 0)
     {
-      hcom_logging_syslog(LOG_CRIT, "%s@%d-Thread create error:%d\n", thisFile, __LINE__, ret);
+      hcom_logging_syslog(LOG_CRIT, "%s@%d-Thread create %s error:%d\n",
+              thisFile, __LINE__, HCOM_THREAD_NAME_STDOUT_REDIRECT, ret);
       return ret;
     }
 
@@ -162,7 +163,7 @@ int hcom_mono_pipe_make_thread()
 
 //=================================================================
 // This thread reads all pipe messages received from stdout (mono)
-void *hcom_mono_pipe_pthread(FAR void *arg)
+void *hcom_mono_stdout_pthread(FAR void *arg)
 {
   int ret;
 
@@ -177,7 +178,7 @@ void *hcom_mono_pipe_pthread(FAR void *arg)
   // This loop runs forever
   while(!_shutting_down)
   {
-    ret = hcom_mono_pipe_read_pipe_loop();
+    ret = hcom_mono_stdout_read_pipe_loop();
     if(ret < 0)
     {
       sleep(5);
@@ -191,7 +192,7 @@ void *hcom_mono_pipe_pthread(FAR void *arg)
 // The read end of the pipe
 // It is expected that only text message will be received. But not
 // necessarily C style strings.
-int hcom_mono_pipe_read_pipe_loop()
+int hcom_mono_stdout_read_pipe_loop()
 {
   uint8_t buffer[HCOM_MONO_APP_DBG_PIPE_BUFF_SIZE];
   ssize_t readReturn;
@@ -218,7 +219,7 @@ int hcom_mono_pipe_read_pipe_loop()
       hcom_logging_syslog(LOG_DEBUG, "%s@%d-Read %d bytes from pipe\n", thisFile, __LINE__, readReturn);
 
       // Send to host
-      int ret = hcom_mono_pipe_route_mono_text_stdout(buffer, readReturn);
+      int ret = hcom_mono_stdout_route_mono_text_stdout(buffer, readReturn);
       if (ret < 0 )
       {
         if(ret == -EAGAIN)
@@ -243,7 +244,7 @@ int hcom_mono_pipe_read_pipe_loop()
 
 //=================================================================
 // Ship the text from mono app to USB and to host PC
-int hcom_mono_pipe_route_mono_text_stdout(uint8_t *recvBuff, int numbBytes)
+int hcom_mono_stdout_route_mono_text_stdout(uint8_t *recvBuff, int numbBytes)
 {
   int availBufSpace;
 

@@ -1,5 +1,5 @@
 /****************************************************************************
- * \examples\hcom\misc\hcom_register_access.c
+ * \apps\examples\hcom\os_rqsts\hcom_bbreg_access.c
  * 
  *   Copyright (C) 2020 Wilderness Labs. All rights reserved.
  *   Author:  Wilderness Labs

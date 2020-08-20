@@ -1,5 +1,5 @@
 /****************************************************************************
- * \examples\hcom\esp32\hcom_esp32_comms.h
+ * \apps\examples\hcom\esp32\hcom_esp32_comms.h
  * 
  *   Copyright (C) 2020 Wilderness Labs. All rights reserved.
  *   Author:  Wilderness Labs
@@ -33,8 +33,8 @@
  *
  ****************************************************************************/
 
-#ifndef __CONFIGS_MEADOW_SRC_MEADOW_ESP32_MAIN__H
-#define __CONFIGS_MEADOW_SRC_MEADOW_ESP32_MAIN__H
+#ifndef __CONFIGS_MEADOW_SRC_HCOM_ESP32_COMMON__H
+#define __CONFIGS_MEADOW_SRC_HCOM_ESP32_COMMON__H
 
 /****************************************************************************
  * Included Files
@@ -190,7 +190,10 @@ struct HcomEsp32SecHdrSpiParms_s
 #define HCOM_ESP_COMMS_MSG_QUEUE_NAME "/EspMQ"
 #define HCOM_ESP_COMMS_MSG_QUEUE_MAX_MSGS     4
 
-#define HCOM_ESP_COMMS_MAX_ESP_PACKET_SIZE HCOM_PROTOCOL_PACKET_MAX_SIZE
+// This is just a guess and so far it's been big enough.
+// Originally, it was based on HCOM_SAFE_PACKET_BUF_SIZE
+// which was about 750. 
+#define HCOM_ESP_COMMS_MAX_ESP_PACKET_SIZE 768
 
 #define HCOM_ESP32_PICO_D4_FLASH_ID 0
 #define HCOM_ESP32_PICO_D4_FLASH_SIZE (4 * 1024 * 1024)
@@ -304,4 +307,4 @@ enum Esp32Registers
   char *hcom_esp32_util_convert_cmd_to_string(uint8_t cmd);
   int hcom_esp32_util_hardware_restart(void);
 
-#endif // __CONFIGS_MEADOW_SRC_MEADOW_ESP32_MAIN__H
+#endif // __CONFIGS_MEADOW_SRC_HCOM_ESP32_COMMON__H

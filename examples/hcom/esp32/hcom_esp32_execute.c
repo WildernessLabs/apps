@@ -1,5 +1,5 @@
 /****************************************************************************
- * examples\hcom\esp32\hcom_esp32_execute.c
+ * \apps\examples\hcom\esp32\hcom_esp32_execute.c
  * 
  *   Copyright (C) 2020 Wilderness Labs. All rights reserved.
  *   Author:  Wilderness Labs
@@ -67,8 +67,9 @@ static char _espCalcMd5Hash[HCOM_PROTOCOL_REQUEST_MD5_HASH_LENGTH + 1];
 /****************************************************************************
  * Private Function Prototypes
  ****************************************************************************/
+
 static int hcom_esp32_exec_buffer_to_esp32(uint8_t *downloadData, size_t dnldDataSize, bool isLastDownload);
-static uint32_t erase_time_per_mega_byte(size_t xmit_size);
+static uint32_t hcom_esp32_exec_era_time_per_mega_byte(size_t xmit_size);
 
 /****************************************************************************
  * Public Functions
@@ -94,7 +95,7 @@ void hcom_esp32_exec_shutdown()
 
 //====================================================================
 // Returns approximately how much time to erase destination flash
-uint32_t erase_time_per_mega_byte(size_t xmit_size)
+uint32_t hcom_esp32_exec_era_time_per_mega_byte(size_t xmit_size)
 {
   uint32_t timeout = HCOM_ESP32_ERASE_TIME_PER_MEGA_BYTE * (xmit_size / 1e6);
   return timeout > HCOM_ESP_XMIT_FLASH_DELAY_MS ? timeout : HCOM_ESP_XMIT_FLASH_DELAY_MS;
@@ -196,7 +197,7 @@ int hcom_esp32_exec_download_flash_start(const size_t entireFileSize,
 
   // This will erase all needed flash, thus needing a bit more time
   ret = hcom_esp32_xmit_build_and_send_msg((uint8_t *)&flashBegin, HCOM_ESP32_PROTOCOL_BEGIN_HDR_LENGTH,
-        Esp32CommandFlashBegin, erase_time_per_mega_byte(entireFileSize), &recvdData);
+        Esp32CommandFlashBegin, hcom_esp32_exec_era_time_per_mega_byte(entireFileSize), &recvdData);
   if(ret < 0)
   {
     hcom_logging_syslog(LOG_ERR, "%s@%d-FLASH_BEGIN %d\n", thisFile, __LINE__, ret);

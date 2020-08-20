@@ -1,5 +1,5 @@
 /****************************************************************************
- * \examples\hcom\commands\hcom_save_parse_request.c
+ * \apps\examples\hcom\comms\hcom_host_route.c
  * 
  *   Copyright (C) 2019 - 2020 Wilderness Labs. All rights reserved.
  *   Author:  Wilderness Labs
@@ -119,19 +119,19 @@ void hcom_host_route_request_by_type(const uint8_t *recvOrigData, const size_t r
   {
     case HCOM_MDOW_REQUEST_START_FILE_TRANSFER:
       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-      hcom_dnld_proc_begin(recvPayload, recvPayloadSize, userData, requestType);
+      hcom_file_dnld_proc_begin(recvPayload, recvPayloadSize, userData, requestType);
       break;
       
     // Note: Start file transfer provides the 'Accepted' message and
     // end file transfer the 'Concluded' message
     case HCOM_MDOW_REQUEST_END_FILE_TRANSFER:
-      hcom_dnld_proc_end(userData);
+      hcom_file_dnld_proc_end(userData);
       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
       break;
 
     case HCOM_MDOW_REQUEST_DELETE_FILE_BY_NAME:
       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-      hcom_dnld_write_del_remove_file_start(recvPayload, recvPayloadSize, userData);
+      hcom_file_write_del_remove_file_start(recvPayload, recvPayloadSize, userData);
       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
       break;
 
@@ -140,13 +140,13 @@ void hcom_host_route_request_by_type(const uint8_t *recvOrigData, const size_t r
     // ESP32 follow
     case HCOM_MDOW_REQUEST_START_ESP_FILE_TRANSFER:
       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-      hcom_dnld_proc_begin(recvPayload, recvPayloadSize, userData, requestType);
+      hcom_file_dnld_proc_begin(recvPayload, recvPayloadSize, userData, requestType);
       break;
 
     // Note: Start file transfer provides the 'Accepted' message and
     // end file transfer the 'Concluded' message
     case HCOM_MDOW_REQUEST_END_ESP_FILE_TRANSFER:
-      hcom_dnld_proc_end(userData);
+      hcom_file_dnld_proc_end(userData);
       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
       break;
     
@@ -178,19 +178,19 @@ void hcom_host_route_request_by_type(const uint8_t *recvOrigData, const size_t r
 
     case HCOM_MDOW_REQUEST_LIST_PARTITION_FILES:
       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-      hcom_list_files_in_partition(userData);
+      hcom_file_lists_files_in_partition(userData);
       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
       break;
 
     case HCOM_MDOW_REQUEST_LIST_PART_FILES_AND_CRC:
       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-      hcom_list_files_and_crc_in_partition(userData);
+      hcom_file_lists_files_and_crc_in_partition(userData);
       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
       break;
 
     case HCOM_MDOW_REQUEST_MONO_RUN_STATE:
       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-//       hcom_mono_rqst_is_mono_enabled(userData);
+      hcom_mono_ctrl_report_mono_enabled_state(userData);
       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
       break;
 
@@ -225,12 +225,12 @@ void hcom_host_route_request_by_type(const uint8_t *recvOrigData, const size_t r
 
     case HCOM_MDOW_REQUEST_MONO_DISABLE:
       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-      hcom_mono_rqst_disable_mono(userData);   // Forces restart
+      hcom_mono_ctrl_disable_mono(userData);   // Forces restart
       break;
 
     case HCOM_MDOW_REQUEST_MONO_ENABLE:
       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-      hcom_mono_rqst_enable_mono(userData);   // Forces restart
+      hcom_mono_ctrl_enable_mono(userData);   // Forces restart
       break;
 
     case HCOM_MDOW_REQUEST_MONO_FLASH:
@@ -264,7 +264,7 @@ void hcom_host_route_request_by_type(const uint8_t *recvOrigData, const size_t r
 
     case HCOM_MDOW_REQUEST_DEBUGGER_MSG:
       // Accepted and concluded not needed here! This is not user facing message
-      hcom_remote_dbg_recv_host_sending_to_mono(recvPayload, recvPayloadSize, userData);
+      hcom_mono_remote_dbg_recv_host_sending_to_mono(recvPayload, recvPayloadSize, userData);
       break;
 
     case HCOM_MDOW_REQUEST_ENABLE_DISABLE_NSH:
@@ -317,7 +317,7 @@ void hcom_host_route_request_by_type(const uint8_t *recvOrigData, const size_t r
       break;
 #endif
 
-// p-m These are not needed
+// These are not needed
 //       // Partitions the entire flash chip with the number of partitions that
 //       // are defined by userData.
 //     case HCOM_MDOW_REQUEST_PARTITION_FLASH_FS:

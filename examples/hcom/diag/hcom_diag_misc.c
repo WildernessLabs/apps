@@ -59,6 +59,7 @@ static char *thisFile = __FILE__;
 
 #if defined CONFIG_SYSTEM_NSH
 int nsh_main(int argc, char *argv[]);
+static bool _nsh_enabled;
 #endif
 
 /****************************************************************************
@@ -71,37 +72,49 @@ int nsh_main(int argc, char *argv[]);
 
 int hcom_diag_misc_setup()
 {
+#if defined CONFIG_SYSTEM_NSH
+  _nsh_enabled = false;
+#endif
   return OK;
 }
 
 //=======================================================================================
+// THERE'S A PROBLEM. NUTTX ROUTES ALL NUTTX OUTPUT TO stdout THEN to /dev/console. SINCE
+// MONO ROUTES ALL Console.Write() CALLS TO stdout AND HCOM REDIRECTS stdout TO A PIPE AND
+// VIA HCOM TO THE HOST. NSH CANNOT BE USED UNLESS A CHANGE IS MADE TO DISABLE THE stdout
+// REDIRECTION.
+//
 // userData = 1 enables and userData = 0 disables
 void hcom_diag_misc_launch_nsh(uint32_t userData)
 {
-  // p-m Need to swap out the _nsh_enabled for pthread_join. That way we can
+  syslog(1, "NSH>--Entered hcom_diag_misc_launch_nsh, userData:%d\n", userData); usleep(50 * 1000);
+  // Need to swap out the _nsh_enabled for pthread_join. That way we can
   // use NSH>exit and then restart it again. The way it is, once started the
   // _nsh_enabled flag once set true won't allow nsh to be restarted.
   // mayby waitpid() or waitid() can do the job
+  // Tried 'atexit()' but nuttx hung at start???
 #if defined CONFIG_SYSTEM_NSH
   int _nsh_pid;
-  static bool _nsh_enabled = false;
 
   if(_nsh_enabled)
   {
     hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0, "NSH already enabled",
             thisFile, __LINE__);
+  syslog(1, "_nsh_enanabled:%d so exiting:%d\n", _nsh_enabled); usleep(50 * 1000);
     return;
   }
 
   if(userData == 1)
   {
     // Create a unique task for NSH
+  syslog(1, "NSH>--Creating task for nsh\n"); usleep(50 * 1000);
     _nsh_pid = task_create("nsh", CONFIG_SYSTEM_NSH_PRIORITY,
                         CONFIG_SYSTEM_NSH_STACKSIZE,
                         (main_t)nsh_main,
                         (FAR char * const *) NULL);
     if(_nsh_pid > 0)
     {
+  syslog(1, "NSH>--Creating task_create SUCCESS\n"); usleep(50 * 1000);
       _nsh_enabled = true;
       hcom_logging_syslog(LOG_INFO, "%s@%d-NSH now enabled [pid:%d, pri:%d, stack:%d]\n",
               thisFile, __LINE__, _nsh_pid, CONFIG_SYSTEM_NSH_PRIORITY, CONFIG_SYSTEM_NSH_STACKSIZE);
@@ -110,6 +123,7 @@ void hcom_diag_misc_launch_nsh(uint32_t userData)
     }
     else
     {
+  syslog(1, "NSH>--Creating task_create FAILED\n"); usleep(50 * 1000);
       hcom_logging_syslog(LOG_ERR, "%s@%d-NSH could not be created\n", thisFile, __LINE__);
       hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0,
               "NSH could not be created", thisFile, __LINE__);
@@ -117,6 +131,7 @@ void hcom_diag_misc_launch_nsh(uint32_t userData)
   }
   else
   {
+  syslog(1, "NSH>--Not implemented\n"); usleep(50 * 1000);
     hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0,
             "NSH not implemented", thisFile, __LINE__);
     return;

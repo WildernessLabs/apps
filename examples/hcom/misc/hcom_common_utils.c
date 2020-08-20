@@ -1,5 +1,5 @@
 /****************************************************************************
- * \examples\hcom\hcom_common_utils.c
+ * \apps\examples\hcom\misc\hcom_common_utils.c
  * 
  *   Copyright (C) 2019 - 2020 Wilderness Labs. All rights reserved.
  *   Author:  Wilderness Labs

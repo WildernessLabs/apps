@@ -1,5 +1,5 @@
 /****************************************************************************
- * \examples\hcom\file_access\list_files.c
+ * \apps\examples\hcom\file\hcom_file_lists.c
  * 
  *   Copyright (C) 2019 - 2020 Wilderness Labs. All rights reserved.
  *   Author:  Wilderness Labs
@@ -61,14 +61,14 @@ static char *thisFile = __FILE__;
 /****************************************************************************
  * Private Function Prototypes
  ****************************************************************************/
-static uint32_t hcom_list_calc_crc_for_file(char *completeFilePath, off_t *fileSize,
+static uint32_t hcom_file_lists_calc_crc_for_file(char *completeFilePath, off_t *fileSize,
           uint32_t *blockSizeKB);
-static int hcom_list_all_dev_dir_and_files(const char *name, int indent, uint32_t userData);
+static int hcom_file_lists_all_dev_dir_and_files(const char *name, int indent, uint32_t userData);
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
-int hcom_list_files_in_partition(uint32_t partitionId)
+int hcom_file_lists_files_in_partition(uint32_t partitionId)
 {
   int fileCount = 0;
 
@@ -143,7 +143,7 @@ int hcom_list_files_in_partition(uint32_t partitionId)
 }
 
 //=====================================================================
-int hcom_list_files_and_crc_in_partition(uint32_t partitionId)
+int hcom_file_lists_files_and_crc_in_partition(uint32_t partitionId)
 {
   int fileCount = 0;
 
@@ -191,7 +191,7 @@ int hcom_list_files_and_crc_in_partition(uint32_t partitionId)
       // Find the CRC checksum
       off_t fileSize;
       uint32_t blockSizeKB;
-      uint32_t crcChecksum = hcom_list_calc_crc_for_file(completeNameBuf, &fileSize, &blockSizeKB);
+      uint32_t crcChecksum = hcom_file_lists_calc_crc_for_file(completeNameBuf, &fileSize, &blockSizeKB);
       totalSizeOfFiles += fileSize;
       totalFlashSizeKB += blockSizeKB;
 
@@ -242,14 +242,14 @@ int hcom_list_files_and_crc_in_partition(uint32_t partitionId)
 
 // ==============================================================
 // THIS IS CALLABLE from Developer 4 at this time
-int hcom_list_all_dev_dir_and_files_start(uint32_t userData)
+int hcom_file_lists_all_dev_dir_and_files_start(uint32_t userData)
 {
   // Changing "/" to "meadow0" will only show meadow files
-  return hcom_list_all_dev_dir_and_files("/", 0, userData);
+  return hcom_file_lists_all_dev_dir_and_files("/", 0, userData);
 }
 //----------------------------------------------
 // NOTE - Recursive function
-int hcom_list_all_dev_dir_and_files(const char *name, int indent, uint32_t userData)
+int hcom_file_lists_all_dev_dir_and_files(const char *name, int indent, uint32_t userData)
 {
   char hostMsg[HCOM_SHORT_HOST_STRING_BUFF_LENGTH];
 
@@ -283,7 +283,7 @@ int hcom_list_all_dev_dir_and_files(const char *name, int indent, uint32_t userD
       snprintf(path, sizeof(path), "%s/%s", name, entry->d_name);
       
       // Recursion is here
-      hcom_list_all_dev_dir_and_files(path, indent + 1, userData);
+      hcom_file_lists_all_dev_dir_and_files(path, indent + 1, userData);
     }
     else
     {
@@ -307,7 +307,7 @@ int hcom_list_all_dev_dir_and_files(const char *name, int indent, uint32_t userD
 
 //==================================================================
 // This call will calculate the crc32 checksum for the requested file
-uint32_t hcom_list_calc_crc_for_file(char *completeFilePath,
+uint32_t hcom_file_lists_calc_crc_for_file(char *completeFilePath,
           off_t *fileSize, uint32_t *blockSizeKB)
 {
   uint32_t crc32Checksum = 0;

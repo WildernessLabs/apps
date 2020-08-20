@@ -1,5 +1,5 @@
 /****************************************************************************
- * examples\hcom\esp32\hcom_esp32_proc_util.c
+ * \apps\examples\hcom\esp32\hcom_esp32_proc_util.c
  * 
  *   Copyright (C) 2020 Wilderness Labs. All rights reserved.
  *   Author:  Wilderness Labs
@@ -65,6 +65,7 @@ static uint8_t hcom_esp_sync_msg[] =
 /****************************************************************************
  * Private Function Prototypes
  ****************************************************************************/
+ 
  static char *thisFile = __FILE__;
  static bool _connectionActive;
  static void hcom_esp32_util_gpio_enter_prog_mode(void);

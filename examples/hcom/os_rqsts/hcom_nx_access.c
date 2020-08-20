@@ -1,5 +1,5 @@
 /****************************************************************************
- * \examples\hcom\hcom_nx_access.c
+ * \apps\examples\hcom\os_rqsts\hcom_nx_access.c
  * 
  *   Copyright (C) 2020 Wilderness Labs. All rights reserved.
  *   Author:  Wilderness Labs

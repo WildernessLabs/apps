@@ -1,5 +1,5 @@
 /****************************************************************************
- * \examples\hcom\commands\hcom_proc_requests.c
+ * \apps\examples\hcom\comms\hcom_host_parse.c
  * 
  *   Copyright (C) 2019 - 2020 Wilderness Labs. All rights reserved.
  *   Author:  Wilderness Labs
@@ -33,7 +33,7 @@
  *
  ****************************************************************************/
 
-// This file is mostly about receiving undelimited data buffering it and
+// This file is mostly about saving undelimited data, buffering it and
 // pulling packetized data and forwarding it to be routed.
 
 /****************************************************************************
@@ -58,6 +58,8 @@ static char *thisFile = __FILE__;
 static bool _shutting_down;
 static struct host_com_cir_buffer_s *_hcom_cbuf;
 static size_t _max_packet_size = HCOM_SAFE_PACKET_BUF_SIZE;
+static uint8_t *_packet_dest_buf = NULL;
+static uint8_t *_decode_dest_buf = NULL;
 
 /****************************************************************************
  * Private Function Prototypes
@@ -73,9 +75,11 @@ static int hcom_host_parse_pull_all_packets_from_buffer(void);
 int hcom_host_parse_setup()
 {
   _shutting_down = false;
-
+  
+  _packet_dest_buf = (uint8_t *)malloc(_max_packet_size);
+  _decode_dest_buf = (uint8_t *)malloc(_max_packet_size);
   _hcom_cbuf = (struct host_com_cir_buffer_s *)malloc(sizeof(struct host_com_cir_buffer_s));
-  if (_hcom_cbuf == NULL)
+  if (_hcom_cbuf == NULL || _decode_dest_buf == NULL || _packet_dest_buf == NULL)
   {
     hcom_logging_syslog(LOG_ERR, "%s@%d-cir buf alloc\n", thisFile, __LINE__);
     return -1;
@@ -97,6 +101,8 @@ void hcom_host_parse_shutdown()
 {
   _shutting_down = true;
 
+  free(_packet_dest_buf);
+  free(_decode_dest_buf);
   free(_hcom_cbuf);
 }
 
@@ -161,21 +167,12 @@ int hcom_host_parse_process_raw_data(uint8_t recvBuff[], const ssize_t recvByteC
 int hcom_host_parse_pull_all_packets_from_buffer()
 {
   int result;
-  // Todo - the memory allocated for this is never freed.
-  static uint8_t *packet_dest_buf = NULL;
-  static uint8_t *decode_dest_buf = NULL;
-
-  if (packet_dest_buf == NULL)
-  {
-    packet_dest_buf = (uint8_t *)malloc(_max_packet_size);
-    decode_dest_buf = (uint8_t *)malloc(_max_packet_size);
-  }
 
   for (;;)
   {
     size_t packetLength;
     // If buffer too small packetLength will contain the desired size
-    result = hcom_cirbuf_get_next_packet(_hcom_cbuf, packet_dest_buf, _max_packet_size, &packetLength);
+    result = hcom_cirbuf_get_next_packet(_hcom_cbuf, _packet_dest_buf, _max_packet_size, &packetLength);
 
     if (result == HCOM_CIR_BUF_GET_NONE_FOUND)
       return OK; // Return to receive more data
@@ -184,13 +181,13 @@ int hcom_host_parse_pull_all_packets_from_buffer()
     DEBUGASSERT(result == HCOM_CIR_BUF_GET_FOUND_MSG);
 
     // Drop trailing delimiter of 0x00 (--packetLength) then decode the packet
-    size_t decodedPacketSize = hcom_host_cobs_decoder(packet_dest_buf, --packetLength, decode_dest_buf);
+    size_t decodedPacketSize = hcom_host_cobs_decoder(_packet_dest_buf, --packetLength, _decode_dest_buf);
 
     if(decodedPacketSize == 0)
       continue;
       
     // Process the received data
-    result = hcom_host_parse_process_packet(decode_dest_buf, decodedPacketSize);
+    result = hcom_host_parse_process_packet(_decode_dest_buf, decodedPacketSize);
     if (result == OK)
     {
       continue; // pull next packet
@@ -236,7 +233,7 @@ int hcom_host_parse_process_packet(const uint8_t *packet, const size_t packetSiz
   {
     // Data Packet (sequence number > 0) 
     hcom_logging_syslog(LOG_DEBUG, "%s@%d-Data seq:%d, len:%d\n", thisFile, __LINE__, seqNumb, packetSize); 
-    hcom_dnld_proc_recvd_file_data(packet, packetSize, seqNumb);
+    hcom_file_dnld_proc_recvd_file_data(packet, packetSize, seqNumb);
   }
 
   return OK;

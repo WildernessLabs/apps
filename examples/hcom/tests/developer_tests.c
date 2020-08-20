@@ -1,5 +1,5 @@
 /****************************************************************************
- * examples\hcom\nuttx_rqsts\hcom_developer_tests.c
+ * \apps\examples\hcom\tests\developer_tests.c
  * 
  *   Copyright (C) 2020 Wilderness Labs. All rights reserved.
  *   Author:  Wilderness Labs
@@ -168,7 +168,7 @@ void hcom_developer_tests_developer_2(uint32_t userData)
   // }
   // return;
 
-  // Too fast to see
+  // P.S it's too fast to see
   for(int cnt = 0; cnt < userData; cnt++)
   {
     // Turn all on
@@ -190,7 +190,7 @@ void hcom_developer_tests_developer_2(uint32_t userData)
         syslog(1, "hcom_nx_gpio_config value of:%d\n", gpioOffset);
       }
     }
-    //usleep(1);
+    //usleep(1);    // Adjust slow down for testing
   }
 }
 
@@ -213,6 +213,6 @@ void hcom_developer_tests_developer_3(uint32_t userData)
 void hcom_developer_tests_developer_4(uint32_t userData)
 {
   // Shows all devices within Nuttx system on cli
-  hcom_list_all_dev_dir_and_files_start(userData);
+  hcom_file_lists_all_dev_dir_and_files_start(userData);
 }
 

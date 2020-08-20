@@ -1,5 +1,5 @@
 /****************************************************************************
- * examples\hcom\misc\hcom_circular_buffer.c
+ * \apps\examples\hcom\misc\hcom_circular_buffer.c
  * 
  *   Copyright (C) 2019 - 2020 Wilderness Labs. All rights reserved.
  *   Author:  Wilderness Labs

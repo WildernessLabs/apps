@@ -1,5 +1,5 @@
 /****************************************************************************
- * \examples\hcom\mono_if\hcom_remote_vs_debug.c
+ * \apps\examples\hcom\mono\hcom_remote_vs_debug.c
  * 
  *   Copyright (C) 2019 - 2020 Wilderness Labs. All rights reserved.
  *   Author:  Wilderness Labs
@@ -69,7 +69,7 @@ static char *thisFile = __FILE__;
 
 static bool _shutting_down;
 static int _transmit_sd;
-static bool _hcom_remote_dbg_running;
+static bool _hcom_mono_remote_dbg_running;
 
 struct remote_dbg_session
 {
@@ -82,38 +82,38 @@ struct remote_dbg_session
 /****************************************************************************
  * Private Function Prototypes
  ****************************************************************************/
-static FAR void *hcom_remote_dbg_pthread(FAR void *arg);
+static FAR void *hcom_mono_remote_dbg_pthread(FAR void *arg);
 
-static int hcom_remote_dbg_create_thread(void);
-static int hcom_remote_dbg_create_server_socket(struct remote_dbg_session *dbgSock);
-static int hcom_remote_dbg_connect_and_receive(struct remote_dbg_session *dbgSock, uint8_t *recvBuffer);
+static int hcom_mono_remote_dbg_create_thread(void);
+static int hcom_mono_remote_dbg_create_server_socket(struct remote_dbg_session *dbgSock);
+static int hcom_mono_remote_dbg_connect_and_receive(struct remote_dbg_session *dbgSock, uint8_t *recvBuffer);
 
-static int hcom_remote_dbg_accept_connection(struct remote_dbg_session *dbgSock);
-static int hcom_remote_dbg_read_mono_send_to_host_loop(struct remote_dbg_session *dbgSock, uint8_t *recvBuffer);
+static int hcom_mono_remote_dbg_accept_connection(struct remote_dbg_session *dbgSock);
+static int hcom_mono_remote_dbg_read_mono_send_to_host_loop(struct remote_dbg_session *dbgSock, uint8_t *recvBuffer);
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
-int hcom_remote_dbg_setup()
+int hcom_mono_remote_dbg_setup()
 {
   _shutting_down = false;
   _transmit_sd = -1;
-  _hcom_remote_dbg_running = false;
+  _hcom_mono_remote_dbg_running = false;
   
   return OK;
 }
 
 //=======================================================================
-int hcom_remote_dbg_lazy_startup(void)
+int hcom_mono_remote_dbg_lazy_startup(void)
 {
   int ret;
 
-  if(_hcom_remote_dbg_running)
+  if(_hcom_mono_remote_dbg_running)
     return OK;
 
   // Create a thread to read and forward the debug data
-  ret = hcom_remote_dbg_create_thread();
+  ret = hcom_mono_remote_dbg_create_thread();
   if (ret < 0)
   {
     hcom_logging_syslog(LOG_ERR, "%s@%d-%s thread create, errno:%d\n",
@@ -121,18 +121,18 @@ int hcom_remote_dbg_lazy_startup(void)
     return ret;
   }
 
-  _hcom_remote_dbg_running = true;
+  _hcom_mono_remote_dbg_running = true;
   return OK;
 }
 
 //=======================================================================
-void hcom_remote_dbg_shutdown()
+void hcom_mono_remote_dbg_shutdown()
 {
   _shutting_down = true;
 }
 
 //================================================================
-static void hcom_remote_dbg_close_and_delay(void)
+static void hcom_mono_remote_dbg_close_and_delay(void)
 {
   // Wait and try again
   if(!_shutting_down)
@@ -141,7 +141,7 @@ static void hcom_remote_dbg_close_and_delay(void)
 
 //=============================================================
 // Need a unique thread to run the debugging session
-int hcom_remote_dbg_create_thread()
+int hcom_mono_remote_dbg_create_thread()
 {
     int ret;
     pthread_t thread;
@@ -153,11 +153,11 @@ int hcom_remote_dbg_create_thread()
     (void)pthread_attr_setschedparam(&attr, &param);
     (void)pthread_attr_setstacksize(&attr, 2048);
 
-    ret = pthread_create(&thread, &attr, hcom_remote_dbg_pthread, NULL);
+    ret = pthread_create(&thread, &attr, hcom_mono_remote_dbg_pthread, NULL);
     if (ret < 0)
     {
-      hcom_logging_syslog(LOG_CRIT, "%s@%d-create thread, ret:%d, errno:%d\n",
-                thisFile, __LINE__, ret, errno);
+      hcom_logging_syslog(LOG_CRIT, "%s@%d-create thread %s, ret:%d, errno:%d\n",
+                thisFile, __LINE__, HCOM_THREAD_NAME_REMOTE_DBG, ret, errno);
       return ret;
     }
 
@@ -166,7 +166,7 @@ int hcom_remote_dbg_create_thread()
 
 //=================================================================
 // This thread receives all stdout messages received from mono
-FAR void *hcom_remote_dbg_pthread(FAR void *arg)
+FAR void *hcom_mono_remote_dbg_pthread(FAR void *arg)
 {
   int ret;
   struct remote_dbg_session *dbgSock;
@@ -185,14 +185,14 @@ FAR void *hcom_remote_dbg_pthread(FAR void *arg)
     goto exit_remote_dbg_rcvbuff;
   }
 
-  ret = hcom_remote_dbg_create_server_socket(dbgSock);
+  ret = hcom_mono_remote_dbg_create_server_socket(dbgSock);
   if(ret < 0)
   {
     hcom_logging_syslog(LOG_ERR, "%s@%d-Remote dbg server create, ret:%d errno:%d\n", thisFile, __LINE__, ret, errno);
     goto exit_remote_dbg_thread;     // Kills thread
   }
 
-  ret = hcom_remote_dbg_connect_and_receive(dbgSock, recvBuffer);
+  ret = hcom_mono_remote_dbg_connect_and_receive(dbgSock, recvBuffer);
   if(ret < 0)
   {
     hcom_logging_syslog(LOG_ERR, "%s@%d-Remote dbg server connect, ret:%d errno:%d\n", thisFile, __LINE__, ret, errno);
@@ -208,7 +208,7 @@ exit_remote_dbg_rcvbuff:
 
 //=========================================================================
 // Setup the server socket
-int hcom_remote_dbg_create_server_socket(struct remote_dbg_session *dbgSock)
+int hcom_mono_remote_dbg_create_server_socket(struct remote_dbg_session *dbgSock)
 {
   int ret;
 
@@ -275,13 +275,13 @@ int hcom_remote_dbg_create_server_socket(struct remote_dbg_session *dbgSock)
 
 //===================================================================
 // Returning from this function kills the thread
-int hcom_remote_dbg_connect_and_receive(struct remote_dbg_session *dbgSock, uint8_t *recvBuffer)
+int hcom_mono_remote_dbg_connect_and_receive(struct remote_dbg_session *dbgSock, uint8_t *recvBuffer)
 {
   // Loop to accept connections and forward data
   while(!_shutting_down)
   {
     // Blocking call to accept socket connection from mono
-    int ret = hcom_remote_dbg_accept_connection(dbgSock);
+    int ret = hcom_mono_remote_dbg_accept_connection(dbgSock);
     
     if(_shutting_down)
       return OK;
@@ -290,23 +290,23 @@ int hcom_remote_dbg_connect_and_receive(struct remote_dbg_session *dbgSock, uint
     {
       hcom_logging_syslog(LOG_WARNING, "%s@%d-Accept connection failed. ret:%d, errno:%d\n",
                 thisFile, __LINE__, ret, errno);
-      hcom_remote_dbg_close_and_delay();
+      hcom_mono_remote_dbg_close_and_delay();
       continue;
     }
 
     // Read data from mono via socket until error. Error reported in loop.
-    hcom_remote_dbg_read_mono_send_to_host_loop(dbgSock, recvBuffer);
+    hcom_mono_remote_dbg_read_mono_send_to_host_loop(dbgSock, recvBuffer);
     if(_shutting_down)
       return OK;
     
-    hcom_remote_dbg_close_and_delay();
+    hcom_mono_remote_dbg_close_and_delay();
   }
 
   return OK;
 }
 
 //=================================================================
-int hcom_remote_dbg_accept_connection(struct remote_dbg_session *dbgSock)
+int hcom_mono_remote_dbg_accept_connection(struct remote_dbg_session *dbgSock)
 {
   // syslog(1, "VSD->server: Waiting for mono connection request\n");
 
@@ -329,7 +329,7 @@ int hcom_remote_dbg_accept_connection(struct remote_dbg_session *dbgSock)
 // Note: since this is considered a stream we'll just receive and
 // forward whatever data happens to be ready, assuming the other
 // end can piece it back together.
-int hcom_remote_dbg_read_mono_send_to_host_loop(struct remote_dbg_session *dbgSock,
+int hcom_mono_remote_dbg_read_mono_send_to_host_loop(struct remote_dbg_session *dbgSock,
           uint8_t *recvBuffer)
 {
   int ret;
@@ -378,11 +378,11 @@ int hcom_remote_dbg_read_mono_send_to_host_loop(struct remote_dbg_session *dbgSo
 //==========================================================================
 // This call is the result of a CLI command --VSDebug plus --VSDebugPort 4024.
 // This information is sent directly to mono to initiates host PC / Visual Studio debugging.
-void hcom_remote_dbg_recv_host_sending_to_mono(const uint8_t *recvPayload,
+void hcom_mono_remote_dbg_recv_host_sending_to_mono(const uint8_t *recvPayload,
         size_t recvPayloadSize, uint32_t userData)
 {  
   // If not already created, creates a thread to run debugging
-  hcom_remote_dbg_lazy_startup();
+  hcom_mono_remote_dbg_lazy_startup();
 
   if(_transmit_sd < 1)
   {

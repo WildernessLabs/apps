@@ -1,5 +1,5 @@
 /****************************************************************************
- * \examples\hcom\hcom_mono_control.c
+ * \apps\examples\hcom\mono\hcom_mono_control.c
  * 
  *   Copyright (C) 2020 Wilderness Labs. All rights reserved.
  *   Author:  Wilderness Labs
@@ -243,7 +243,7 @@ bool hcom_mono_ctrl_is_mono_enabled()
 // The following are called from host 
 //=======================================================================================
 // Called from host to disable Mono from running on next MCU reset
-void hcom_mono_rqst_disable_mono(uint32_t userData)
+void hcom_mono_ctrl_disable_mono(uint32_t userData)
 {
   hcom_bb_reg_acc_clear_bbr_bits(HCOM_BBREG_USER_RQST_MONO_START_BIT);
 
@@ -265,7 +265,7 @@ void hcom_mono_rqst_disable_mono(uint32_t userData)
 
 //=======================================================================================
 // Called from host to enable Mono to run on next MCU reset
-void hcom_mono_rqst_enable_mono(uint32_t userData)
+void hcom_mono_ctrl_enable_mono(uint32_t userData)
 {
   hcom_bb_reg_acc_set_bbr_bits(HCOM_BBREG_USER_RQST_MONO_START_BIT);
 
@@ -287,7 +287,7 @@ void hcom_mono_rqst_enable_mono(uint32_t userData)
 
 //======================================================================================
 // The host has ask for the mono startup state
-void hcom_mono_rqst_is_mono_enabled(uint32_t userData)
+void hcom_mono_ctrl_report_mono_enabled_state(uint32_t userData)
 {
   char *monoStartupMsg;
 

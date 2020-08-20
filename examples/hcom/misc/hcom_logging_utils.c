@@ -1,5 +1,5 @@
 /****************************************************************************
- * \examples\hcom\hcom_common_utils.c
+ * \apps\examples\hcom\misc\hcom_logging_utils.c
  * 
  *   Copyright (C) 2019 - 2020 Wilderness Labs. All rights reserved.
  *   Author:  Wilderness Labs
@@ -72,6 +72,12 @@ int hcom_logging_utils_setup()
   sem_init(&_f7syslogSem, 0, 1);
   return OK;
 }
+//============================================================
+void hcom_logging_utils_shutdown()
+{
+  sem_destroy(&_f7syslogSem);
+  free(_f7syslogTextBuf);
+}
 
 //============================================================
 // Make syslogMask available
@@ -87,7 +93,6 @@ int hcom_logging_syslog_mask_init()
   bool isPowerOnRestart;
 
 #if defined(CONFIG_STM32F7_PWR)
-
   // This BBR was set by hcom nx since it starts first
   _syslogMask = hcom_bb_reg_acc_read_bbr_and_right_justify(HCOM_BBREG_RESTART_SYSLOG_CONFIG_VALUE_MASK);
   setlogmask(_syslogMask);
@@ -256,7 +261,7 @@ static int hcom_logging_utils_build_syslog_string(int priority, FAR const IPTR c
 
 //=====================================================================
 // Wait for the thread writing to exit
-static void hcom_utils_f7syslog_takesem(void)
+static void hcom_logging_utils_takesem(void)
 {
   int ret;
 
@@ -299,11 +304,12 @@ void hcom_logging_syslog_x(int priority, FAR const IPTR char *fmt, ...)
 }
 
 //===================================================================
-// Use this for syslogs writes that can be routed to host.
+// Use this for syslogs writes that can be routed to host, which are
+// 99% of all syslog calls
 void hcom_logging_syslog(int priority, FAR const IPTR char *fmt, ...)
 {
   // Prevent multiple threads from garbling message
-  hcom_utils_f7syslog_takesem();
+  hcom_logging_utils_takesem();
 
   if ((_syslogMask & LOG_MASK(priority)) == 0)
   {
