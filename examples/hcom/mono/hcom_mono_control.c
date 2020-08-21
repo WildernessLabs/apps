@@ -103,12 +103,39 @@ int hcom_mono_ctrl_start_mono_main()
     hcom_logging_syslog(LOG_INFO, "%s@%d-MONO started [pid:%d, pri:%d, stack size:%d]\n",
             thisFile, __LINE__, mono_pid, HCOM_MONO_RUNTIME_TASK_PRIORITY,
             HCOM_MONO_RUNTIME_TASK_STACKSIZE);
+
     hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0,
             "MONO started", thisFile, __LINE__);
+// p-m
+    syslog(LOG_INFO, "1a-%s@%d-MONO started [pid:%d, pri:%d, stack size:%d]\n",
+            thisFile, __LINE__, mono_pid, HCOM_MONO_RUNTIME_TASK_PRIORITY,
+            HCOM_MONO_RUNTIME_TASK_STACKSIZE);
+
+    sleep(10 * 1000);
+    syslog(LOG_INFO, "1b-%s@%d-MONO started [pid:%d, pri:%d, stack size:%d]\n",
+            thisFile, __LINE__, mono_pid, HCOM_MONO_RUNTIME_TASK_PRIORITY,
+            HCOM_MONO_RUNTIME_TASK_STACKSIZE);
+
+    sleep(20 * 1000);
+    syslog(1, "2-%s@%d-MONO started [pid:%d, pri:%d, stack size:%d]\n",
+            thisFile, __LINE__, mono_pid, HCOM_MONO_RUNTIME_TASK_PRIORITY,
+            HCOM_MONO_RUNTIME_TASK_STACKSIZE);
+
+    sleep(30 * 1000);
+    syslog(LOG_INFO, "3-%s@%d-MONO started [pid:%d, pri:%d, stack size:%d]\n",
+            thisFile, __LINE__, mono_pid, HCOM_MONO_RUNTIME_TASK_PRIORITY,
+            HCOM_MONO_RUNTIME_TASK_STACKSIZE);
+
+    sleep(40 * 1000);
+    syslog(1, "4-%s@%d-MONO started [pid:%d, pri:%d, stack size:%d]\n",
+            thisFile, __LINE__, mono_pid, HCOM_MONO_RUNTIME_TASK_PRIORITY,
+            HCOM_MONO_RUNTIME_TASK_STACKSIZE);
   }
   else
   {
-    hcom_logging_syslog(LOG_ERR, "%s@%d-The task to run mono failed in create\n", thisFile, __LINE__);
+    hcom_logging_syslog(LOG_ERR, "%s@%d-The task to run mono failed in create\n",
+              thisFile, __LINE__);
+
     hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0,
             "Mono task could not be created", thisFile, __LINE__);
     return -1;

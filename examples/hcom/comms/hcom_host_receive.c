@@ -101,7 +101,7 @@ int hcom_host_recv_setup()
      instead of the configured device name (USB ACM) */
 
   // if (hcom_utils_boot_time_qemu_check())
-  //   deviceName = "/dev/ttyS1";
+  //   deviceName = "/dev/ttyS1";   // UART 4
 
   return OK;
 }

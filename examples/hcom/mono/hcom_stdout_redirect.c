@@ -162,7 +162,7 @@ int hcom_mono_stdout_make_thread()
 }
 
 //=================================================================
-// This thread reads all pipe messages received from stdout (mono)
+// This thread reads all pipe messages redirected from stdout (mono)
 void *hcom_mono_stdout_pthread(FAR void *arg)
 {
   int ret;
@@ -174,6 +174,9 @@ void *hcom_mono_stdout_pthread(FAR void *arg)
     hcom_logging_syslog(LOG_ERR, "redirect_writer: dup2 failed ret:%d errno:%d\n", ret, errno);
     return NULL;
   }
+
+  // p-m is the right?
+  //close(_pipefd[HCOM_PIPE_WRITE_OFFSET]);
 
   // This loop runs forever
   while(!_shutting_down)

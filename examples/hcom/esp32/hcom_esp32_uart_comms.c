@@ -51,7 +51,8 @@
 // See ...nuttx\arch\arm\src\stm32f7\stm32_serial.c @ 3100 and following
 // for where this assignment is made.
 
-#define HCOM_ESP32_FLASH_UART_DEV_NAME "/dev/ttyS2"
+// A few common defines
+#define HCOM_ESP32_FLASH_UART_DEV_NAME "/dev/ttyS2"   // UART 5
 #define HCOM_ESP32_FLASH_UART_READ_BUF_SIZE 512
 
 /* Configuration ************************************************************/

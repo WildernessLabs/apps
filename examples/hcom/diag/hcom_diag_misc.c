@@ -1,5 +1,5 @@
 /****************************************************************************
- * configs/stm32f777-zit6-meadow/src/hcom/hcom_exec_utility_request.c
+ * \apps\examples\hcom\diag\hcom_diag_misc.c
  * 
  *   Copyright (C) 2019 - 2020 Wilderness Labs. All rights reserved.
  *   Author:  Wilderness Labs
@@ -50,6 +50,10 @@
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
+// p-m temp so I can see the code...
+#if !defined (CONFIG_SYSTEM_NSH)
+#define CONFIG_SYSTEM_NSH 1
+#endif
 
 /* Configuration ************************************************************/
 /****************************************************************************
@@ -76,70 +80,6 @@ int hcom_diag_misc_setup()
   _nsh_enabled = false;
 #endif
   return OK;
-}
-
-//=======================================================================================
-// THERE'S A PROBLEM. NUTTX ROUTES ALL NUTTX OUTPUT TO stdout THEN to /dev/console. SINCE
-// MONO ROUTES ALL Console.Write() CALLS TO stdout AND HCOM REDIRECTS stdout TO A PIPE AND
-// VIA HCOM TO THE HOST. NSH CANNOT BE USED UNLESS A CHANGE IS MADE TO DISABLE THE stdout
-// REDIRECTION.
-//
-// userData = 1 enables and userData = 0 disables
-void hcom_diag_misc_launch_nsh(uint32_t userData)
-{
-  syslog(1, "NSH>--Entered hcom_diag_misc_launch_nsh, userData:%d\n", userData); usleep(50 * 1000);
-  // Need to swap out the _nsh_enabled for pthread_join. That way we can
-  // use NSH>exit and then restart it again. The way it is, once started the
-  // _nsh_enabled flag once set true won't allow nsh to be restarted.
-  // mayby waitpid() or waitid() can do the job
-  // Tried 'atexit()' but nuttx hung at start???
-#if defined CONFIG_SYSTEM_NSH
-  int _nsh_pid;
-
-  if(_nsh_enabled)
-  {
-    hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0, "NSH already enabled",
-            thisFile, __LINE__);
-  syslog(1, "_nsh_enanabled:%d so exiting:%d\n", _nsh_enabled); usleep(50 * 1000);
-    return;
-  }
-
-  if(userData == 1)
-  {
-    // Create a unique task for NSH
-  syslog(1, "NSH>--Creating task for nsh\n"); usleep(50 * 1000);
-    _nsh_pid = task_create("nsh", CONFIG_SYSTEM_NSH_PRIORITY,
-                        CONFIG_SYSTEM_NSH_STACKSIZE,
-                        (main_t)nsh_main,
-                        (FAR char * const *) NULL);
-    if(_nsh_pid > 0)
-    {
-  syslog(1, "NSH>--Creating task_create SUCCESS\n"); usleep(50 * 1000);
-      _nsh_enabled = true;
-      hcom_logging_syslog(LOG_INFO, "%s@%d-NSH now enabled [pid:%d, pri:%d, stack:%d]\n",
-              thisFile, __LINE__, _nsh_pid, CONFIG_SYSTEM_NSH_PRIORITY, CONFIG_SYSTEM_NSH_STACKSIZE);
-      hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0,
-              "NSH now enabled until Meadow restart", thisFile, __LINE__);
-    }
-    else
-    {
-  syslog(1, "NSH>--Creating task_create FAILED\n"); usleep(50 * 1000);
-      hcom_logging_syslog(LOG_ERR, "%s@%d-NSH could not be created\n", thisFile, __LINE__);
-      hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0,
-              "NSH could not be created", thisFile, __LINE__);
-    }
-  }
-  else
-  {
-  syslog(1, "NSH>--Not implemented\n"); usleep(50 * 1000);
-    hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0,
-            "NSH not implemented", thisFile, __LINE__);
-    return;
-  }
-#else
-  hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0, 
-          "NuttShell not compiled", thisFile, __LINE__);
-#endif
 }
 
 #if HCOM_COMMON_UTILS_DIAG_PRINT_BUFFER > 0
@@ -230,3 +170,64 @@ void hcom_diag_misc_print_buffer(const uint8_t buffer[], const int bufLen, uint8
 {
 }
 #endif
+
+//=======================================================================================
+// I'm leaving this code here because it could become useful.
+// The reason this doesn't work is that when it moved to /apps it now shares
+// stdout with all other /apps applications including mono. Mono routes
+// all Console.Write() calls to stdout. To get Console.Write() calls to output
+// on CLI, stdout was redirected, and with it the NSH output was redirected too.
+// If NSH is desired just prevent the stdout redirection code from running
+// and hook up a terminal to D0 & D1 (UART 4).
+// userData = 1 enables and userData = 0 disables
+void hcom_diag_misc_launch_nsh(uint32_t userData)
+{
+  // Currently, NSH can only be enabled once from the CLI. After this the _nsh_enable flag
+  // will be set true and prevents nsh from being re-started.
+  // A nice but not needed feature would be to find a different method to determine
+  // if nsh is running (e.g. pthread_join, waitpid(),  waitid() or atexit()).
+  // This is not a big problem especially as this code no longer works, as discribed
+  // above.
+#if defined CONFIG_SYSTEM_NSH
+  int _nsh_pid;
+
+  if(_nsh_enabled)
+  {
+    hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0, "NSH already enabled",
+            thisFile, __LINE__);
+    return;
+  }
+
+  if(userData == 1)
+  {
+    // Create a unique task for NSH
+    _nsh_pid = task_create("nsh", CONFIG_SYSTEM_NSH_PRIORITY,
+                        CONFIG_SYSTEM_NSH_STACKSIZE,
+                        (main_t)nsh_main,
+                        (FAR char * const *) NULL);
+    if(_nsh_pid > 0)
+    {
+      _nsh_enabled = true;
+      hcom_logging_syslog(LOG_INFO, "%s@%d-NSH now enabled [pid:%d, pri:%d, stack:%d]\n",
+              thisFile, __LINE__, _nsh_pid, CONFIG_SYSTEM_NSH_PRIORITY, CONFIG_SYSTEM_NSH_STACKSIZE);
+      hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0,
+              "NSH now enabled until Meadow restart", thisFile, __LINE__);
+    }
+    else
+    {
+      hcom_logging_syslog(LOG_ERR, "%s@%d-NSH could not be created\n", thisFile, __LINE__);
+      hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0,
+              "NSH could not be created", thisFile, __LINE__);
+    }
+  }
+  else
+  {
+    hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0,
+            "NSH not implemented", thisFile, __LINE__);
+    return;
+  }
+#else
+  hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0, 
+          "NuttShell not compiled", thisFile, __LINE__);
+#endif
+}

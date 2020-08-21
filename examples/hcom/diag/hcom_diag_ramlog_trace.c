@@ -1,5 +1,5 @@
 /****************************************************************************
- * \apps\examples\hcom\diag\hcom_diag_trace_processing.c
+ * \apps\examples\hcom\diag\hcom_diag_ramlog_trace.c
  *
  *   Copyright (C) 2020 Wilderness Labs. All rights reserved.
  *   Author:  Wilderness Labs
@@ -45,6 +45,11 @@
 #include <ctype.h>
 #include <poll.h>
 
+// p-m so I can see the code
+#if !defined (CONFIG_RAMLOG_SYSLOG)
+#define CONFIG_RAMLOG_SYSLOG 1
+#endif
+
 #if defined (CONFIG_RAMLOG_SYSLOG)
 /****************************************************************************
  * Pre-processor Definitions
@@ -52,7 +57,7 @@
 
 #define HCOM_TRACE_RAMLOG_READ_BUFF_SIZE 256
 #define HCOM_TRACE_CIRCULAR_BUFFER_SIZE (HCOM_TRACE_RAMLOG_READ_BUFF_SIZE * 5)
-#define HCOM_TRACE_RAMLOG_SERIAL_NAME ("/dev/ttyS0")
+#define HCOM_TRACE_RAMLOG_SERIAL_NAME ("/dev/ttyS0")    // UART 1
 
 /****************************************************************************
  * Private Types
@@ -107,10 +112,11 @@ int hcom_diag_trace_ramlog_setup()
   _trace_ramlog_to_uart1 = false;
 
   // p-m FOR INITIAL TESTING SAVE SOME TROUBLE BY FORCING HAPPY VALUES
-  // p-m THESE ALL NEED TO BE CHANGED WHEN EVERTHING READY
-  // p-m - force to uart1 for ORTING TO APPS SIDE
+  // p-m - force to uart1 for PORTING TO APPS SIDE
   _trace_ramlog_to_uart1 = true;
-  // p-m Override defaults from battery backed register values
+  //_trace_ramlog_to_host = true;
+
+  // p-m IGNORE VALUES from battery backed register values
   // if(hcom_bb_reg_acc_read_bbr_and_right_justify(HCOM_BBREG_ROUTE_TRACE_MSG_TO_UART1_BIT))
   //   _trace_ramlog_to_uart1 = true;
 
@@ -123,6 +129,7 @@ int hcom_diag_trace_ramlog_setup()
     // The only way to undo this initialization is restarting the MCU
     hcom_diag_trace_ramlog_lazy_initialization();
   }
+
   return OK;
 }
 
@@ -227,9 +234,11 @@ int hcom_diag_trace_ramlog_make_thread()
 FAR void *hcom_diag_trace_ramlog_pthread(FAR void *arg)
 {
   int ret;
-  
+  hcom_diag_gpio_write_set_8bits(0xff);
+
   while(!_shutting_down)
   {
+  hcom_diag_gpio_write_set_8bits(0xf);
     // Must have ramlog, it's the source of all trace data
     ret = hcom_diag_trace_ramlog_open_ramlog();
     if(ret < 0)
@@ -326,13 +335,20 @@ int hcom_diag_trace_ramlog_read_ramlog_loop()
   ssize_t readReturn;
   int ret;
 
+  // p-m
+  static uint8_t readCnt = 0;
+
   while(!_shutting_down)
   {
+    readCnt++;
+    hcom_diag_gpio_write_set_8bits(readCnt);
     // Read ramlog
     readReturn = read(_ramlog_fd, buffer, HCOM_TRACE_RAMLOG_READ_BUFF_SIZE);
     if (readReturn < 0 )
     {
       // Error
+      hcom_diag_gpio_write(10, 1);    // p-m
+
       hcom_diag_trace_ramlog_err_logger(LOG_ERR, "%s@%d ramlog read readReturn:%d errno:%d\n",
               thisFile, __LINE__, readReturn, errno);
       return -errno;    // Close connection and try again
@@ -340,12 +356,19 @@ int hcom_diag_trace_ramlog_read_ramlog_loop()
     else if (readReturn == 0)
     {
       // EOF
+      hcom_diag_gpio_write(10, 1);    // p-m
+
       hcom_diag_trace_ramlog_err_logger(LOG_WARNING, "%s@%d ramlog read EOF readReturn:%d errno:%d\n",
               thisFile, __LINE__, readReturn, errno);
       return -1;
     }
     else
     {
+      // p-m
+      // syslog(1, "-->Read %d bytes from ramlog buffer\n", readReturn); usleep(10 * 1000);
+      // readCnt++;
+      // hcom_diag_gpio_write_set_8bits(readCnt);
+      
       // Successful ramlog message read. Put message into circular buffer
       // unless logging has been turned off
       if(_trace_ramlog_to_host || _trace_ramlog_to_uart1)

@@ -62,11 +62,11 @@ void hcom_developer_tests_developer_1(uint32_t userData)
 {
   // This will control gpio A0-MISO ports based on userData
   // userData = 1 to 9 turns on gpios
-  // userData = -1 to -9 turns on gpios
+  // userData = -1 to -9 turns off gpios
 
   int ret;
   static bool isInitialized = false;
-  uint8_t gpioDefn;
+  uint8_t gpioHcomId;
   uint8_t cmdValue;
   int32_t signedUserData = (int32_t)userData;
 
@@ -92,19 +92,19 @@ void hcom_developer_tests_developer_1(uint32_t userData)
 
   if(signedUserData > 0)
   {
-    gpioDefn = userData + 1;    // userData of 1 is offset of 2
+    gpioHcomId = userData + 1;    // userData of 1 is offset of 2
     cmdValue = HCOM_GPIO_DIGITAL_CMD_VALUE_HIGH;
   }
   else
   {
-    gpioDefn = (signedUserData * -1) + 1;
+    gpioHcomId = (signedUserData * -1) + 1;
     cmdValue = HCOM_GPIO_DIGITAL_CMD_VALUE_LOW;
   }
 
-  ret = hcom_nx_gpio_write(gpioDefn, cmdValue);
+  ret = hcom_nx_gpio_write(gpioHcomId, cmdValue);
   if(ret < 0)
   {
-    syslog(1, "hcom_nx_gpio_write error:%d gpio:%d, value:%d\n", ret, gpioDefn,cmdValue);
+    syslog(1, "hcom_nx_gpio_write error:%d gpio:%d, value:%d\n", ret, gpioHcomId,cmdValue);
   }
 }
 

@@ -314,8 +314,8 @@ extern "C"
   int hcom_nx_update_bbr(uint32_t clearBits, uint32_t setBits);
   int hcom_nx_restart_meadow(void);
   int hcom_nx_get_mcu_id(uint8_t uniqueId[12]);
-  int hcom_nx_gpio_config(int gpioDefn, uint8_t configValue);
-  int hcom_nx_gpio_write(int gpioDefn, uint8_t cmdValue);
+  int hcom_nx_gpio_config(int gpioHcomId, uint8_t configValue);
+  int hcom_nx_gpio_write(int gpioHcomId, uint8_t cmdValue);
   void hcom_nx_forward_cmd_to_nx(uint16_t hcomCmd, uint32_t userData);
   bool hcom_nx_is_mounted(uint32_t partitionId);
   // These exist and work, however, they are not currently needed.
@@ -338,6 +338,10 @@ extern "C"
   void hcom_diag_misc_launch_nsh(uint32_t userData);
   void hcom_diag_misc_print_buffer(const uint8_t packetBuffer[], const int bufLen, uint8_t logPriority);
 
+  int hcom_diag_gpio_setup(void);
+  int hcom_diag_gpio_config(void);
+  int hcom_diag_gpio_write(int gpioHcomId, uint8_t cmdValue);
+  int hcom_diag_gpio_write_set_8bits(uint8_t setBits);
   //-------------------------------------------------------
   // Testing utilities
   void hcom_developer_tests_developer_1(uint32_t userData);
@@ -346,12 +350,12 @@ extern "C"
   void hcom_developer_tests_developer_4(uint32_t userData);
 
 // Diagnostic
-// When 0, removes some special diagnostic code
+// When 0, removes diagnostic code
 #define HCOM_ESP32_PROCESS_CR_LF_ENDLESS_TEXT 0
-#define HCOM_SYSLOG_DATA_BUFFER_CONTENTS 0
+#define HCOM_SYSLOG_DATA_BUFFER_CONTENTS      0
 #define HCOM_COMMON_UTILS_DIAG_PRINT_BUFFER   1
-#define HCOM_INCLUDE_BATTERY_BACKED_REG_TEST 1
-#define HCOM_INCLUDE_MONO_VS_DEBUG_TEST 1
+#define HCOM_INCLUDE_MONO_VS_DEBUG_TEST       1
+#define HCOM_INCLUDE_BATTERY_BACKED_REG_TEST  1
 
 #if HCOM_INCLUDE_BATTERY_BACKED_REG_TEST > 0
 void hcom_bbr_tests(void);

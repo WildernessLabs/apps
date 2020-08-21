@@ -38,6 +38,7 @@
  ****************************************************************************/
 
 #include "hcom_common.h"
+#include <meadow/hcom_shared_common.h>
 
 #if defined (CONFIG_HCOM_ESP32_COMMS)
 #include "esp32/hcom_esp32_comms.h"
@@ -94,13 +95,23 @@ int hcom_main(int argc, char *argv[])
     return ret;
   }
 #endif
-
+  
   ret = hcom_nx_access_setup();
   if (ret < 0)
   {
     syslog(LOG_CRIT, "%s@%d-setup hcom nx access:%d\n", thisFile, __LINE__, ret);
     return ret;
   }
+
+#if HCOM_INCLUDE_DIAGNOSTIC_GPIO > 0
+  // Note: Must follow hcom_nx_access_setup()
+  ret = hcom_diag_gpio_setup();
+  if (ret < 0)
+  {
+    syslog(LOG_CRIT, "%s@%d-setup diag gpio:%d\n", thisFile, __LINE__, ret);
+    return ret;
+  }
+#endif
 
   // Allocates memory for logging buffer
   ret = hcom_common_utils_setup();

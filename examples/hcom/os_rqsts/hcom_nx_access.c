@@ -185,12 +185,12 @@ int hcom_nx_restart_meadow(void)
 
 //=============================================================
 // Configures gpio via nx
-int hcom_nx_gpio_config(int gpioDefn, uint8_t configValue)
+int hcom_nx_gpio_config(int gpioHcomId, uint8_t configValue)
 {
   int ret;
   struct hcom_nx_upd_gpio_config_s gpioConfig;
 
-  gpioConfig.gpioDefn = gpioDefn;
+  gpioConfig.gpioHcomId = gpioHcomId;
   gpioConfig.configValue = configValue;
 
   ret = ioctl(_hcom_nx_fd, HCOM_NX_UPD_GPIO_CONFIG, (unsigned long) &gpioConfig);
@@ -198,7 +198,7 @@ int hcom_nx_gpio_config(int gpioDefn, uint8_t configValue)
   {
     hcom_logging_syslog(LOG_ERR, "%s@%d-%s Failed gpio config, ret:%d, errno:%d\n",
             thisFile, __LINE__, HCOM_NX_UPD_DRIVER_NAME, ret, errno);
-    return ret;
+    return ret * 100;
   }
 
   return gpioConfig.result;
@@ -206,12 +206,12 @@ int hcom_nx_gpio_config(int gpioDefn, uint8_t configValue)
 
 //=============================================================
 // Writes to gpio via nx
-int hcom_nx_gpio_write(int gpioDefn, uint8_t cmdValue)
+int hcom_nx_gpio_write(int gpioHcomId, uint8_t cmdValue)
 {
   int ret;
   struct hcom_nx_upd_gpio_write_s gpioCommand;
 
-  gpioCommand.gpioDefn = gpioDefn;
+  gpioCommand.gpioHcomId = gpioHcomId;
   gpioCommand.cmdValue = cmdValue;
 
   ret = ioctl(_hcom_nx_fd, HCOM_NX_UPD_GPIO_COMMAND, (unsigned long) &gpioCommand);
