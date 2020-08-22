@@ -61,17 +61,6 @@ static char *thisFile = __FILE__;
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
-  /* For reference
-  #define HCOM_GPIO_DIG_NX_ID_A0___01    2
-  #define HCOM_GPIO_DIG_NX_ID_A1___02    3
-  #define HCOM_GPIO_DIG_NX_ID_A2___03    4
-  #define HCOM_GPIO_DIG_NX_ID_A3___04    5
-  #define HCOM_GPIO_DIG_NX_ID_A4___05    6
-  #define HCOM_GPIO_DIG_NX_ID_A5___06    7
-  #define HCOM_GPIO_DIG_NX_ID_SCK__07    8
-  #define HCOM_GPIO_DIG_NX_ID_MOSI_08    9
-  #define HCOM_GPIO_DIG_NX_ID_MISO_09    10
-  */
 
 int hcom_diag_gpio_setup()
 {
@@ -153,8 +142,8 @@ int hcom_diag_gpio_write(int gpioHcomId, uint8_t cmdValue)
   
   DEBUGASSERT(cmdValue == HCOM_GPIO_DIGITAL_CMD_VALUE_HIGH ||
               cmdValue == HCOM_GPIO_DIGITAL_CMD_VALUE_LOW);
-  DEBUGASSERT(gpioHcomId > HCOM_GPIO_DIG_NX_ID_A0___01 &&
-              gpioHcomId < HCOM_GPIO_DIG_NX_ID_MISO_09);
+  DEBUGASSERT(gpioHcomId >= HCOM_GPIO_DIG_NX_ID_A0___01 &&
+              gpioHcomId <= HCOM_GPIO_DIG_NX_ID_MISO_09);
 
   ret = hcom_nx_gpio_write(gpioHcomId, cmdValue);
   if (ret < 0)
@@ -170,6 +159,7 @@ int hcom_diag_gpio_write(int gpioHcomId, uint8_t cmdValue)
 }
 
 //================================================================
+// This could be moved to the nuttx for much lower overhead.
 int hcom_diag_gpio_write_set_8bits(uint8_t setBits)
 {  
   // Note: Low (false/0) turns led on for an open drain

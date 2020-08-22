@@ -234,11 +234,9 @@ int hcom_diag_trace_ramlog_make_thread()
 FAR void *hcom_diag_trace_ramlog_pthread(FAR void *arg)
 {
   int ret;
-  hcom_diag_gpio_write_set_8bits(0xff);
 
   while(!_shutting_down)
   {
-  hcom_diag_gpio_write_set_8bits(0xf);
     // Must have ramlog, it's the source of all trace data
     ret = hcom_diag_trace_ramlog_open_ramlog();
     if(ret < 0)
@@ -257,6 +255,7 @@ FAR void *hcom_diag_trace_ramlog_pthread(FAR void *arg)
       }
     }
 
+    // Attempt to read from the ramlog buffer
     ret = hcom_diag_trace_ramlog_read_ramlog_loop();
     if(ret < 0)
     {
@@ -335,20 +334,13 @@ int hcom_diag_trace_ramlog_read_ramlog_loop()
   ssize_t readReturn;
   int ret;
 
-  // p-m
-  static uint8_t readCnt = 0;
-
   while(!_shutting_down)
   {
-    readCnt++;
-    hcom_diag_gpio_write_set_8bits(readCnt);
     // Read ramlog
     readReturn = read(_ramlog_fd, buffer, HCOM_TRACE_RAMLOG_READ_BUFF_SIZE);
     if (readReturn < 0 )
     {
       // Error
-      hcom_diag_gpio_write(10, 1);    // p-m
-
       hcom_diag_trace_ramlog_err_logger(LOG_ERR, "%s@%d ramlog read readReturn:%d errno:%d\n",
               thisFile, __LINE__, readReturn, errno);
       return -errno;    // Close connection and try again
@@ -356,19 +348,12 @@ int hcom_diag_trace_ramlog_read_ramlog_loop()
     else if (readReturn == 0)
     {
       // EOF
-      hcom_diag_gpio_write(10, 1);    // p-m
-
       hcom_diag_trace_ramlog_err_logger(LOG_WARNING, "%s@%d ramlog read EOF readReturn:%d errno:%d\n",
               thisFile, __LINE__, readReturn, errno);
       return -1;
     }
     else
     {
-      // p-m
-      // syslog(1, "-->Read %d bytes from ramlog buffer\n", readReturn); usleep(10 * 1000);
-      // readCnt++;
-      // hcom_diag_gpio_write_set_8bits(readCnt);
-      
       // Successful ramlog message read. Put message into circular buffer
       // unless logging has been turned off
       if(_trace_ramlog_to_host || _trace_ramlog_to_uart1)
@@ -405,29 +390,48 @@ int hcom_diag_trace_ramlog_save_recvd_data(uint8_t recvBuff[], const ssize_t rec
     }
     else if (result == HCOM_CIR_BUF_ADD_WONT_FIT)
     {
-      // Wasn't possible to put these bytes in the buffer. We need to
+
+      // Wasn't possible to put these bytes in the buffer, it's full. We need to
       // pull packets and retry to add this data
       hcom_diag_trace_ramlog_err_logger(LOG_WARNING, "%s@%d-No room in cir buf, pull and retry\n",
               thisFile, __LINE__);
-              
+
+      // Pull packets
       result = hcom_diag_trace_ramlog_pull_all_packets_from_buffer();
       if (result == HCOM_CIR_BUF_GET_FOUND_MSG)
-        continue;   // There should be room now for the failed add
-
-      if (result == HCOM_CIR_BUF_GET_NONE_FOUND || result == HCOM_CIR_BUF_GET_DEST_NO_ROOM)
       {
-        hcom_diag_trace_ramlog_err_logger(LOG_ERR, "%s@%d-pull packets from cir buf %d\n",
+        // Pull and processed some so attempt to add again
+        continue;
+      }
+      
+      if (result == HCOM_CIR_BUF_GET_NONE_FOUND)
+      {
+        // This looks like a buffer full of garbage and not delimiter
+        hcom_diag_trace_ramlog_err_logger(LOG_ERR, "%s@%d-pull packets from cir buf, none found\n",
+                 thisFile, __LINE__);
+        
+        return OK;    // Report and throw data away.
+      }
+
+      if (result == HCOM_CIR_BUF_GET_DEST_NO_ROOM)
+      {
+          // hcom_diag_gpio_write(HCOM_GPIO_4, 1);  // p-m
+        // The buffer we supplied is too small for the message found
+        hcom_diag_trace_ramlog_err_logger(LOG_ERR, "%s@%d-pull packets from cir buf, no room\n",
                  thisFile, __LINE__, result);
+
         return OK;    // Report and throw data away.
       }
     }
     else if (result == HCOM_CIR_BUF_ADD_BAD_ARG)
     {
+      // A bad argument is never expected
       hcom_diag_trace_ramlog_err_logger(LOG_ERR, "%s@%d-Bad argument to cir buf\n", thisFile, __LINE__);
       return OK; // Report and throw data away and keep going
     }
     else
     {
+      // Undefined error????
       hcom_diag_trace_ramlog_err_logger(LOG_ERR, "%s@%d-Unknown cir buf add err:%d\n", thisFile, __LINE__, result);
       return OK; // Report and throw data away and keep going
     }
