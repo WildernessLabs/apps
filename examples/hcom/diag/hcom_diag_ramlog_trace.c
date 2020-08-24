@@ -45,11 +45,6 @@
 #include <ctype.h>
 #include <poll.h>
 
-// p-m so I can see the code
-#if !defined (CONFIG_RAMLOG_SYSLOG)
-#define CONFIG_RAMLOG_SYSLOG 1
-#endif
-
 #if defined (CONFIG_RAMLOG_SYSLOG)
 /****************************************************************************
  * Pre-processor Definitions

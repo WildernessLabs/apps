@@ -45,9 +45,7 @@
 #include <sys/mount.h>
 #include <sys/stat.h>
 #include <sys/ioctl.h>
-
 #include <nuttx/fs/fs.h>
-
 #include <nuttx/fs/dirent.h>
 
 

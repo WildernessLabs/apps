@@ -33,6 +33,8 @@
  *
  ****************************************************************************/
 
+// This module controls the exection of mono
+
 /****************************************************************************
  * Included Files
  ****************************************************************************/
@@ -44,15 +46,13 @@
 
 #define HCOM_MONO_RUNTIME_TASK_STACKSIZE 32768
 
-#if defined(CONFIG_USERMAIN_PRIORITY)
-// CONFIG_USERMAIN_PRIORITY defined via make menuconfig at
-// RTOS Features > Tasks and Scheduling > init thread priority
-#define HCOM_MONO_RUNTIME_TASK_PRIORITY CONFIG_USERMAIN_PRIORITY
-#else
+// Note:
+// CONFIG_USERMAIN_PRIORITY defined via make menuconfig at RTOS Features >
+// Tasks and Scheduling > init thread priority. It's used to set the priority
+// of the nuttx launch user app which in our case is hcom.
 // SCHED_PRIORITY_DEFAULT defined in ...\Meadow\Meadow.OS\nuttx\include\sys\types.h
-// currently a value of 100
+// It's a hardcoded nuttx value of 100
 #define HCOM_MONO_RUNTIME_TASK_PRIORITY SCHED_PRIORITY_DEFAULT
-#endif
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -84,9 +84,9 @@ int hcom_mono_ctrl_start_mono_main()
   // Don't start if there's a reason
   if(!hcom_mono_ctrl_should_mono_run())
   {
-    hcom_logging_syslog(LOG_INFO, "%s@%d-->Sorry, mono main will not be started\n",
-              thisFile, __LINE__);
-    return OK;    // Reason has been reported already
+    // Reason has been reported already and obviously
+    // mono won't start if we exit here.
+    return OK;
   }
 
   // Set the flag that can identify if mono locked up. It will be
@@ -100,36 +100,12 @@ int hcom_mono_ctrl_start_mono_main()
                       (FAR char * const *) NULL);
   if(mono_pid > 0)
   {
-    hcom_logging_syslog(LOG_INFO, "%s@%d-MONO started [pid:%d, pri:%d, stack size:%d]\n",
+    hcom_logging_syslog(LOG_INFO, "%s@%d-MONO launched [pid:%d, pri:%d, stack size:%d]\n",
             thisFile, __LINE__, mono_pid, HCOM_MONO_RUNTIME_TASK_PRIORITY,
             HCOM_MONO_RUNTIME_TASK_STACKSIZE);
 
     hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0,
-            "MONO started", thisFile, __LINE__);
-// p-m
-    syslog(LOG_INFO, "1a-%s@%d-MONO started [pid:%d, pri:%d, stack size:%d]\n",
-            thisFile, __LINE__, mono_pid, HCOM_MONO_RUNTIME_TASK_PRIORITY,
-            HCOM_MONO_RUNTIME_TASK_STACKSIZE);
-
-    sleep(10 * 1000);
-    syslog(LOG_INFO, "1b-%s@%d-MONO started [pid:%d, pri:%d, stack size:%d]\n",
-            thisFile, __LINE__, mono_pid, HCOM_MONO_RUNTIME_TASK_PRIORITY,
-            HCOM_MONO_RUNTIME_TASK_STACKSIZE);
-
-    sleep(20 * 1000);
-    syslog(1, "2-%s@%d-MONO started [pid:%d, pri:%d, stack size:%d]\n",
-            thisFile, __LINE__, mono_pid, HCOM_MONO_RUNTIME_TASK_PRIORITY,
-            HCOM_MONO_RUNTIME_TASK_STACKSIZE);
-
-    sleep(30 * 1000);
-    syslog(LOG_INFO, "3-%s@%d-MONO started [pid:%d, pri:%d, stack size:%d]\n",
-            thisFile, __LINE__, mono_pid, HCOM_MONO_RUNTIME_TASK_PRIORITY,
-            HCOM_MONO_RUNTIME_TASK_STACKSIZE);
-
-    sleep(40 * 1000);
-    syslog(1, "4-%s@%d-MONO started [pid:%d, pri:%d, stack size:%d]\n",
-            thisFile, __LINE__, mono_pid, HCOM_MONO_RUNTIME_TASK_PRIORITY,
-            HCOM_MONO_RUNTIME_TASK_STACKSIZE);
+            "MONO launched", thisFile, __LINE__);
   }
   else
   {

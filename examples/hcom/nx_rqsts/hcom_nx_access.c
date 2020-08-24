@@ -263,8 +263,11 @@ void hcom_nx_forward_cmd_to_nx(uint16_t hcomCmd, uint32_t userData)
   }
 }
 
-// NO DIRECT ACCESS TO REGISTERS IF POSSIBLE
-// KEEP THE CODE IN THE CASE THIS GOAL IS NOT POSSIBLE
+// No direct register access seems to be possible. The following functions
+// provide access. However, the caller needs to know the correct register
+// address. Since this is difficult on the apps side of nuttx other means
+// have been implemented.
+// BUT, KEEPING THE CODE IN THE CASE SOME FUTURE NEED ARISES
 // //=============================================================
 // int hcom_nx_set_register(uint32_t address, uint32_t value)
 // {

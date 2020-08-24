@@ -307,10 +307,10 @@ void hcom_file_dnld_proc_end(uint32_t userData)
   char *sendMsgToHost;
 #if defined (CONFIG_HCOM_ESP32_COMMS)
   char *espCalculatedMd5;
+  bool lastFile = userData == 1 ? true : false;
 #endif
   int stringLen;
   uint16_t requestType;
-  bool lastFile = userData == 1 ? true : false;
 
   hcom_logging_syslog(LOG_NOTICE, "End of %s transfer\n",
             _currentHcomDataPacketAction == HcomDnldActionMeadowFileXfer? "Meadow" : "ESP32");

@@ -33,6 +33,10 @@
  *
  ****************************************************************************/
 
+// This module contains an implementation of a circular buffer that is used
+// in a couple of places. It allows 1-n bytes to be saved and a delimited
+// packet to be retrieved.
+
 /****************************************************************************
  * Included Files
  ****************************************************************************/
@@ -65,8 +69,9 @@
 // encoding scheme. It both buffers and isolates the packets.
 //
 // Note: this is not thread safe as all functions share a common buffer.
-// However, at this time only one thread access these functions.
-int hcom_cirbuf_init(struct host_com_cir_buffer_s *hcbuf, size_t totalCapacity, uint8_t delimiter)
+// However, at this time only one thread access these functions / buffer.
+int hcom_cirbuf_init(struct host_com_cir_buffer_s *hcbuf, size_t totalCapacity,
+          uint8_t delimiter)
 {
   hcbuf->delimiter = delimiter;
 
@@ -103,7 +108,8 @@ int hcom_cirbuf_release_memory(struct host_com_cir_buffer_s *hcbuf)
 
 //==============================================================================
 // Add the bytes requested, if they will fit
-int hcom_cirbuf_add_bytes(struct host_com_cir_buffer_s *hcbuf, uint8_t *newBytes, uint32_t bytesToAdd)
+int hcom_cirbuf_add_bytes(struct host_com_cir_buffer_s *hcbuf, uint8_t *newBytes,
+          uint32_t bytesToAdd)
 {
   if (bytesToAdd == 0)
     return HCOM_CIR_BUF_ADD_BAD_ARG;
@@ -155,19 +161,19 @@ int hcom_cirbuf_get_next_packet(struct host_com_cir_buffer_s *hcbuf, uint8_t *pa
     found = (uint8_t *)memchr(hcbuf->tail, hcbuf->delimiter, hcbuf->top - hcbuf->tail);
   }
 
-  // Move first part
+  // Move bytes of packet or it's first half
   if (found != NULL)
   {
     // Found the delimiter, message in one contiguous packet
     sizeFoundTop = found - hcbuf->tail + 1;
     if (sizeFoundTop > packetDestBufSize)
     {
-      // Won't fit in provided packet
+      // Won't fit in caller supplied packet
       *packetLength = sizeFoundTop;   // Size needed
       return HCOM_CIR_BUF_GET_DEST_NO_ROOM;
     }
 
-    // Since it will fit we can copy and exit
+    // It will all fit we can copy and exit
     memcpy(packetDestBuf, hcbuf->tail, sizeFoundTop);
     hcbuf->tail = found + 1;
     *packetLength = sizeFoundTop;     // Size found

@@ -102,7 +102,7 @@ void hcom_host_route_request_by_type(const uint8_t *recvOrigData, const size_t r
   uint16_t requestType = recvOrigData[msgOffset] + (recvOrigData[msgOffset + 1] << 8);
   msgOffset += sizeof(uint16_t);
 
-//uint16_t extraData = recvOrigData[msgOffset] + (recvOrigData[msgOffset + 1] << 8);
+  //uint16_t extraData = recvOrigData[msgOffset] + (recvOrigData[msgOffset + 1] << 8);
   msgOffset += sizeof(uint16_t);
 
   uint32_t userData = recvOrigData[msgOffset] + (recvOrigData[msgOffset + 1] << 8) +
@@ -172,7 +172,7 @@ void hcom_host_route_request_by_type(const uint8_t *recvOrigData, const size_t r
 
     case HCOM_MDOW_REQUEST_CHANGE_TRACE_LEVEL:
       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-      hcom_logging_utils_change_trace_level(userData);
+      hcom_diag_logging_change_trace_level(userData);
       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
       break;
 
@@ -262,17 +262,20 @@ void hcom_host_route_request_by_type(const uint8_t *recvOrigData, const size_t r
       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
       break;
 
+#if HCOM_VS_REMOTE_DEBUGGING_INCLUDE_IN_BUILD > 0
     case HCOM_MDOW_REQUEST_DEBUGGER_MSG:
       // Accepted and concluded not needed here! This is not user facing message
       hcom_mono_remote_dbg_recv_host_sending_to_mono(recvPayload, recvPayloadSize, userData);
       break;
+#endif
 
+#if HCOM_NUTT_SHELL_LAUNCHER_INCLUDE_IN_BUILD > 0
     case HCOM_MDOW_REQUEST_ENABLE_DISABLE_NSH:
       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
       hcom_diag_misc_launch_nsh(userData);
       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
       break;
-
+#endif
     case HCOM_MDOW_REQUEST_DEVELOPER_1:
       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
       hcom_developer_tests_developer_1(userData);
@@ -317,7 +320,7 @@ void hcom_host_route_request_by_type(const uint8_t *recvOrigData, const size_t r
       break;
 #endif
 
-// These are not needed
+// These are not available
 //       // Partitions the entire flash chip with the number of partitions that
 //       // are defined by userData.
 //     case HCOM_MDOW_REQUEST_PARTITION_FLASH_FS:

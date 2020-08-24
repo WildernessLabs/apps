@@ -391,7 +391,7 @@ int hcom_esp32_exec_buffer_to_esp32(uint8_t *downloadData, size_t dnldDataSize, 
 
   hcom_logging_syslog(LOG_DEBUG, "%s@%d-SENDING DATA PACKET, seq:%d\n",
             thisFile, __LINE__, _espSeqNumb - 1);
-#if HCOM_SYSLOG_DATA_BUFFER_CONTENTS > 0
+#if HCOM_OUTPUT_DATA_BUFFER_INFO_VIA_SYSLOG > 0
   hcom_diag_misc_print_buffer(_downloadBuffer, dataDnldOffset, LOG_DEBUG);
 #endif
 

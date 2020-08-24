@@ -34,8 +34,8 @@
  ****************************************************************************/
 
 // This module is responsible for creating a pipe and redirecting stdout to
-// this pipe. It then reads the pipe and routes this information to the host 
-// PC / Mac for display via Meadow.CLI
+// this pipe. And then reading the pipe and routing this information to the host 
+// PC/Mac for display via Meadow.CLI
 
 /****************************************************************************
  * Included Files
@@ -50,6 +50,8 @@
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
+
+#if HCOM_STDOUT_REDIRECT_INCLUDE_IN_BUILD > 0
 
 #define HCOM_PIPE_READ_OFFSET 0
 #define HCOM_PIPE_WRITE_OFFSET 1
@@ -79,10 +81,21 @@ static int hcom_mono_stdout_create_infrastructure(void);
 static int hcom_mono_stdout_make_thread(void);
 static int hcom_mono_stdout_read_pipe_loop(void);
 static int hcom_mono_stdout_route_mono_text_stdout(uint8_t *recvBuff, int numbBytes);
+#endif
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
+#if HCOM_STDOUT_REDIRECT_INCLUDE_IN_BUILD == 0
+int hcom_mono_stdout_setup()
+{
+  return OK;
+}
+
+void hcom_mono_stdout_shutdown()
+{
+}
+#else
 int hcom_mono_stdout_setup()
 {
   _shutting_down = false;
@@ -273,3 +286,4 @@ int hcom_mono_stdout_route_mono_text_stdout(uint8_t *recvBuff, int numbBytes)
 
   return ret;
 }
+#endif

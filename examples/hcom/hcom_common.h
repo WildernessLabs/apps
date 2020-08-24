@@ -79,6 +79,20 @@
 #define HCOM_DEVICE_INFO_MONO_VERSION "0.0.0.1"
 
 //--------------------------------------------------------------------
+// Things that can be excluded from a build but generally are needed
+#define HCOM_VS_REMOTE_DEBUGGING_INCLUDE_IN_BUILD   1
+#define HCOM_STDOUT_REDIRECT_INCLUDE_IN_BUILD       1
+
+// Diagnostic
+#define HCOM_NUTT_SHELL_LAUNCHER_INCLUDE_IN_BUILD   0
+#define HCOM_ESP32_PROCESS_CR_LF_ENDLESS_TEXT       0
+#define HCOM_OUTPUT_DATA_BUFFER_INFO_VIA_SYSLOG     0
+#define HCOM_INCLUDE_DIAG_PRINT_BUFFER_CODE         0
+ 
+// Test code
+#define HCOM_VS_DEBUGGING_TESTS_INCLUDE_IN_BUILD    0 // was 1 not working
+#define HCOM_INCLUDE_BATTERY_BACKED_REG_TEST        0 // was 0 not working
+
 // The code not compiled by this #define could be removed
 #define HCOM_IGNORE_UNNECESSARY_FILE_SYSTEM_COMMANDS
 
@@ -107,9 +121,9 @@
 //---------------------------------------------------------------------
 // These define how long the receive thread waits before "waking up"
 // p-m DON'T FORGET
-#define HCOM_RECV_TIMEOUT_DEFAULT_SECONDS 60
 // #define HCOM_RECV_TIMEOUT_DEFAULT_SECONDS 15
-// #define HCOM_RECV_TIMEOUT_DEFAULT_SECONDS (5 * 60)    // 5 minutes
+// #define HCOM_RECV_TIMEOUT_DEFAULT_SECONDS 60
+#define HCOM_RECV_TIMEOUT_DEFAULT_SECONDS (5 * 60)    // 5 minutes
 // #define HCOM_RECV_TIMEOUT_DEFAULT_SECONDS (1 * 60 * 60) // once an hour report hcom thread running
 #define HCOM_RECV_TIMEOUT_ACTIVE_SECONDS 5
 
@@ -206,7 +220,6 @@ extern "C"
  * Public Functions
  ****************************************************************************************************/
 
-  // -----------------------------------------------
   // USB CDC/ACM send receive host messages
   int hcom_host_recv_setup(void);
   void hcom_host_recv_shutdown(void);
@@ -269,7 +282,9 @@ extern "C"
   // mono Visual Studio interactions
   int hcom_mono_remote_dbg_setup(void);
   void hcom_mono_remote_dbg_shutdown(void);
+#if HCOM_VS_REMOTE_DEBUGGING_INCLUDE_IN_BUILD > 0  
   void hcom_mono_remote_dbg_recv_host_sending_to_mono(const uint8_t *recvPayload, size_t recvPayloadSize, uint32_t userData);
+#endif
 
   // -----------------------------------------------
   // Comms support, COBS encode and receive circular buffer
@@ -297,17 +312,7 @@ extern "C"
   void hcom_misc_rqst_enter_dfu_mode(uint32_t user_data);
 
   // -----------------------------------------------
-  int hcom_logging_utils_setup(void);
-  void hcom_logging_utils_shutdown(void);
-  int hcom_logging_utils_get_syslog_mask(void);
-  void hcom_logging_utils_change_trace_level(uint32_t userData);
-  void hcom_logging_syslog(int priority, FAR const IPTR char *fmt, ...);
-  void hcom_logging_syslog_x(int priority, FAR const IPTR char *fmt, ...);
-  void hcom_logging_safe_ramlog(int priority, FAR const IPTR char *fmt, va_list args);
-  int hcom_logging_syslog_mask_init(void);
-
-  // -----------------------------------------------
-  // HCOM nx (nuttx) access allows low-level access to the operating system
+  // HCOM nx (nuttx) access allows low-level access to operating system resources
   int hcom_nx_access_setup(void);
   int hcom_nx_set_bbr(uint32_t value);
   int hcom_nx_get_bbr(uint32_t *value);
@@ -318,10 +323,21 @@ extern "C"
   int hcom_nx_gpio_write(int gpioHcomId, uint8_t cmdValue);
   void hcom_nx_forward_cmd_to_nx(uint16_t hcomCmd, uint32_t userData);
   bool hcom_nx_is_mounted(uint32_t partitionId);
-  // These exist and work, however, they are not currently needed.
+  // These exist and work, however, direct registry access is currently
+  // not supported.
   // int hcom_nx_set_register(uint32_t address, uint32_t value);
   // int hcom_nx_get_register(uint32_t address, uint32_t *value);
   // int hcom_nx_update_register(uint32_t address, uint32_t clearBits, uint32_t setBits);
+
+  // -----------------------------------------------
+  int hcom_diag_logging_setup(void);
+  void hcom_diag_logging_shutdown(void);
+  int hcom_diag_logging_get_syslog_mask(void);
+  void hcom_diag_logging_change_trace_level(uint32_t userData);
+  void hcom_logging_syslog(int priority, FAR const IPTR char *fmt, ...);
+  void hcom_logging_syslog_x(int priority, FAR const IPTR char *fmt, ...);
+  void hcom_logging_safe_ramlog(int priority, FAR const IPTR char *fmt, va_list args);
+  int hcom_logging_syslog_mask_init(void);
 
   //-------------------------------------------------------
   // Ramlog to host/uart
@@ -335,7 +351,9 @@ extern "C"
   void hcom_diag_trace_do_not_send_to_uart1(uint32_t userData);
 
   int hcom_diag_misc_setup(void);
+#if HCOM_NUTT_SHELL_LAUNCHER_INCLUDE_IN_BUILD > 0
   void hcom_diag_misc_launch_nsh(uint32_t userData);
+#endif
   void hcom_diag_misc_print_buffer(const uint8_t packetBuffer[], const int bufLen, uint8_t logPriority);
 
   int hcom_diag_gpio_setup(void);
@@ -349,19 +367,11 @@ extern "C"
   void hcom_developer_tests_developer_3(uint32_t userData);
   void hcom_developer_tests_developer_4(uint32_t userData);
 
-// Diagnostic
-// When 0, removes diagnostic code
-#define HCOM_ESP32_PROCESS_CR_LF_ENDLESS_TEXT 0
-#define HCOM_SYSLOG_DATA_BUFFER_CONTENTS      0
-#define HCOM_COMMON_UTILS_DIAG_PRINT_BUFFER   1
-#define HCOM_INCLUDE_MONO_VS_DEBUG_TEST       1
-#define HCOM_INCLUDE_BATTERY_BACKED_REG_TEST  1
-
 #if HCOM_INCLUDE_BATTERY_BACKED_REG_TEST > 0
 void hcom_bbr_tests(void);
 #endif
 
-#if HCOM_INCLUDE_MONO_VS_DEBUG_TEST > 0
+#if HCOM_VS_DEBUGGING_TESTS_INCLUDE_IN_BUILD > 0
 int MonoVsRemoteDebugTests(uint32_t userData);
 #endif
 

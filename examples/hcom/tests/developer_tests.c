@@ -203,7 +203,7 @@ void hcom_developer_tests_developer_3(uint32_t userData)
 #endif
 
 // 1 is the only valid value
-#if HCOM_INCLUDE_MONO_VS_DEBUG_TEST > 0
+#if HCOM_VS_DEBUGGING_TESTS_INCLUDE_IN_BUILD > 0
   if(userData > 0)
     MonoVsRemoteDebugTests(userData);
 #endif

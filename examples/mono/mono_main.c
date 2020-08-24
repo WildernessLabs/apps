@@ -63,8 +63,6 @@ int main(int argc, FAR char *argv[])
 int mono_main(int argc, char *argv[])
 #endif
 {
-  syslog(1, "Entered mono main\n");
-
   // Normal mono startup follows
   symtab_initialize();
 
@@ -105,11 +103,11 @@ int mono_main(int argc, char *argv[])
   mono_dl_register_library("nuttx", meadow_mappings);
 
   // Joao, this call may need to be somewhere within mono.
-  // I put it here as a place holder.
+  // I put it here as a place holder, but it seems to do the job.
+  // apparently some of the above calls hang up nuttx.
   //
   // Notify hcom that everything is running correctly
   hcom_mono_ctrl_clear_mono_is_running_flag();
-  syslog(1, "Entering mono_main_driver\n");
   
   ret = mono_main_driver (mono_argc, mono_argv);
 

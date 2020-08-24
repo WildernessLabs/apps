@@ -55,6 +55,7 @@ HCOM_SRCS = comms/hcom_host_encode.c \
 	comms/hcom_host_route.c \
 	comms/hcom_host_send.c \
 	diag/hcom_diag_gpio.c \
+	diag/hcom_diag_logging.c \
 	diag/hcom_diag_misc.c \
 	diag/hcom_diag_ramlog_trace.c \
 	file/hcom_file_dnld_proc.c \
@@ -62,13 +63,12 @@ HCOM_SRCS = comms/hcom_host_encode.c \
 	file/hcom_file_write_delete.c \
 	misc/hcom_circular_buffer.c \
 	misc/hcom_common_utils.c \
-	misc/hcom_logging_utils.c \
 	mono/hcom_mono_control.c \
 	mono/hcom_remote_vs_debug.c \
 	mono/hcom_stdout_redirect.c \
-	os_rqsts/hcom_bbreg_access.c \
-	os_rqsts/hcom_misc_requests.c \
-	os_rqsts/hcom_nx_access.c \
+	nx_rqsts/hcom_bbreg_access.c \
+	nx_rqsts/hcom_misc_requests.c \
+	nx_rqsts/hcom_nx_access.c \
 	tests/bbreg_tests.c \
 	tests/developer_tests.c \
 	tests/vs_debug_tests.c

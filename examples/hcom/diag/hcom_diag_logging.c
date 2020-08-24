@@ -33,6 +33,10 @@
  *
  ****************************************************************************/
 
+// This functions are used to process the logging request. There was a time
+// we memory was unavailable for all but the briefest syslog messages. Much
+// of what that is in here is the result of the memory reduction effort.
+
 /****************************************************************************
  * Included Files
  ****************************************************************************/
@@ -66,14 +70,14 @@ static char *_f7syslogTextBuf;
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
-int hcom_logging_utils_setup()
+int hcom_diag_logging_setup()
 {
   _f7syslogTextBuf = malloc(HCOM_PROTOCOL_REQUEST_MAX_SIMPLE_DATA_LEN);
   sem_init(&_f7syslogSem, 0, 1);
   return OK;
 }
 //============================================================
-void hcom_logging_utils_shutdown()
+void hcom_diag_logging_shutdown()
 {
   sem_destroy(&_f7syslogSem);
   free(_f7syslogTextBuf);
@@ -81,7 +85,7 @@ void hcom_logging_utils_shutdown()
 
 //============================================================
 // Make syslogMask available
-int hcom_logging_utils_get_syslog_mask()
+int hcom_diag_logging_get_syslog_mask()
 {
   return _syslogMask;
 }
@@ -144,7 +148,7 @@ int hcom_logging_syslog_mask_init()
 }
 
 //=======================================================================================
-void hcom_logging_utils_change_trace_level(uint32_t userData)
+void hcom_diag_logging_change_trace_level(uint32_t userData)
 {
   char hostMsg[HCOM_SHORT_HOST_STRING_BUFF_LENGTH];
   int stringLen;
@@ -195,7 +199,7 @@ void hcom_logging_utils_change_trace_level(uint32_t userData)
 // This is part of memory saving effort to remove from all the syslog
 // messages the need to identify the type of log. It's done here and
 // not in 100+ places.
-static int hcom_logging_utils_log_priority_to_text(int priority, char *textPri)
+static int hcom_diag_logging_log_priority_to_text(int priority, char *textPri)
 {
   switch (priority)
   {
@@ -233,13 +237,13 @@ static int hcom_logging_utils_log_priority_to_text(int priority, char *textPri)
 
 //===================================================================
 // Builds the string for syslogs
-static int hcom_logging_utils_build_syslog_string(int priority, FAR const IPTR char * fmtStr, va_list argsList,
+static int hcom_diag_logging_build_syslog_string(int priority, FAR const IPTR char * fmtStr, va_list argsList,
         char* finalString, int maxStringLen)
 {
   // Adding the prefix here saves memory by removing
   // the text at the start of each message
   char labelPrefix[16];
-  int prefixLen = hcom_logging_utils_log_priority_to_text(priority, labelPrefix);
+  int prefixLen = hcom_diag_logging_log_priority_to_text(priority, labelPrefix);
   int fmtLength = strlen(fmtStr);
 
   char *finalFmt = malloc(prefixLen + fmtLength + 1); // room for '\0'
@@ -261,7 +265,7 @@ static int hcom_logging_utils_build_syslog_string(int priority, FAR const IPTR c
 
 //=====================================================================
 // Wait for the thread writing to exit
-static void hcom_logging_utils_takesem(void)
+static void hcom_diag_logging_takesem(void)
 {
   int ret;
 
@@ -309,7 +313,7 @@ void hcom_logging_syslog_x(int priority, FAR const IPTR char *fmt, ...)
 void hcom_logging_syslog(int priority, FAR const IPTR char *fmt, ...)
 {
   // Prevent multiple threads from garbling message
-  hcom_logging_utils_takesem();
+  hcom_diag_logging_takesem();
 
   if ((_syslogMask & LOG_MASK(priority)) == 0)
   {
@@ -319,7 +323,7 @@ void hcom_logging_syslog(int priority, FAR const IPTR char *fmt, ...)
 
   va_list args;
   va_start(args, fmt);
-  int stringLen = hcom_logging_utils_build_syslog_string(priority, fmt, args, _f7syslogTextBuf,
+  int stringLen = hcom_diag_logging_build_syslog_string(priority, fmt, args, _f7syslogTextBuf,
             HCOM_PROTOCOL_REQUEST_MAX_SIMPLE_DATA_LEN);
   va_end(args);  
 
@@ -377,7 +381,7 @@ void hcom_logging_safe_ramlog(int priority, FAR const IPTR char *fmt,
   _safeRamlogText = malloc(HCOM_PROTOCOL_REQUEST_MAX_SIMPLE_DATA_LEN);
   DEBUGASSERT(_safeRamlogText != NULL);
 
-  int stringLen = hcom_logging_utils_build_syslog_string(priority, fmt, args, _safeRamlogText,
+  int stringLen = hcom_diag_logging_build_syslog_string(priority, fmt, args, _safeRamlogText,
             HCOM_PROTOCOL_REQUEST_MAX_SIMPLE_DATA_LEN);
 
   // Note: no time stamp to these messages

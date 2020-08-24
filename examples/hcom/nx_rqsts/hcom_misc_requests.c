@@ -64,14 +64,13 @@ int hcom_misc_rqst_setup()
 }
 
 //======================================================================================
-// Most of the device information is available from here but not
-// the MCU unique identifier.
+// Most of the device information is available from here (apps) but not
+// the MCU unique identifier, for this we must access the nuttx side.
 void hcom_misc_rqst_get_device_info(uint32_t userData)
 {
   char *csvDevInfo;
   int stringLen;
-  // 96 bit unique chip id as 12 bytes
-  uint8_t uniqueId[12];
+  uint8_t uniqueId[12];  // 96 bit unique chip id as 12 bytes
 
   csvDevInfo = malloc(HCOM_MAX_HOST_STRING_BUFF_LENGTH);
   if(csvDevInfo == NULL)

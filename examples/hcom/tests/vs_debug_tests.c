@@ -49,7 +49,7 @@
 
 #include "../hcom_common.h"
 
-#if HCOM_INCLUDE_MONO_VS_DEBUG_TEST > 0
+#if HCOM_VS_DEBUGGING_TESTS_INCLUDE_IN_BUILD > 0
 // For network testing
 #include <sys/socket.h>
 #include <sys/un.h>
@@ -60,7 +60,7 @@
  * Private Data
  ****************************************************************************/
 
-#if HCOM_INCLUDE_MONO_VS_DEBUG_TEST > 0
+#if HCOM_VS_DEBUGGING_TESTS_INCLUDE_IN_BUILD > 0
 static char *thisFile = __FILE__;
 
 static int _sockfd = -1;
@@ -71,12 +71,14 @@ static bool _connected = false;
  * Private Function Prototypes
  ****************************************************************************/
 
+#if HCOM_VS_DEBUGGING_TESTS_INCLUDE_IN_BUILD > 0
 static int MonoDebugTestInitialize(void);
 static FAR void *hcom_vs_debug_test_pthread(FAR void *arg);
 static int MonoDebugTestExecute(void);
 static int MonoDebugTestConnect(void);
 static int MonoDebugTestSend(uint8_t *sendBuffer, int sendSize);
 static int MonoDebugTestReceive(uint8_t *recvBuffer);
+#endif
 
 /****************************************************************************
  * Public Functions
@@ -85,7 +87,7 @@ static int MonoDebugTestReceive(uint8_t *recvBuffer);
 // to do.
 int MonoVsRemoteDebugTests(uint32_t userData)
 {
-#if HCOM_INCLUDE_MONO_VS_DEBUG_TEST > 0
+#if HCOM_VS_DEBUGGING_TESTS_INCLUDE_IN_BUILD > 0
   switch(userData)
   {
     case 1:
@@ -97,7 +99,7 @@ int MonoVsRemoteDebugTests(uint32_t userData)
   return OK;
 }
 
-#if HCOM_INCLUDE_MONO_VS_DEBUG_TEST > 0
+#if HCOM_VS_DEBUGGING_TESTS_INCLUDE_IN_BUILD > 0
 //=================================================================
 // Need to create a pthread to run this test so the caller can return
 // to do it's work.

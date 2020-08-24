@@ -43,11 +43,8 @@
 #include <meadow/hcom_shared_common.h>
 
 #include <nuttx/config.h>
-//#include <fcntl.h>
 #include <dirent.h>
 #include <sys/stat.h>
-
-//#include <nuttx/fs/fs.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -241,7 +238,7 @@ int hcom_file_lists_files_and_crc_in_partition(uint32_t partitionId)
 }
 
 // ==============================================================
-// THIS IS CALLABLE from Developer 4 at this time
+// THIS IS AN UNDOCUMENTED FEATURE CALLABLE from Developer 4.
 int hcom_file_lists_all_dev_dir_and_files_start(uint32_t userData)
 {
   // Changing "/" to "meadow0" will only show meadow files
@@ -287,7 +284,7 @@ int hcom_file_lists_all_dev_dir_and_files(const char *name, int indent, uint32_t
     }
     else
     {
-      // All other entry types
+      // All non-directory types
       char *entryType;
       if(DIRENT_ISFILE(entry->d_type)) {entryType = "file";}
       else if(DIRENT_ISCHR(entry->d_type)) {entryType = "char";}

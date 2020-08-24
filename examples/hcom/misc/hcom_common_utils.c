@@ -71,6 +71,8 @@ void hcom_common_utils_shutdown()
 }
 
 //===================================================================
+// NOTE: THIS EXACT CODE IS ALSO ON THE NUTTX SIDE
+//
 // This is called during startup, before the hcom thread is created,
 // to check if we are running under the QEMU virtualization model.
 // 

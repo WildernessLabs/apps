@@ -1,7 +1,7 @@
 /****************************************************************************
  * \apps\examples\hcom\diag\hcom_diag_gpio.c
  * 
- *   Copyright (C) 2019 - 2020 Wilderness Labs. All rights reserved.
+ *   Copyright (C) 2020 Wilderness Labs. All rights reserved.
  *   Author:  Wilderness Labs
  *
  * Redistribution and use in source and binary forms, with or without
@@ -32,6 +32,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *
  ****************************************************************************/
+
+// This module contains the code to allow GPIOs to be used for diagnistics
 
 /****************************************************************************
  * Included Files
@@ -80,6 +82,7 @@ int hcom_diag_gpio_setup()
 
 #if HCOM_INCLUDE_DIAGNOSTIC_GPIO > 0
 //================================================================
+// Configure the diagnostic GPIOs
 int hcom_diag_gpio_config()
 {
   int ret;
@@ -129,12 +132,12 @@ int hcom_diag_gpio_config()
 #endif
 
 //================================================================
-// The caller provides the integer that represents the GPIO. The
-// Meadow F7 GPIO A0 - MOSI have values of 2 - 10.
+// The caller provides the integer that represents the GPIO within
+// hcom. The Meadow F7 GPIO A0 - MOSI have values of 2 - 10.
 // cmdValue is either HCOM_GPIO_DIGITAL_CMD_VALUE_HIGH (1) or
 // HCOM_GPIO_DIGITAL_CMD_VALUE_LOW (0).
 // Note: It seems to take about 5 microsec for this function to
-// complete. From the nuttx side it takes about 250 nanosec.
+// complete. While on the nuttx side it takes about 250 nanosec.
 int hcom_diag_gpio_write(int gpioHcomId, uint8_t cmdValue)
 {
 #if HCOM_INCLUDE_DIAGNOSTIC_GPIO > 0
@@ -159,7 +162,7 @@ int hcom_diag_gpio_write(int gpioHcomId, uint8_t cmdValue)
 }
 
 //================================================================
-// This could be moved to the nuttx for much lower overhead.
+// This could be moved to the nuttx for much less overhead.
 int hcom_diag_gpio_write_set_8bits(uint8_t setBits)
 {  
   // Note: Low (false/0) turns led on for an open drain

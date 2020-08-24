@@ -33,8 +33,7 @@
  *
  ****************************************************************************/
 
-// The low level hcom receiver lives here. These are the functions that
-// need use the connections file descriptor.
+// The low level hcom receiver lives here.
 
 /****************************************************************************
  * Included Files

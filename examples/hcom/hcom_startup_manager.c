@@ -33,6 +33,9 @@
  *
  ****************************************************************************/
 
+// This module is where everything starts. The thread created by nuttx for
+// running apps enters here and hcom begins.
+
 /****************************************************************************
  * Included Files
  ****************************************************************************/
@@ -76,7 +79,7 @@ int hcom_main(int argc, char *argv[])
   int ret;
 
   // First so hcom_logging_syslog can be used by during setup
-  ret = hcom_logging_utils_setup();
+  ret = hcom_diag_logging_setup();
   if (ret < 0)
   {
     // Revert to syslog as there may be problems with hcom_logging_syslog
@@ -113,7 +116,7 @@ int hcom_main(int argc, char *argv[])
   }
 #endif
 
-  // Allocates memory for logging buffer
+  // Does nothing
   ret = hcom_common_utils_setup();
   if (ret < 0)
   {
@@ -199,6 +202,7 @@ int hcom_main(int argc, char *argv[])
   }
 #endif
 
+#if defined(HCOM_VS_REMOTE_DEBUGGING_INCLUDE_IN_BUILD)
   // Creates a unix domain socket and creates a receiving thread.
   ret = hcom_mono_remote_dbg_setup();
   if (ret < 0)
@@ -206,6 +210,7 @@ int hcom_main(int argc, char *argv[])
     hcom_logging_syslog(LOG_CRIT, "%s@%d-setup remote dbg %d\n", thisFile, __LINE__, ret);
     return ret;
   }
+#endif
 
 #if defined (CONFIG_HCOM_ESP32_COMMS)
   ret = hcom_esp32_uart_comms_setup();
@@ -242,7 +247,7 @@ void hcom_manager_shutdown()
   hcom_host_recv_shutdown();
   hcom_mono_stdout_shutdown();
   hcom_common_utils_shutdown();
-  hcom_logging_utils_shutdown();
+  hcom_diag_logging_shutdown();
   hcom_host_route_shutdown();  
   hcom_host_parse_shutdown();
   hcom_host_send_shutdown();

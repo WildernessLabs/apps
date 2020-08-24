@@ -245,7 +245,7 @@ int hcom_esp32_recv_pull_and_process()
 int hcom_esp32_recv_handle_text_packet(uint8_t *text_buffer, ssize_t length)
 {
   // Ignore if not LOG_INFO
-  if ((hcom_logging_utils_get_syslog_mask() & LOG_MASK(LOG_INFO)) == 0)
+  if ((hcom_diag_logging_get_syslog_mask() & LOG_MASK(LOG_INFO)) == 0)
     return OK;   // Nothing to do
 
   // There are times when the ESP32 sends endless cr/lf very fast

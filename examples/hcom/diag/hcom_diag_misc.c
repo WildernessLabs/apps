@@ -50,9 +50,9 @@
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
-// p-m temp so I can see the code...
-#if !defined (CONFIG_SYSTEM_NSH)
-#define CONFIG_SYSTEM_NSH 1
+
+#if HCOM_NUTT_SHELL_LAUNCHER_INCLUDE_IN_BUILD > 0 &&  !defined (CONFIG_SYSTEM_NSH)
+#warning"HCOM_NUTT_SHELL_LAUNCHER_INCLUDE_IN_BUILD is > 0 but CONFIG_SYSTEM_NSH is not defined"
 #endif
 
 /* Configuration ************************************************************/
@@ -61,7 +61,7 @@
  ****************************************************************************/
 static char *thisFile = __FILE__;
 
-#if defined CONFIG_SYSTEM_NSH
+#if HCOM_NUTT_SHELL_LAUNCHER_INCLUDE_IN_BUILD > 0
 int nsh_main(int argc, char *argv[]);
 static bool _nsh_enabled;
 #endif
@@ -76,13 +76,13 @@ static bool _nsh_enabled;
 
 int hcom_diag_misc_setup()
 {
-#if defined CONFIG_SYSTEM_NSH
+#if HCOM_NUTT_SHELL_LAUNCHER_INCLUDE_IN_BUILD > 0
   _nsh_enabled = false;
 #endif
   return OK;
 }
 
-#if HCOM_COMMON_UTILS_DIAG_PRINT_BUFFER > 0
+#if HCOM_INCLUDE_DIAG_PRINT_BUFFER_CODE > 0
 //============================================================================
 // For diagnostic use only
 void hcom_diag_misc_print_buffer(const uint8_t buffer[], const int bufLen, uint8_t msgPriority)
@@ -93,7 +93,7 @@ void hcom_diag_misc_print_buffer(const uint8_t buffer[], const int bufLen, uint8
 #define HCOM_UTIL_ASCII_OFFSET (57 + HCOM_UTIL_LEADING_SPACES)
 #define HCOM_UTIL_DISPLAY_LENGTH (HCOM_UTIL_ASCII_OFFSET + HCOM_UTIL_BYTES_PER_LINE + 3)
 
-  if ((hcom_logging_utils_get_syslog_mask() & LOG_MASK(msgPriority)) == 0)
+  if ((hcom_diag_logging_get_syslog_mask() & LOG_MASK(msgPriority)) == 0)
     return;
 
   if(bufLen <= 0)
@@ -172,23 +172,25 @@ void hcom_diag_misc_print_buffer(const uint8_t buffer[], const int bufLen, uint8
 #endif
 
 //=======================================================================================
-// I'm leaving this code here because it could become useful.
-// The reason this doesn't work is that when it moved to /apps it now shares
-// stdout with all other /apps applications including mono. Mono routes
-// all Console.Write() calls to stdout. To get Console.Write() calls to output
-// on CLI, stdout was redirected, and with it the NSH output was redirected too.
-// If NSH is desired just prevent the stdout redirection code from running
-// and hook up a terminal to D0 & D1 (UART 4).
-// userData = 1 enables and userData = 0 disables
+// I'm leaving this code here because it could become useful. The reason this
+// doesn't work is that when it was moved to /apps it now shares stdout with
+// all other /apps applications including mono. Mono routes all Console.Write()
+// calls to stdout. To get Console.Write() calls to output on CLI, stdout was
+// redirected, and with it the NSH output was redirected too.
+// If NSH is desired either disable mono from running via CLI command or prevent
+// the stdout redirection code from running (via a code hack). Then hook up a
+// terminal to D0 & D1 (UART 4).
+// userData = 1 enables all other values are ignored.
 void hcom_diag_misc_launch_nsh(uint32_t userData)
 {
+#if HCOM_NUTT_SHELL_LAUNCHER_INCLUDE_IN_BUILD > 0
+
   // Currently, NSH can only be enabled once from the CLI. After this the _nsh_enable flag
   // will be set true and prevents nsh from being re-started.
   // A nice but not needed feature would be to find a different method to determine
   // if nsh is running (e.g. pthread_join, waitpid(),  waitid() or atexit()).
   // This is not a big problem especially as this code no longer works, as discribed
   // above.
-#if defined CONFIG_SYSTEM_NSH
   int _nsh_pid;
 
   if(_nsh_enabled)
@@ -223,11 +225,11 @@ void hcom_diag_misc_launch_nsh(uint32_t userData)
   else
   {
     hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0,
-            "NSH not implemented", thisFile, __LINE__);
+            "Not possible to disable NSH", thisFile, __LINE__);
     return;
   }
 #else
   hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0, 
-          "NuttShell not compiled", thisFile, __LINE__);
+          "NuttShell not available", thisFile, __LINE__);
 #endif
 }

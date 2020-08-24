@@ -36,8 +36,8 @@
 // This is a Unix domain stream socket server. It allows the mono debugging
 // interface to interact with hcom to forward the debug information to the host.
 
-// NOTE: This has never been put into use. Therefore, there are remaining
-// syslog(1, "VSD->..."); entries that have not been removed.
+// NOTE: This module is a WIP as it has never been put into use. Therefore,
+// there are remaining syslog entries that have not been removed.
 
 /****************************************************************************
  * Included Files
@@ -65,6 +65,7 @@
 /****************************************************************************
  * Private Data
  ****************************************************************************/
+#if HCOM_VS_REMOTE_DEBUGGING_INCLUDE_IN_BUILD > 0
 static char *thisFile = __FILE__;
 
 static bool _shutting_down;
@@ -90,11 +91,21 @@ static int hcom_mono_remote_dbg_connect_and_receive(struct remote_dbg_session *d
 
 static int hcom_mono_remote_dbg_accept_connection(struct remote_dbg_session *dbgSock);
 static int hcom_mono_remote_dbg_read_mono_send_to_host_loop(struct remote_dbg_session *dbgSock, uint8_t *recvBuffer);
+#endif
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
+#if HCOM_VS_REMOTE_DEBUGGING_INCLUDE_IN_BUILD == 0
+int hcom_mono_remote_dbg_setup()
+{
+  return OK;
+}
+void hcom_mono_remote_dbg_shutdown()
+{
+}
+#else
 int hcom_mono_remote_dbg_setup()
 {
   _shutting_down = false;
@@ -363,7 +374,7 @@ int hcom_mono_remote_dbg_read_mono_send_to_host_loop(struct remote_dbg_session *
 
     hcom_logging_syslog(LOG_DEBUG, "%s@%d-Forwarding %d bytes to host PC for VS\n",
               thisFile, __LINE__, nBytesRead);
-#if HCOM_SYSLOG_DATA_BUFFER_CONTENTS > 0
+#if HCOM_OUTPUT_DATA_BUFFER_INFO_VIA_SYSLOG > 0
     hcom_utils_diag_print_buffer(recvBuffer, nBytesRead, LOG_DEBUG);
 #endif
 
@@ -400,7 +411,8 @@ void hcom_mono_remote_dbg_recv_host_sending_to_mono(const uint8_t *recvPayload,
 
   hcom_logging_syslog(LOG_DEBUG, "%s@%d-Received %d bytes from VS. forwarded to Mono.\n",
           thisFile, __LINE__, recvPayloadSize);
-#if HCOM_SYSLOG_DATA_BUFFER_CONTENTS > 0
+#if HCOM_OUTPUT_DATA_BUFFER_INFO_VIA_SYSLOG > 0
   hcom_utils_diag_print_buffer(recvPayload, recvPayloadSize, LOG_DEBUG);
 #endif
 }
+#endif
