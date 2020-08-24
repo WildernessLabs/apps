@@ -106,12 +106,9 @@ int hcom_diag_trace_ramlog_setup()
   _uart1_fd = -1;
   _trace_ramlog_to_uart1 = false;
 
-  // p-m FOR INITIAL TESTING SAVE SOME TROUBLE BY FORCING HAPPY VALUES
-  // p-m - force to uart1 for PORTING TO APPS SIDE
+  // p-m Work around for a bug - force to uart1 but disable host
   _trace_ramlog_to_uart1 = true;
-  //_trace_ramlog_to_host = true;
 
-  // p-m IGNORE VALUES from battery backed register values
   // if(hcom_bb_reg_acc_read_bbr_and_right_justify(HCOM_BBREG_ROUTE_TRACE_MSG_TO_UART1_BIT))
   //   _trace_ramlog_to_uart1 = true;
 
@@ -410,7 +407,6 @@ int hcom_diag_trace_ramlog_save_recvd_data(uint8_t recvBuff[], const ssize_t rec
 
       if (result == HCOM_CIR_BUF_GET_DEST_NO_ROOM)
       {
-          // hcom_diag_gpio_write(HCOM_GPIO_4, 1);  // p-m
         // The buffer we supplied is too small for the message found
         hcom_diag_trace_ramlog_err_logger(LOG_ERR, "%s@%d-pull packets from cir buf, no room\n",
                  thisFile, __LINE__, result);
@@ -498,12 +494,10 @@ int hcom_diag_trace_ramlog_route_trace_text(uint8_t *recvBuff, int numbBytes)
     DEBUGASSERT(numbBytes < HCOM_MAX_HOST_STRING_BUFF_LENGTH);
 
     // Send entire message, includes ctrl chararacters
-// p-m - removed following because sending to host not implemented yet
-    return OK;
-    // int ret = hcom_host_send_raw_string_msg(HCOM_HOST_REQUEST_TEXT_TRACE_MSG, 0, (char *) recvBuff,
-    //         numbBytes, thisFile, __LINE__);
-    // if(ret == -EAGAIN)
-    //   return ret;
+    int ret = hcom_host_send_raw_string_msg(HCOM_HOST_REQUEST_TEXT_TRACE_MSG, 0, (char *) recvBuff,
+            numbBytes, thisFile, __LINE__);
+    if(ret == -EAGAIN)
+      return ret;
   }
 
   return OK;

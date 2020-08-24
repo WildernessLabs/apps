@@ -188,8 +188,7 @@ void *hcom_mono_stdout_pthread(FAR void *arg)
     return NULL;
   }
 
-  // p-m is the right?
-  //close(_pipefd[HCOM_PIPE_WRITE_OFFSET]);
+  close(_pipefd[HCOM_PIPE_WRITE_OFFSET]);
 
   // This loop runs forever
   while(!_shutting_down)
@@ -266,14 +265,14 @@ int hcom_mono_stdout_route_mono_text_stdout(uint8_t *recvBuff, int numbBytes)
 
   if(numbBytes == 0)
     return OK;
-    
+
   // Make sure message fits in allocated buffer, if not, truncate
   if(numbBytes >= HCOM_MONO_APP_DBG_PIPE_BUFF_SIZE)
     availBufSpace = HCOM_MONO_APP_DBG_PIPE_BUFF_SIZE - 1;
   else
     availBufSpace = numbBytes;
 
-  // Includes ctrl chararacter
+  // Includes ctrl chararacter(s)
   int ret = hcom_host_send_raw_string_msg(HCOM_HOST_REQUEST_TEXT_MONO_MSG, 0, (char *) recvBuff,
           availBufSpace, thisFile, __LINE__);
   if (ret < 0)

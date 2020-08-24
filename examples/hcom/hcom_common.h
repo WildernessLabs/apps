@@ -84,10 +84,12 @@
 #define HCOM_STDOUT_REDIRECT_INCLUDE_IN_BUILD       1
 
 // Diagnostic
-#define HCOM_NUTT_SHELL_LAUNCHER_INCLUDE_IN_BUILD   0
+#define HCOM_NUTT_SHELL_LAUNCHER_INCLUDE_IN_BUILD   0   // Requires nsh to be defined
 #define HCOM_ESP32_PROCESS_CR_LF_ENDLESS_TEXT       0
 #define HCOM_OUTPUT_DATA_BUFFER_INFO_VIA_SYSLOG     0
 #define HCOM_INCLUDE_DIAG_PRINT_BUFFER_CODE         0
+// Note: there is another one like these (HCOM_INCLUDE_DIAGNOSTIC_GPIO_CODE) defined in
+// include/Meadow/hcom_shared_common.h
  
 // Test code
 #define HCOM_VS_DEBUGGING_TESTS_INCLUDE_IN_BUILD    0 // was 1 not working

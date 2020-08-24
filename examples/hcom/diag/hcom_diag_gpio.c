@@ -34,6 +34,7 @@
  ****************************************************************************/
 
 // This module contains the code to allow GPIOs to be used for diagnistics
+// This is only intended for low-level debugging
 
 /****************************************************************************
  * Included Files
@@ -46,9 +47,6 @@
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
-
-// p-m So I can see code
-#define HCOM_INCLUDE_DIAGNOSTIC_GPIO 1
 
 /* Configuration ************************************************************/
 /****************************************************************************
@@ -66,7 +64,7 @@ static char *thisFile = __FILE__;
 
 int hcom_diag_gpio_setup()
 {
-#if HCOM_INCLUDE_DIAGNOSTIC_GPIO > 0
+#if HCOM_INCLUDE_DIAGNOSTIC_GPIO_CODE > 0
   int ret;
   ret = hcom_diag_gpio_config();
   if (ret < 0)
@@ -80,7 +78,7 @@ int hcom_diag_gpio_setup()
 #endif
 }
 
-#if HCOM_INCLUDE_DIAGNOSTIC_GPIO > 0
+#if HCOM_INCLUDE_DIAGNOSTIC_GPIO_CODE > 0
 //================================================================
 // Configure the diagnostic GPIOs
 int hcom_diag_gpio_config()
@@ -93,7 +91,7 @@ int hcom_diag_gpio_config()
     ret = hcom_nx_gpio_config(gpioOffset, HCOM_GPIO_DIGITAL_CONFIG_OUTPUT);
     if(ret < 0)
     {
-      syslog(1, "hcom_nx_gpio_config value of:%d\n", gpioOffset);
+      hcom_logging_syslog(LOG_ERR, "hcom_nx_gpio_config value of:%d\n", gpioOffset);
       break;
     }
   }
@@ -140,7 +138,7 @@ int hcom_diag_gpio_config()
 // complete. While on the nuttx side it takes about 250 nanosec.
 int hcom_diag_gpio_write(int gpioHcomId, uint8_t cmdValue)
 {
-#if HCOM_INCLUDE_DIAGNOSTIC_GPIO > 0
+#if HCOM_INCLUDE_DIAGNOSTIC_GPIO_CODE > 0
   int ret;
   
   DEBUGASSERT(cmdValue == HCOM_GPIO_DIGITAL_CMD_VALUE_HIGH ||

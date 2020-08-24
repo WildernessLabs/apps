@@ -93,6 +93,8 @@ int hcom_mono_ctrl_start_mono_main()
   // cleared by mono once mono is running correctly.
   hcom_bb_reg_acc_set_bbr_bits(HCOM_BBREG_MONO_LAST_RUN_LOCKUP_BIT);
 
+  hcom_logging_syslog(LOG_NOTICE, "%s@%d-Attempting to start mono\n", thisFile, __LINE__);
+  
   // Create a task to execute mono
   mono_pid = task_create("mono", HCOM_MONO_RUNTIME_TASK_PRIORITY,
                       HCOM_MONO_RUNTIME_TASK_STACKSIZE,
@@ -124,6 +126,7 @@ int hcom_mono_ctrl_start_mono_main()
 // Mono calls the function after it is running correctly
 void hcom_mono_ctrl_clear_mono_is_running_flag()
 {
+  hcom_logging_syslog(LOG_NOTICE, "%s@%d-Mono has started\n", thisFile, __LINE__);
   hcom_bb_reg_acc_clear_bbr_bits(HCOM_BBREG_MONO_LAST_RUN_LOCKUP_BIT);
 }
 
@@ -191,10 +194,11 @@ bool hcom_mono_ctrl_are_needed_files_here()
     "System.Core.dll",
     "System.dll",
     "Meadow.dll",
-    // "Meadow.Foundation.dll", don't think this is required
     "App.exe",
     NULL
   };
+  
+  // "Meadow.Foundation.dll", don't think this is required
 
   memset(missingFiles, 0, 128);
 

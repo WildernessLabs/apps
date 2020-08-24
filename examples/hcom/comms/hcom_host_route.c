@@ -112,8 +112,8 @@ void hcom_host_route_request_by_type(const uint8_t *recvOrigData, const size_t r
   const uint8_t *recvPayload = recvOrigData + msgOffset;
   const size_t recvPayloadSize = recvOrigDataSize - msgOffset;
 
-  // syslog(1, "-->Received %d bytes beyond header. Request Type:0x%04x\n",
-  //           recvPayloadSize, requestType);
+  hcom_logging_syslog(LOG_DEBUG, "-->Received %d bytes after header. Request Type:0x%04x\n",
+            recvPayloadSize, requestType);
 
   switch (requestType)
   {
