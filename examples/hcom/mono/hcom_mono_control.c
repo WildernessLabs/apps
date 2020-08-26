@@ -43,7 +43,7 @@
 #include <meadow/hcom_protocol.h>
 #include <meadow/hcom_bbreg_defn.h>
 #include <meadow/hcom_shared_common.h>
-#include <meadow/hcom_udp_shared.h>
+#include <meadow/hcom_upd_shared.h>
 
 #define HCOM_MONO_RUNTIME_TASK_STACKSIZE 32768
 
@@ -92,6 +92,10 @@ void hcom_mono_ctrl_clear_mono_is_running_flag()
   {
     hcom_logging_syslog(LOG_ERR, "hcom_nx_gpio_config:%d\n", ret);
   }
+
+  // p-m FOR TESTING INIT GPIOs HERE
+  hcom_diag_gpio_config_all_as_output();
+
 }
 
 //====================================================================

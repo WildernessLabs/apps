@@ -88,8 +88,8 @@
 #define HCOM_ESP32_PROCESS_CR_LF_ENDLESS_TEXT       0
 #define HCOM_OUTPUT_DATA_BUFFER_INFO_VIA_SYSLOG     0
 #define HCOM_INCLUDE_DIAG_PRINT_BUFFER_CODE         0
-// Note: there is another one like these (HCOM_INCLUDE_DIAGNOSTIC_GPIO_CODE) defined in
-// include/Meadow/hcom_shared_common.h
+// Note: there is other #defines (e.g. HCOM_INCLUDE_DIAGNOSTIC_GPIO_CODE) defined
+// in include/Meadow/hcom_shared_common.h
  
 // Test code
 #define HCOM_VS_DEBUGGING_TESTS_INCLUDE_IN_BUILD    0 // was 1 not working
@@ -124,8 +124,8 @@
 // These define how long the receive thread waits before "waking up"
 // p-m DON'T FORGET
 // #define HCOM_RECV_TIMEOUT_DEFAULT_SECONDS 15
-// #define HCOM_RECV_TIMEOUT_DEFAULT_SECONDS 60
-#define HCOM_RECV_TIMEOUT_DEFAULT_SECONDS (5 * 60)    // 5 minutes
+#define HCOM_RECV_TIMEOUT_DEFAULT_SECONDS 60
+// #define HCOM_RECV_TIMEOUT_DEFAULT_SECONDS (5 * 60)    // 5 minutes
 // #define HCOM_RECV_TIMEOUT_DEFAULT_SECONDS (1 * 60 * 60) // once an hour report hcom thread running
 #define HCOM_RECV_TIMEOUT_ACTIVE_SECONDS 5
 
@@ -323,7 +323,11 @@ extern "C"
   int hcom_nx_get_mcu_id(uint8_t uniqueId[12]);
   int hcom_nx_gpio_config(int gpioHcomId, uint8_t configValue);
   int hcom_nx_gpio_write(int gpioHcomId, uint8_t cmdValue);
-  void hcom_nx_forward_cmd_to_nx(uint16_t hcomCmd, uint32_t userData);
+  int hcom_nx_diag_gpio_config(int gpioHcomId, uint8_t configValue);
+  int hcom_nx_diag_gpio_write(int gpioHcomId, uint8_t cmdValue);
+  int hcom_nx_diag_gpio_write_byte(uint8_t byteValue, uint8_t rangeId);
+
+  void hcom_nx_forward_cli_cmd_to_nx(uint16_t hcomCmd, uint32_t userData);
   bool hcom_nx_is_mounted(uint32_t partitionId);
   // These exist and work, however, direct registry access is currently
   // not supported.
@@ -359,9 +363,10 @@ extern "C"
   void hcom_diag_misc_print_buffer(const uint8_t packetBuffer[], const int bufLen, uint8_t logPriority);
 
   int hcom_diag_gpio_setup(void);
-  int hcom_diag_gpio_config(void);
-  int hcom_diag_gpio_write(int gpioHcomId, uint8_t cmdValue);
-  int hcom_diag_gpio_write_set_8bits(uint8_t setBits);
+  int hcom_diag_gpio_config_all_as_output(void);
+  int hcom_diag_gpio_config_one_output(int gpioHcomId);
+  int hcom_diag_gpio_output_cmd_led(int ledNumber, bool turnOn);
+  int hcom_diag_gpio_write_byte(uint8_t byteValue, uint8_t rangeId);
   //-------------------------------------------------------
   // Testing utilities
   void hcom_developer_tests_developer_1(uint32_t userData);

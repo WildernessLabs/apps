@@ -245,6 +245,9 @@ bool hcom_host_recv_received_data()
     // Return > 0 valid data received and this is the length
     if (readResult > 0)
     {
+      // p-m LED #1
+      hcom_diag_gpio_output_cmd_led(1, true);
+
       // We've received some data
       int result = hcom_host_parse_process_raw_data(_tempRecvBuff, readResult);
       if (result < 0)
@@ -339,7 +342,6 @@ ssize_t hcom_host_recv_wait_until_change(uint8_t *recvBuffer, time_t readTimeout
     return -ENOTCONN; // "Transport endpoint is not connected" [128] - Probably time to shutdown
   }
 
-  // readReturn < 0
   readReturn = -errno;
 
   // EINTR (Error Interrupt) is not an error... it simply means that this read was
