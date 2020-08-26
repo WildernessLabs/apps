@@ -111,7 +111,7 @@ void hcom_developer_tests_developer_1(uint32_t userData)
 //==============================================================
 void hcom_developer_tests_developer_2(uint32_t userData)
 {
-  int ret;
+  // int ret;
 
   // for(int cnt = 0; cnt < 255; cnt++)
   // {

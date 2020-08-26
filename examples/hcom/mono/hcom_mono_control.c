@@ -92,10 +92,6 @@ void hcom_mono_ctrl_clear_mono_is_running_flag()
   {
     hcom_logging_syslog(LOG_ERR, "hcom_nx_gpio_config:%d\n", ret);
   }
-
-  // p-m FOR TESTING INIT GPIOs HERE
-  hcom_diag_gpio_config_all_as_output();
-
 }
 
 //====================================================================

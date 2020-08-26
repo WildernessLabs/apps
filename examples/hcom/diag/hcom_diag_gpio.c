@@ -40,9 +40,12 @@
  * Included Files
  ****************************************************************************/
 
+#include <meadow/hcom_shared_common.h>
+
+#if HCOM_INCLUDE_IN_BUILD_DIAGNOSTIC_GPIO_CODE > 0
+
 #include "../hcom_common.h"
 #include <meadow/hcom_upd_shared.h>
-#include <meadow/hcom_shared_common.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -64,7 +67,6 @@ static char *thisFile = __FILE__;
 
 int hcom_diag_gpio_setup()
 {
-#if HCOM_INCLUDE_DIAGNOSTIC_GPIO_CODE > 0
   int ret;
   ret = hcom_diag_gpio_config_all_as_output();
   if (ret < 0)
@@ -73,12 +75,8 @@ int hcom_diag_gpio_setup()
               thisFile, __LINE__, ret, errno);
   }
   return ret;
-#else
-  return OK;
-#endif
 }
 
-#if HCOM_INCLUDE_DIAGNOSTIC_GPIO_CODE > 0
 //================================================================
 // Configure the diagnostic GPIOs
 int hcom_diag_gpio_config_all_as_output()
@@ -145,13 +143,11 @@ int hcom_diag_gpio_config_all_as_output()
 
   return ret;
 }
-#endif
 
 //================================================================
 // Configure one gpio as output
 int hcom_diag_gpio_config_one_output(int gpioHcomId)
 {
-#if HCOM_INCLUDE_DIAGNOSTIC_GPIO_CODE > 0
   int ret;
   
   DEBUGASSERT(gpioHcomId >= HCOM_DIAG_GPIO_A0 &&
@@ -165,9 +161,6 @@ int hcom_diag_gpio_config_one_output(int gpioHcomId)
   }
 
   return ret;
-#else
-  return OK;
-#endif
 }
 
 //================================================================
@@ -185,3 +178,5 @@ int hcom_diag_gpio_write_byte(uint8_t byteValue, uint8_t rangeId)
 {
   return hcom_nx_diag_gpio_write_byte(byteValue, rangeId);
 }
+
+#endif

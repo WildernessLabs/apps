@@ -225,7 +225,7 @@ int hcom_nx_gpio_write(int gpioHcomId, uint8_t cmdValue)
   return OK;
 }
 
-#if HCOM_INCLUDE_DIAGNOSTIC_GPIO_CODE > 0
+#if HCOM_INCLUDE_IN_BUILD_DIAGNOSTIC_GPIO_CODE > 0
 
 //=============================================================
 // Configures diagnostic gpio via nx

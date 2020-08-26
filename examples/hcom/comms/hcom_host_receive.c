@@ -245,9 +245,6 @@ bool hcom_host_recv_received_data()
     // Return > 0 valid data received and this is the length
     if (readResult > 0)
     {
-      // p-m LED #1
-      hcom_diag_gpio_output_cmd_led(1, true);
-
       // We've received some data
       int result = hcom_host_parse_process_raw_data(_tempRecvBuff, readResult);
       if (result < 0)

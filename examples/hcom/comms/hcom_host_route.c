@@ -320,38 +320,39 @@ void hcom_host_route_request_by_type(const uint8_t *recvOrigData, const size_t r
       break;
 #endif
 
-// These are not available
-//       // Partitions the entire flash chip with the number of partitions that
-//       // are defined by userData.
-//     case HCOM_MDOW_REQUEST_PARTITION_FLASH_FS:
-//       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-// //       hcom_exec_flash_fs_partition(userData);
-//       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
-//       break;
+#if HCOM_IGNORE_UNNECESSARY_FILE_SYSTEM_COMMANDS > 0
+      // Partitions the entire flash chip with the number of partitions that
+      // are defined by userData.
+    case HCOM_MDOW_REQUEST_PARTITION_FLASH_FS:
+      hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
+      hcom_exec_flash_fs_partition(userData);
+      hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
+      break;
 
-//       // Mount the file system for testing.
-//     case HCOM_MDOW_REQUEST_MOUNT_FLASH_FS:
-//       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-// //       hcom_exec_flash_fs_mount(userData);
-//       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
-//       break;
+      // Mount the file system for testing.
+    case HCOM_MDOW_REQUEST_MOUNT_FLASH_FS:
+      hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
+      hcom_exec_flash_fs_mount(userData);
+      hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
+      break;
 
-//     case HCOM_MDOW_REQUEST_FORMAT_FLASH_FILE_SYS:
-//       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-// //       hcom_exec_flash_fs_format(userData);
-//       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
-//       break;
+    case HCOM_MDOW_REQUEST_FORMAT_FLASH_FILE_SYS:
+      hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
+      hcom_exec_flash_fs_format(userData);
+      hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
+      break;
 
-//     case HCOM_MDOW_REQUEST_INITIALIZE_FLASH_FS:
-//       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-// //       hcom_exec_flash_fs_initialize(userData);
-//       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
-//       break;
+    case HCOM_MDOW_REQUEST_INITIALIZE_FLASH_FS:
+      hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
+      hcom_exec_flash_fs_initialize(userData);
+      hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
+      break;
 
-//     case HCOM_MDOW_REQUEST_CREATE_ENTIRE_FLASH_FS:
-//       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-// //       hcom_exec_flash_fs_create(userData);
-//       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
+    case HCOM_MDOW_REQUEST_CREATE_ENTIRE_FLASH_FS:
+      hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
+      hcom_exec_flash_fs_create(userData);
+      hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
+#endif
 
     default:
     {

@@ -340,12 +340,6 @@ int hcom_host_send_transmit_to_host(FAR uint8_t xmitBuffer[], size_t xmitLength)
   size_t toWriteOffset = 0;
   size_t blockedCount = 0;
 
-  // p-m initialize leds
-  hcom_diag_gpio_config_all_as_output();
-
-  // p-m LED #2
-  hcom_diag_gpio_output_cmd_led(2, true);
-
   if(_shutting_down)
   {
     return OK;
@@ -360,8 +354,6 @@ int hcom_host_send_transmit_to_host(FAR uint8_t xmitBuffer[], size_t xmitLength)
 
   encodedLength++;
   remainingBytes = encodedLength;
-  // p-m LED #3
-  hcom_diag_gpio_output_cmd_led(3, true);
 
   // Since there's no guarantee all bytes written at one time, loop until message 100% written
   while (remainingBytes > 0)
@@ -375,14 +367,6 @@ int hcom_host_send_transmit_to_host(FAR uint8_t xmitBuffer[], size_t xmitLength)
     {
       remainingBytes -= writeRet;   // Note: if remainingBytes == 0 will exit while loop
       toWriteOffset += writeRet;
-
-      // p-m Exit now?
-      if(remainingBytes == 0)   // 
-        // p-m LED #4
-        hcom_diag_gpio_output_cmd_led(4, true);
-      else
-        // p-m LED #5 - Try again
-        hcom_diag_gpio_output_cmd_led(5, true);
 
       hcom_logging_syslog_x(LOG_DEBUG, "%s@%d-Send %d bytes, sent %d (%d remaining) will %s\n\n",
           thisFile, __LINE__, encodedLength, writeRet, remainingBytes == 0 ? "exit" : "retry");
@@ -401,8 +385,6 @@ int hcom_host_send_transmit_to_host(FAR uint8_t xmitBuffer[], size_t xmitLength)
     // Was write attempt was blocked? 
     if(errno == EAGAIN)
     {
-      // p-m LED #6
-      hcom_diag_gpio_output_cmd_led(6, true);
       // In this case either host PC was disconnected from Meadow, CLI stopped running
       // or Meadow.CLI just can't keep up. We'll give it a chance to catchup.
       if(blockedCount < HCOM_XMIT_MAX_BLOCKED_COUNT_VALUE)
@@ -419,8 +401,6 @@ int hcom_host_send_transmit_to_host(FAR uint8_t xmitBuffer[], size_t xmitLength)
                 thisFile, __LINE__, blockedCount, remainingBytes, encodedLength);
 
       // No reason to close fd. The caller can sort out what to do with partial data sent.
-      // p-m LED #7
-      hcom_diag_gpio_output_cmd_led(7, true);
       return -errno;
     }
 
@@ -429,17 +409,10 @@ int hcom_host_send_transmit_to_host(FAR uint8_t xmitBuffer[], size_t xmitLength)
     _comms_write_fd = -1;
     _lastXmitBlocked = true;
 
-    // p-m LED #8
-    hcom_diag_gpio_output_cmd_led(8, true);
-
     return -errno;
   } // while (remainingBytes > 0)
 
   // Success exit
   _lastXmitBlocked = false;
-
-  // p-m LED #9
-  hcom_diag_gpio_output_cmd_led(9, true);
-
   return OK;
 }
