@@ -73,9 +73,9 @@ static struct host_com_cir_buffer_s *_ramlog_cbuf;
 static uint8_t *_singleMsgBuf;
 static int _ramlog_fd;
 static int _uart1_fd;
-bool _trace_ramlog_initialized;
-bool _trace_ramlog_to_host;
-bool _trace_ramlog_to_uart1;
+static bool _trace_ramlog_initialized;
+static bool _trace_ramlog_to_host;
+static bool _trace_ramlog_to_uart1;
 
 /****************************************************************************
  * Private Functions
