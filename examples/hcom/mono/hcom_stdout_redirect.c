@@ -99,7 +99,12 @@ void hcom_mono_stdout_shutdown()
 int hcom_mono_stdout_setup()
 {
   _shutting_down = false;
-
+  
+  // It would be nice if this initialization could be postponed
+  // until we know if mono was running. This was quickly attempted
+  // and created timing issues so everything was reverted.
+  // Note that this suggestion would only provide minimal
+  // value since mono will usually be running.
   return hcom_mono_stdout_create_infrastructure();
 }
 
@@ -125,16 +130,31 @@ void hcom_mono_stdout_shutdown()
 }
 
 //==========================================================================
+// This function creates a pipe and insures that the write end has
+// been switched to stdout
 int hcom_mono_stdout_create_infrastructure()
 {
   int ret;
 
-  // Create and open both ends of pipe
+  // Creates a pipe and opens both ends of pipe. _pipefd[] contains the 2 newly
+  // created file descriptors. 
   ret = pipe(_pipefd);
   if(ret < 0)
   {
     hcom_logging_syslog(LOG_ERR, "%s@%d-pipe, errno:%d\n",
       thisFile, __LINE__, errno);
+    hcom_startup_mgr_release_sem_err(ret);
+    return ret;
+  }
+
+  // Redirect stdout to the write end of our new pipe
+  ret = dup2(_pipefd[HCOM_PIPE_WRITE_OFFSET], STDOUT_FILENO);
+  if (ret < 0)
+  {
+    hcom_logging_syslog(LOG_ERR, "%s@%d-redirect_writer: dup2 failed ret:%d errno:%d\n, thisFile, __LINE__", ret, errno);
+
+    // Release startup manager to continue startup
+    hcom_startup_mgr_release_sem_err(ret);
     return ret;
   }
 
@@ -144,9 +164,12 @@ int hcom_mono_stdout_create_infrastructure()
   {
     hcom_logging_syslog(LOG_ERR, "%s@%d-thread create, errno:%d\n",
       thisFile, __LINE__, errno);
-    return -1;
+    
+    hcom_startup_mgr_release_sem_err(ret);
+    return ret;
   }
 
+  // Note: the startup semaphore will be released by the new thread
   return OK;
 }
 
@@ -161,13 +184,14 @@ int hcom_mono_stdout_make_thread()
     param.sched_priority = HCOM_THREAD_PRIORITY_STDOUT_REDIRECT;
     (void)pthread_attr_init(&attr);
     (void)pthread_attr_setschedparam(&attr, &param);
-    (void)pthread_attr_setstacksize(&attr, 2048);
+    (void)pthread_attr_setstacksize(&attr, HCOM_THREAD_STACKSIZE_STDOUT_REDIRECT);
 
     ret = pthread_create(&thread, &attr, hcom_mono_stdout_pthread, NULL);
     if (ret < 0)
     {
       hcom_logging_syslog(LOG_CRIT, "%s@%d-Thread create %s error:%d\n",
               thisFile, __LINE__, HCOM_THREAD_NAME_STDOUT_REDIRECT, ret);
+      hcom_startup_mgr_release_sem_err(ret);
       return ret;
     }
 
@@ -175,29 +199,31 @@ int hcom_mono_stdout_make_thread()
 }
 
 //=================================================================
-// This thread reads all pipe messages redirected from stdout (mono)
+// This thread first does a little initialization then goes into a
+// loop reading all pipe messages redirected from stdout (mono).
+// This function creates the infrastructure needed to route mono generated
+// stdout and stderr to the host PC / Mac.
 void *hcom_mono_stdout_pthread(FAR void *arg)
 {
   int ret;
+  int extendTimeout = 5;
 
-  // Redirect stdout (STDOUT_FILENO) to our pipe
-  ret = dup2(_pipefd[HCOM_PIPE_WRITE_OFFSET], STDOUT_FILENO);
-  if (ret < 0)
-  {
-    hcom_logging_syslog(LOG_ERR, "redirect_writer: dup2 failed ret:%d errno:%d\n", ret, errno);
-    return NULL;
-  }
 
-  close(_pipefd[HCOM_PIPE_WRITE_OFFSET]);
+  // Release startup manager to continue startup
+  hcom_startup_mgr_release_sem();
 
   // This loop runs forever
   while(!_shutting_down)
   {
+    // Returns on errors
     ret = hcom_mono_stdout_read_pipe_loop();
     if(ret < 0)
     {
-      sleep(5);
+      // Reduces useless message frequency
+      sleep(extendTimeout += 15);
+      continue;
     }
+    extendTimeout = 15;
   }
 
   return NULL;

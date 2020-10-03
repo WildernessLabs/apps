@@ -78,24 +78,58 @@ bool hcom_mono_ctrl_did_mono_run_last_time(void);
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
-// Mono calls the function after it is running 
+
+// Mono calls this function after it is running 
 void hcom_mono_ctrl_clear_mono_is_running_flag()
 {
   int ret;
+  int nx_access_fd;
+
+  // Since this is being called by a thread from a different task
+  // group we need to open nx upd driver.
+  nx_access_fd = hcom_via_nx_upd_driver_open();
+  if (nx_access_fd < 0)
+  {
+    syslog(LOG_ERR, "%s@%d-setup hcom nx access:%d\n", thisFile, __LINE__, nx_access_fd);
+    return;
+  }
 
   hcom_logging_syslog(LOG_NOTICE, "%s@%d-Mono has started\n", thisFile, __LINE__);
+
+  // Clear the flag so mono will start next time.
   hcom_bbreg_clear_bbr_bits(HCOM_BBREG_MONO_LAST_RUN_LOCKUP_BIT);
-  
+
   // Turn off blue LED
-  ret = hcom_via_nx_gpio_write(HCOM_GPIO_DIG_NX_ID_BLUE_LED, HCOM_GPIO_DIGITAL_CMD_VALUE_HIGH);
+  ret = hcom_via_nx_gpio_write(hcom_via_nx_get_fd(),
+          HCOM_GPIO_DIG_NX_ID_BLUE_LED, HCOM_GPIO_DIGITAL_CMD_VALUE_HIGH);
+  if(ret < 0)
+  {
+    hcom_logging_syslog(LOG_ERR, "%s@%d-hcom_via_nx_gpio_write:%d\n", thisFile, __LINE__, ret);
+  }
+  
+  hcom_via_nx_upd_driver_close(nx_access_fd);
+
+  #if defined (CONFIG_RAMLOG_SYSLOG)
+  // Sets flag so ramlog can restore UART1's proper configuration
+  // since mono initialization reconfigured as digital output
+  hcom_diag_trace_ramlog_mono_started();
+#endif
+}
+
+//====================================================================
+int hcom_mono_ctrl_mono_main_setup()
+{
+  int ret;
+
+  // Configure Blue LED as output
+  ret = hcom_via_nx_gpio_config(hcom_via_nx_get_fd(), 
+            HCOM_GPIO_DIG_NX_ID_BLUE_LED, HCOM_GPIO_DIGITAL_CONFIG_OUTPUT);
   if(ret < 0)
   {
     hcom_logging_syslog(LOG_ERR, "hcom_via_nx_gpio_config:%d\n", ret);
+    return -1;
   }
-
-  #if defined (CONFIG_RAMLOG_SYSLOG)
-  hcom_diag_trace_ramlog_mono_started();
-  #endif
+  return OK;
 }
 
 //====================================================================
@@ -105,14 +139,9 @@ int hcom_mono_ctrl_start_mono_main()
   int ret;
   int mono_pid;
 
-  // Configure Blue LED as output
-  ret = hcom_via_nx_gpio_config(HCOM_GPIO_DIG_NX_ID_BLUE_LED, HCOM_GPIO_DIGITAL_CONFIG_OUTPUT);
-  if(ret < 0)
-  {
-    hcom_logging_syslog(LOG_ERR, "hcom_via_nx_gpio_config:%d\n", ret);
-  }
-  // Turn on blue LED
-  ret = hcom_via_nx_gpio_write(HCOM_GPIO_DIG_NX_ID_BLUE_LED, HCOM_GPIO_DIGITAL_CMD_VALUE_LOW);
+  // Turn on blue LED. It will stay on of mono doesn't start
+  ret = hcom_via_nx_gpio_write(hcom_via_nx_get_fd(),
+          HCOM_GPIO_DIG_NX_ID_BLUE_LED, HCOM_GPIO_DIGITAL_CMD_VALUE_LOW);
   if (ret < 0)
   {
     hcom_logging_syslog(LOG_ERR, "%s@%d-hcom_via_nx_gpio_write, ret:%d, errno:%d\n",
@@ -126,12 +155,14 @@ int hcom_mono_ctrl_start_mono_main()
     return OK;
   }
 
-  // Set the flag that can identify if mono locked up. It will be
+  // Set the flag that can identify if mono locks up. It will be
+
   // cleared by mono once mono is running correctly.
   hcom_bbreg_set_bbr_bits(HCOM_BBREG_MONO_LAST_RUN_LOCKUP_BIT);
 
+
   hcom_logging_syslog(LOG_NOTICE, "%s@%d-Attempting to start mono\n", thisFile, __LINE__);
-  
+
   // Create a task to execute mono
   mono_pid = task_create("mono", HCOM_MONO_RUNTIME_TASK_PRIORITY,
                       CONFIG_PTHREAD_STACK_DEFAULT,
@@ -145,18 +176,15 @@ int hcom_mono_ctrl_start_mono_main()
 
     hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0,
             "MONO launched", thisFile, __LINE__);
-  }
-  else
-  {
-    hcom_logging_syslog(LOG_ERR, "%s@%d-The task to run mono failed in create\n",
-              thisFile, __LINE__);
-
-    hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0,
-            "Mono task could not be created", thisFile, __LINE__);
-    return -1;
+    return OK;
   }
 
-  return OK;
+  hcom_logging_syslog(LOG_ERR, "%s@%d-The task to run mono failed in create\n",
+            thisFile, __LINE__);
+
+  hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0,
+          "Mono task could not be created", thisFile, __LINE__);
+  return -1;
 }
 
 //====================================================================
@@ -204,7 +232,6 @@ bool hcom_mono_ctrl_did_mono_run_last_time()
   {
     // It should not be set unless mono locked up
     hcom_bbreg_clear_bbr_bits(HCOM_BBREG_MONO_LAST_RUN_LOCKUP_BIT);
-
     return false;
   }
 
@@ -215,8 +242,8 @@ bool hcom_mono_ctrl_did_mono_run_last_time()
 // Check if the necessary files exist in the files system
 bool hcom_mono_ctrl_are_needed_files_here()
 {
-  int i = 0;
   char missingFiles[128];
+  int listOff = 0;
   int offset = 0;
   char *neededApps[] = 
   {
@@ -227,15 +254,13 @@ bool hcom_mono_ctrl_are_needed_files_here()
     "App.exe",
     NULL
   };
-  
-  // "Meadow.Foundation.dll", don't think this is required
 
   memset(missingFiles, 0, 128);
 
-  while(neededApps[i] != NULL)
+  while(neededApps[listOff] != NULL)
   {
     char appPath[64];
-    snprintf(appPath, 64, "%s/%s", MONO_MEADOW_EXECUTABLE_PARTITION_NAME, neededApps[i]);
+    snprintf(appPath, 64, "%s/%s", MONO_MEADOW_EXECUTABLE_PARTITION_NAME, neededApps[listOff]);
 
     int fd = open(appPath, O_RDONLY);
     if (fd == -1)
@@ -246,14 +271,14 @@ bool hcom_mono_ctrl_are_needed_files_here()
         missingFiles[offset++] = ' ';
       }
 
-      strcpy(missingFiles + offset, neededApps[i]);
-      offset += strlen(neededApps[i]);
+      strcpy(missingFiles + offset, neededApps[listOff]);
+      offset += strlen(neededApps[listOff]);
     }
     else
     {
       close(fd);
     }
-    i++;
+    listOff++;
   }
   
   if(offset == 0)
@@ -303,7 +328,7 @@ void hcom_mono_ctrl_disable_mono(uint32_t userData)
           sendMsgToHost, thisFile, __LINE__);
 
   usleep(500 * 1000);
-  hcom_via_nx_restart_meadow();
+  hcom_via_nx_restart_meadow(hcom_via_nx_get_fd());
 }
 
 //=======================================================================================
@@ -325,7 +350,7 @@ void hcom_mono_ctrl_enable_mono(uint32_t userData)
           sendMsgToHost, thisFile, __LINE__);
 
   usleep(500 * 1000);
-  hcom_via_nx_restart_meadow();
+  hcom_via_nx_restart_meadow(hcom_via_nx_get_fd());
 }
 
 //======================================================================================
@@ -342,4 +367,3 @@ void hcom_mono_ctrl_report_mono_enabled_state(uint32_t userData)
   hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0,
           monoStartupMsg, thisFile, __LINE__);
 }
-
