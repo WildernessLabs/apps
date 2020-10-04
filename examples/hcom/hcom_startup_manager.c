@@ -242,12 +242,12 @@ int hcom_main(int argc, char *argv[])
 
 #if defined(CONFIG_HCOM_MONO_OUTPUT_PIPE)
   // Creates a pipe and a thread to receive pipe messages
-  ret = hcom_mono_stdout_setup();
+  ret = hcom_mono_stdout_read_setup();
   if (ret < 0)
   {
     hcom_logging_syslog(LOG_CRIT, "%s@%d-setup mono pipe %d\n", thisFile, __LINE__, ret);
     return ret;
-  } // Wait, hcom_mono_stdout_setup creates a thread which must start before we continue
+  } // Wait, hcom_mono_stdout_read_setup creates a thread which must start before we continue
   ret = hcom_startup_mgr_takesem();
   if (ret < 0)
   {
@@ -322,7 +322,7 @@ int hcom_main(int argc, char *argv[])
 void hcom_manager_shutdown()
 {  
   hcom_host_recv_shutdown();
-  hcom_mono_stdout_shutdown();
+  hcom_mono_stdout_read_shutdown();
   hcom_common_utils_shutdown();
   hcom_diag_logging_shutdown();
   hcom_host_route_shutdown();  

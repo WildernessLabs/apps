@@ -66,14 +66,16 @@ int mono_main(int argc, char *argv[]);
  ****************************************************************************/
 
 static char *thisFile = __FILE__;
+static int _write_fd;
 
 /****************************************************************************
  * Private Function Prototypes
  ****************************************************************************/
 
-bool hcom_mono_ctrl_are_needed_files_here(void);
-bool hcom_mono_ctrl_should_mono_run(void);
-bool hcom_mono_ctrl_did_mono_run_last_time(void);
+static bool hcom_mono_ctrl_are_needed_files_here(void);
+static bool hcom_mono_ctrl_should_mono_run(void);
+static bool hcom_mono_ctrl_did_mono_run_last_time(void);
+static int redirect_stdout(void);
 
 /****************************************************************************
  * Public Functions
@@ -109,6 +111,8 @@ void hcom_mono_ctrl_clear_mono_is_running_flag()
   
   hcom_via_nx_upd_driver_close(nx_access_fd);
 
+  redirect_stdout();
+
   #if defined (CONFIG_RAMLOG_SYSLOG)
   // Sets flag so ramlog can restore UART1's proper configuration
   // since mono initialization reconfigured as digital output
@@ -116,10 +120,57 @@ void hcom_mono_ctrl_clear_mono_is_running_flag()
 #endif
 }
 
+//==================================================================
+// Since mono_main is the task calling this function it will cause it's
+// stdout calls to be routed to the fifo
+int redirect_stdout(void)
+{
+  int ret;
+  int errcode = 0;
+
+  if(_write_fd < 0)
+  {
+    do    // Open loop
+    {
+      set_errno(0);
+
+      // Opening with O_NONBLOCK seems like the right thing to do but
+      // it is NOT. It causes the mono app to halt.
+      _write_fd = open(HCOM_MONO_STDOUT_REDIRECT_FIFO, O_WRONLY);
+      if(_write_fd > 0)
+        break;
+
+      errcode = errno;
+      if(errcode != ENOENT)   // ENOENT = Error No Entity -> No such file or directory
+      {
+        syslog(LOG_ERR, "%s() Error: open() of %s failed with errno=%d\n",
+          __func__, HCOM_MONO_STDOUT_REDIRECT_FIFO, errcode);
+        _write_fd = -1;
+        return 1;
+      }
+      
+      usleep(100 * 1000);
+    } while (errcode == ENOENT);
+
+    // Assign the fifo's write end to what has been the stdout fd
+    // ret should be 1 the stdout fd
+    ret = dup2(_write_fd, STDOUT_FILENO);
+    if (ret < 0)
+    {
+      syslog(LOG_ERR, "redirect_writer: dup2 failed ret:%d errno:%d\n", ret, errno);
+      return 2;
+    }
+  }
+
+  return OK;
+}
+
 //====================================================================
 int hcom_mono_ctrl_mono_main_setup()
 {
   int ret;
+  
+  _write_fd = -1;
 
   // Configure Blue LED as output
   ret = hcom_via_nx_gpio_config(hcom_via_nx_get_fd(), 
@@ -156,10 +207,8 @@ int hcom_mono_ctrl_start_mono_main()
   }
 
   // Set the flag that can identify if mono locks up. It will be
-
   // cleared by mono once mono is running correctly.
   hcom_bbreg_set_bbr_bits(HCOM_BBREG_MONO_LAST_RUN_LOCKUP_BIT);
-
 
   hcom_logging_syslog(LOG_NOTICE, "%s@%d-Attempting to start mono\n", thisFile, __LINE__);
 

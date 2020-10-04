@@ -127,7 +127,7 @@
 #define HCOM_COMMUNICATIONS_DEVICE_NAME "/dev/ttyACM0"
 #define HCOM_TRACE_RAMLOG_DEVICE_NAME "/dev/ramlog"
 #define HCOM_REMOTE_DBG_SOCKET_NAME "/dev/monodbg"
-
+#define HCOM_MONO_STDOUT_REDIRECT_FIFO "/dev/monostdout"
 //---------------------------------------------------------------------
 #define HCOM_CIR_BUFFER_MAX_PACKETS 4
 // Based on the encoding scheme (COTS), after encoding there will usually be 2-3 bytes added. One that
@@ -274,8 +274,8 @@ extern "C"
   void hcom_mono_ctrl_report_mono_enabled_state(uint32_t userData);
 
   // mono stdout to host
-  int hcom_mono_stdout_setup(void);
-  void hcom_mono_stdout_shutdown(void);
+  int hcom_mono_stdout_read_setup(void);
+  void hcom_mono_stdout_read_shutdown(void);
 
   // mono Visual Studio interactions
   int hcom_mono_remote_dbg_setup(void);
