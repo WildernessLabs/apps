@@ -268,7 +268,7 @@ extern "C"
   int hcom_mono_ctrl_mono_main_setup(void);
   bool hcom_mono_ctrl_is_mono_enabled(void);
   int hcom_mono_ctrl_start_mono_main(void);
-  void hcom_mono_ctrl_clear_mono_is_running_flag(void);
+  int hcom_mono_ctrl_mono_appears_to_be_running(void);
   void hcom_mono_ctrl_disable_mono(uint32_t userData);
   void hcom_mono_ctrl_enable_mono(uint32_t userData);
   void hcom_mono_ctrl_report_mono_enabled_state(uint32_t userData);
@@ -316,6 +316,7 @@ extern "C"
   void hcom_bbreg_write_bbr(uint32_t value);
   void hcom_bbreg_set_bbr_bits(uint32_t value);
   void hcom_bbreg_clear_bbr_bits(uint32_t value);
+  void hcom_bbreg_clear_bbr_bits_mono(int nx_access_fd, uint32_t value);
   void hcom_bbreg_clear_then_set_bbr_bits(uint32_t clearBits, uint32_t setBits);
   bool hcom_bbreg_is_bbr_bits_set_n_clear(uint32_t value);
   bool hcom_bbreg_is_bbr_bit_set(uint32_t value);

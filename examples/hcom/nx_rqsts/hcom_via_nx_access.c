@@ -165,7 +165,7 @@ int hcom_via_nx_update_bbr(int nx_access_fd, uint32_t clearBits, uint32_t setBit
   ret = ioctl(nx_access_fd, HCOM_NX_UPD_UPDATE_BBR_VALUE, (unsigned long)&bbr_update);
   if (ret < 0)
   {
-    hcom_logging_syslog(LOG_ERR, "%s@%d-%s Failed to update reg, errno:%d\n",
+    hcom_logging_syslog(LOG_ERR, "%s@%d-%s Failed to update battery backed register, errno:%d\n",
             thisFile, __LINE__, HCOM_NX_UPD_DRIVER_NAME, errno);
     return ret;
   }

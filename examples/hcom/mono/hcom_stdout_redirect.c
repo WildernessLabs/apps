@@ -234,7 +234,6 @@ int hcom_mono_stdout_open_read_fifo()
     _read_fd = -1;
   }
 
-syslog(1, "%s@%d-Read FIFO Opening will block until write opened\n", thisFile, __LINE__);
   // The docs say that this open call will block until some writer opens the pipe
   _read_fd = open(HCOM_MONO_STDOUT_REDIRECT_FIFO, O_RDONLY);
   if (_read_fd < 0)
@@ -243,7 +242,6 @@ syslog(1, "%s@%d-Read FIFO Opening will block until write opened\n", thisFile, _
       thisFile, __LINE__, HCOM_MONO_STDOUT_REDIRECT_FIFO, errno);
     return -1;
   }
-syslog(1, "%s@%d-Read FIFO Opened for read\n", thisFile, __LINE__);
 
   return OK;
 }

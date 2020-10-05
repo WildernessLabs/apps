@@ -79,7 +79,6 @@ int hcom_diag_logging_setup()
   sem_init(&_f7syslogSem, 0, 1);
   return OK;
 }
-
 //============================================================
 void hcom_diag_logging_shutdown()
 {

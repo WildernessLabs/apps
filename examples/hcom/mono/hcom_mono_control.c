@@ -81,90 +81,6 @@ static int redirect_stdout(void);
  * Public Functions
  ****************************************************************************/
 
-// Mono calls this function after it is running 
-void hcom_mono_ctrl_clear_mono_is_running_flag()
-{
-  int ret;
-  int nx_access_fd;
-
-  // Since this is being called by a thread from a different task
-  // group we need to open nx upd driver.
-  nx_access_fd = hcom_via_nx_upd_driver_open();
-  if (nx_access_fd < 0)
-  {
-    syslog(LOG_ERR, "%s@%d-setup hcom nx access:%d\n", thisFile, __LINE__, nx_access_fd);
-    return;
-  }
-
-  hcom_logging_syslog(LOG_NOTICE, "%s@%d-Mono has started\n", thisFile, __LINE__);
-
-  // Clear the flag so mono will start next time.
-  hcom_bbreg_clear_bbr_bits(HCOM_BBREG_MONO_LAST_RUN_LOCKUP_BIT);
-
-  // Turn off blue LED
-  ret = hcom_via_nx_gpio_write(hcom_via_nx_get_fd(),
-          HCOM_GPIO_DIG_NX_ID_BLUE_LED, HCOM_GPIO_DIGITAL_CMD_VALUE_HIGH);
-  if(ret < 0)
-  {
-    hcom_logging_syslog(LOG_ERR, "%s@%d-hcom_via_nx_gpio_write:%d\n", thisFile, __LINE__, ret);
-  }
-  
-  hcom_via_nx_upd_driver_close(nx_access_fd);
-
-  redirect_stdout();
-
-  #if defined (CONFIG_RAMLOG_SYSLOG)
-  // Sets flag so ramlog can restore UART1's proper configuration
-  // since mono initialization reconfigured as digital output
-  hcom_diag_trace_ramlog_mono_started();
-#endif
-}
-
-//==================================================================
-// Since mono_main is the task calling this function it will cause it's
-// stdout calls to be routed to the fifo
-int redirect_stdout(void)
-{
-  int ret;
-  int errcode = 0;
-
-  if(_write_fd < 0)
-  {
-    do    // Open loop
-    {
-      set_errno(0);
-
-      // Opening with O_NONBLOCK seems like the right thing to do but
-      // it is NOT. It causes the mono app to halt.
-      _write_fd = open(HCOM_MONO_STDOUT_REDIRECT_FIFO, O_WRONLY);
-      if(_write_fd > 0)
-        break;
-
-      errcode = errno;
-      if(errcode != ENOENT)   // ENOENT = Error No Entity -> No such file or directory
-      {
-        syslog(LOG_ERR, "%s() Error: open() of %s failed with errno=%d\n",
-          __func__, HCOM_MONO_STDOUT_REDIRECT_FIFO, errcode);
-        _write_fd = -1;
-        return 1;
-      }
-      
-      usleep(100 * 1000);
-    } while (errcode == ENOENT);
-
-    // Assign the fifo's write end to what has been the stdout fd
-    // ret should be 1 the stdout fd
-    ret = dup2(_write_fd, STDOUT_FILENO);
-    if (ret < 0)
-    {
-      syslog(LOG_ERR, "redirect_writer: dup2 failed ret:%d errno:%d\n", ret, errno);
-      return 2;
-    }
-  }
-
-  return OK;
-}
-
 //====================================================================
 int hcom_mono_ctrl_mono_main_setup()
 {
@@ -177,20 +93,30 @@ int hcom_mono_ctrl_mono_main_setup()
             HCOM_GPIO_DIG_NX_ID_BLUE_LED, HCOM_GPIO_DIGITAL_CONFIG_OUTPUT);
   if(ret < 0)
   {
-    hcom_logging_syslog(LOG_ERR, "hcom_via_nx_gpio_config:%d\n", ret);
+    hcom_logging_syslog(LOG_ERR, "%s@%d-hcom_via_nx_gpio_config:%d\n",
+              thisFile, __LINE__, ret);
     return -1;
   }
   return OK;
 }
 
 //====================================================================
-// This function is responsible to start mono if it is desired
+// This function is responsible to start mono if it is desired and able
 int hcom_mono_ctrl_start_mono_main()
 {
   int ret;
   int mono_pid;
 
   // Turn on blue LED. It will stay on of mono doesn't start
+  ret = hcom_via_nx_gpio_config(hcom_via_nx_get_fd(), 
+            HCOM_GPIO_DIG_NX_ID_BLUE_LED, HCOM_GPIO_DIGITAL_CONFIG_OUTPUT);
+  if(ret < 0)
+  {
+    hcom_logging_syslog(LOG_ERR, "%s@%d-hcom_via_nx_gpio_config:%d\n",
+              thisFile, __LINE__, ret);
+    return -1;
+  }
+
   ret = hcom_via_nx_gpio_write(hcom_via_nx_get_fd(),
           HCOM_GPIO_DIG_NX_ID_BLUE_LED, HCOM_GPIO_DIGITAL_CMD_VALUE_LOW);
   if (ret < 0)
@@ -271,10 +197,10 @@ bool hcom_mono_ctrl_should_mono_run()
 }
 
 //===================================================================
-// HCOM sets this bit everytime it starts mono. Mono then clears it once
-// it's running. If this bit is set on hcom startup then we don't start
-// mono because something is wrong and this could prevent any host
-// communications from happening.
+// This bit is set everytime we attempt to start mono. Mono then clears
+// it once it's running. If this bit is set when hcom starts up, then
+// we don't start mono because something is wrong. This condition can
+// prevent host communications from happening.
 bool hcom_mono_ctrl_did_mono_run_last_time()
 {
   if(hcom_bbreg_is_bbr_bit_set(HCOM_BBREG_MONO_LAST_RUN_LOCKUP_BIT))
@@ -415,4 +341,111 @@ void hcom_mono_ctrl_report_mono_enabled_state(uint32_t userData)
 
   hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0,
           monoStartupMsg, thisFile, __LINE__);
+}
+
+//==================================================================
+// Below
+// The main thread of the task that will run Mono calls this function.
+// An error here will prevent mono from starting
+//==================================================================
+int hcom_mono_ctrl_mono_appears_to_be_running()
+{
+  int ret;
+  int nx_access_fd;
+
+  // For Mono apps to forward Console.WriteLine text, we must redirect
+  // the Mono tasks stdout fd to a fifo which will route this text
+  // to the host PC if CLI or equal is running.
+  ret = redirect_stdout();
+  if(ret < 0)
+  {
+    hcom_logging_syslog(LOG_ERR, "%s@%d-stdout redirect:%d\n", thisFile, __LINE__, ret);
+    return ret;
+  }
+
+  // For this Mono main thread to access the nuttx side it needs to
+  // open and close the nx upd driver.
+  nx_access_fd = hcom_via_nx_upd_driver_open();
+  if (nx_access_fd < 0)
+  {
+    syslog(LOG_ERR, "%s@%d-setup hcom nx access:%d\n", thisFile, __LINE__, nx_access_fd);
+    return nx_access_fd;
+  }
+
+#if defined (CONFIG_RAMLOG_SYSLOG)
+  // Sets flag so ramlog can restore UART1's proper configuration
+  // since mono initialization reconfigured as digital output
+  hcom_diag_trace_ramlog_mono_started();
+#endif
+
+  // Turn off blue LED
+  ret = hcom_via_nx_gpio_config(nx_access_fd, 
+            HCOM_GPIO_DIG_NX_ID_BLUE_LED, HCOM_GPIO_DIGITAL_CONFIG_OUTPUT);
+  if(ret < 0)
+  {
+    hcom_logging_syslog(LOG_ERR, "%s@%d-hcom_via_nx_gpio_config:%d\n",
+              thisFile, __LINE__, ret);
+    return -1;
+  }
+
+  ret = hcom_via_nx_gpio_write(nx_access_fd,
+          HCOM_GPIO_DIG_NX_ID_BLUE_LED, HCOM_GPIO_DIGITAL_CMD_VALUE_HIGH);
+  if(ret < 0)
+  {
+    hcom_logging_syslog(LOG_ERR, "%s@%d-hcom_via_nx_gpio_write:%d\n", thisFile, __LINE__, ret);
+    return ret;
+  }
+
+  // Clear the flag so mono will start next time.
+  hcom_bbreg_clear_bbr_bits_mono(nx_access_fd, HCOM_BBREG_MONO_LAST_RUN_LOCKUP_BIT);
+
+  // finished interacting with nuttx side
+  hcom_via_nx_upd_driver_close(nx_access_fd);
+
+  hcom_logging_syslog(LOG_NOTICE, "%s@%d-Mono has succesfully started\n", thisFile, __LINE__);
+  return OK;
+}
+
+//==================================================================
+// Since the mono_main task's main thread called this function it will
+// cause it's stdout calls to be routed to the fifo
+int redirect_stdout(void)
+{
+  int ret;
+
+  if(_write_fd < 0)
+  {
+    // Open fifo
+    do
+    {
+      // Opening with O_NONBLOCK seems like the right thing to do but
+      // it is NOT. It causes the mono app to halt.
+      _write_fd = open(HCOM_MONO_STDOUT_REDIRECT_FIFO, O_WRONLY);
+      if(_write_fd >= 0)
+        break;            // Success
+
+      if(errno != ENOENT)   // ENOENT = Error No Entity -> No such file or directory
+      {
+        syslog(LOG_ERR, "%s@%d-Open of %s failed errno:%d\n",
+          thisFile, __LINE__, HCOM_MONO_STDOUT_REDIRECT_FIFO, errno);
+        _write_fd = -1;
+        return 1;
+      }
+      
+      // All errors sleep and try again
+      usleep(100 * 1000);
+    } while (errno == ENOENT);
+
+    // Assign the fifo's write end to the stdout fd.
+    // Note: ret should be 1 the stdout fd
+    ret = dup2(_write_fd, STDOUT_FILENO);
+    if (ret < 0)
+    {
+      syslog(LOG_ERR, "%s@%d-redirect_writer: dup2 failed ret:%d errno:%d\n",
+                thisFile, __LINE__, ret, errno);
+      return -errno;
+    }
+  }
+
+  return OK;
 }

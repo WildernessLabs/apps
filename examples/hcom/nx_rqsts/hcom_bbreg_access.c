@@ -179,6 +179,19 @@ void hcom_bbreg_clear_bbr_bits(uint32_t value)
   }
 }
 
+//-------------------------------------------------------------------
+// Special version that does not assume that the nx access fd is from
+// the HCOM task list of file descriptors
+void hcom_bbreg_clear_bbr_bits_mono(int nx_access_fd, uint32_t value)
+{
+  int ret = hcom_via_nx_update_bbr(nx_access_fd, value, 0);
+  if(ret < 0)
+  {
+    hcom_logging_syslog(LOG_ERR, "%s@%d-%s() Failed, ret:%d errno:%d\n",
+            thisFile, __LINE__, __func__, ret, errno);
+  }
+}
+
 //===================================================================
 // Clears then sets the specified bits
 void hcom_bbreg_clear_then_set_bbr_bits(uint32_t clearBits, uint32_t setBits)

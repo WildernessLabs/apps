@@ -306,12 +306,11 @@ int hcom_main(int argc, char *argv[])
     return ret;
   }
 
-  sem_destroy(&_startupWaitSem);
-
   // Last stop, start mono
   hcom_mono_ctrl_start_mono_main();
 
   // Say good bye to the HCOM's task main thread
+  sem_destroy(&_startupWaitSem);
   return OK;
 }
 
