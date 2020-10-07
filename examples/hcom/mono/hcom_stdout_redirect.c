@@ -33,9 +33,12 @@
  *
  ****************************************************************************/
 
-// This module is responsible for creating a fifo and redirecting stdout to
-// this fifo. And then reading the fifo and routing this information to the host 
-// PC/Mac for display via Meadow.CLI
+// This module is responsible for creating a fifo and reading the fifo and
+// routing this information to the host PC/Mac for display via Meadow.CLI
+// Note: This module is an identical twin of hcom_stderr_redirect.c (except
+// the name stdout). While these could have been placed in a single file I
+// decided that the benefits (less duplicate code and 1 thread vs 2) were not
+// as great as the benefits of having twins (much less complexity).
 
 /****************************************************************************
  * Included Files
@@ -51,14 +54,14 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#if HCOM_STDOUT_REDIRECT_INCLUDE_IN_BUILD > 0
+#if HCOM_STDOUT_STDERR_REDIRECT_INCLUDE_IN_BUILD > 0
 
 /* Configuration ************************************************************/
 
-#define HCOM_MONO_APP_DBG_PIPE_BUFF_SIZE 384
+#define HCOM_MONO_APP_STDOUT_REDIRECT_BUFF_SIZE 384
 
-#if (HCOM_MONO_APP_DBG_PIPE_BUFF_SIZE >= HCOM_PROTOCOL_REQUEST_MAX_SIMPLE_DATA_LEN)
-  #warning "HCOM_MONO_APP_DBG_PIPE_BUFF_SIZE cannot exceed the size of HCOM_PROTOCOL_REQUEST_MAX_SIMPLE_DATA_LEN"
+#if (HCOM_MONO_APP_STDOUT_REDIRECT_BUFF_SIZE >= HCOM_PROTOCOL_REQUEST_MAX_SIMPLE_DATA_LEN)
+  #warning "HCOM_MONO_APP_STDOUT_REDIRECT_BUFF_SIZE cannot exceed the size of HCOM_PROTOCOL_REQUEST_MAX_SIMPLE_DATA_LEN"
 #endif
 
 /****************************************************************************
@@ -85,7 +88,7 @@ static int hcom_mono_stdout_route_mono_text_stdout(uint8_t *recvBuff, int numbBy
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
-#if HCOM_STDOUT_REDIRECT_INCLUDE_IN_BUILD == 0
+#if HCOM_STDOUT_STDERR_REDIRECT_INCLUDE_IN_BUILD == 0
 int hcom_mono_stdout_read_setup()
 {
   return OK;
@@ -252,14 +255,14 @@ int hcom_mono_stdout_open_read_fifo()
 // necessarily C style strings.
 int hcom_mono_stdout_read_fifo_loop()
 {
-  uint8_t buffer[HCOM_MONO_APP_DBG_PIPE_BUFF_SIZE];
+  uint8_t buffer[HCOM_MONO_APP_STDOUT_REDIRECT_BUFF_SIZE];
   ssize_t readReturn;
 
   // Read
   while (!_shutting_down)
   {
     // Blocks until stdout writes something
-    readReturn = read(_read_fd, buffer, HCOM_MONO_APP_DBG_PIPE_BUFF_SIZE);
+    readReturn = read(_read_fd, buffer, HCOM_MONO_APP_STDOUT_REDIRECT_BUFF_SIZE);
     if (readReturn < 0 )
     {
       hcom_logging_syslog(LOG_ERR, "%s@%d-fifo read, readReturn:%d, errno:%d\n",
@@ -310,13 +313,13 @@ int hcom_mono_stdout_route_mono_text_stdout(uint8_t *recvBuff, int numbBytes)
     return OK;
 
   // Make sure message fits in allocated buffer, if not, truncate
-  if(numbBytes >= HCOM_MONO_APP_DBG_PIPE_BUFF_SIZE)
-    availBufSpace = HCOM_MONO_APP_DBG_PIPE_BUFF_SIZE - 1;
+  if(numbBytes >= HCOM_MONO_APP_STDOUT_REDIRECT_BUFF_SIZE)
+    availBufSpace = HCOM_MONO_APP_STDOUT_REDIRECT_BUFF_SIZE - 1;
   else
     availBufSpace = numbBytes;
 
   // Includes ctrl chararacter(s)
-  int ret = hcom_host_send_raw_string_msg(HCOM_HOST_REQUEST_TEXT_MONO_MSG, 0, (char *) recvBuff,
+  int ret = hcom_host_send_raw_string_msg(HCOM_HOST_REQUEST_TEXT_MONO_STDOUT, 0, (char *) recvBuff,
           availBufSpace, thisFile, __LINE__);
   if (ret < 0)
   {
