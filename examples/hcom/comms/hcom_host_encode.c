@@ -67,17 +67,17 @@
 // To used this encoded packet, a delimiter must be added to the end of this encoded
 // message by the caller. Also, while not always needed it can also be preseeded by
 // the delimiter.
-size_t hcom_host_cobs_encoder(uint8_t source[], size_t startingOffset, size_t length,
-          uint8_t encoded[], size_t encodedSkipFirst)
+
+size_t hcom_host_cobs_encoder(uint8_t source[], size_t startingOffset, size_t length, uint8_t encoded[])
 {
   DEBUGASSERT(length <= HCOM_PROTOCOL_PACKET_MAX_SIZE);
   
-  size_t sourceOffset = startingOffset;         // Offset to pre-encoded data buffer
-  // Add 1 because first byte filled with first replacement value below
-  size_t encodedOffset = encodedSkipFirst + 1;  // Offset to encoded data buffer
-  size_t replaceOffset = encodedSkipFirst;      // Offset where 0 is being tracked
-  uint8_t replacement = 1;                      // Value that will be inserted to indicate 0 replaced
+  size_t sourceOffset = startingOffset; // Offset to pre-encoded data buffer
+  size_t encodedOffset = 1;             // Offset to encoded data buffer
+  size_t replaceOffset = 0;             // Offset where 0 is being tracked
+  uint8_t replacement = 1;              // Value that will be inserted to indicate 0 replaced
 
+  
   while (sourceOffset < length + startingOffset)
   {
     // Is source value is the delimiter (0)?
@@ -85,12 +85,12 @@ size_t hcom_host_cobs_encoder(uint8_t source[], size_t startingOffset, size_t le
     {
       encoded[replaceOffset] = replacement; // Replace '0' value with offset
       replaceOffset = encodedOffset++;      // Update replacement offset and bump encoded offset
-      replacement = 1;                      // Reset replacement
+      replacement = 1;                      // Reset replacement offset
     }
     else
     {
       encoded[encodedOffset++] = source[sourceOffset]; // Just copy original value
-      replacement++;
+      replacement++;                        // Keep replacement offset right
 
       // 0xff is reserved for longer than 254 byte packets. If 0xff then
       // replace it with the offset.
