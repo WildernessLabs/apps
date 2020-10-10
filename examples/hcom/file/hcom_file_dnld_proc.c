@@ -369,7 +369,7 @@ void hcom_file_dnld_proc_end(uint32_t userData)
         if (_xferMeadowCalcCrc != _xferRecvFullFileCrc)
         {
           stringLen = snprintf(hostMsg, HCOM_SHORT_HOST_STRING_BUFF_LENGTH,
-                  "Download of '%s' failed due to checksum mismatch, Meadow calculated:0x%08X, received from CLIt:0x%08X",
+                  "Download of '%s' failed due to checksum mismatch, Meadow calculated:0x%08X, received from CLI:0x%08X",
                   _fileNameBuffer, _xferMeadowCalcCrc, _xferRecvFullFileCrc);
           sendMsgToHost = hostMsg;
           requestType = HCOM_HOST_REQUEST_TEXT_ERROR;
