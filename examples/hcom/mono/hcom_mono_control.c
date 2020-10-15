@@ -74,6 +74,7 @@ static char *thisFile = __FILE__;
 bool hcom_mono_ctrl_are_needed_files_here(void);
 bool hcom_mono_ctrl_should_mono_run(void);
 bool hcom_mono_ctrl_did_mono_run_last_time(void);
+bool hcom_mono_ctrl_does_version_match(void);
 
 /****************************************************************************
  * Public Functions
@@ -189,6 +190,16 @@ bool hcom_mono_ctrl_should_mono_run()
     return false;
   }
 
+  if (!hcom_mono_ctrl_does_version_match())
+  {
+    char *noStartReason = "MONO won't start, version mismatch";
+    hcom_logging_syslog(LOG_WARNING, "%s@%d-%s\n", thisFile, __LINE__, noStartReason);
+    hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0,
+            noStartReason, thisFile, __LINE__);
+    return false;
+
+  }
+
   return true;
 }
 
@@ -209,6 +220,21 @@ bool hcom_mono_ctrl_did_mono_run_last_time()
 
   return true;
 }
+
+bool hcom_mono_ctrl_does_version_match()
+{
+  #define STM32_FMCBANK4_BASE  0x90000000     /* 0x90000000-0x9fffffff: FMC bank 4 */
+  uint32_t signature = *((uint32_t*)STM32_FMCBANK4_BASE);
+  uint32_t version = *((uint32_t*)STM32_FMCBANK4_BASE + 1);
+  if (version != MEADOW_OS_VERSION)
+  {
+    syslog(LOG_ERR, "Nuttx/Mono build mismatch. Nuttx version: %p - Mono version: %p ", MEADOW_OS_VERSION, version);
+    return false;
+  }
+  return true;
+}
+
+
 
 //===================================================================
 // Check if the necessary files exist in the files system

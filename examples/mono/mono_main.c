@@ -40,6 +40,8 @@ typedef struct {
  * Private Data
  ****************************************************************************/
 
+#define MEADOW_OS_VERSION 0x00040101
+
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -72,9 +74,16 @@ int mono_main(int argc, char *argv[])
   // Check if Meadow.OS runtime is flashed at external flash.
   #define STM32_FMCBANK4_BASE  0x90000000     /* 0x90000000-0x9fffffff: FMC bank 4 */
   uint32_t signature = *((uint32_t*)STM32_FMCBANK4_BASE);
+  uint32_t version = *((uint32_t*)STM32_FMCBANK4_BASE + 1);
   if (signature != 0xDDCCBBAA)
   {
     syslog(LOG_ERR, "Mono runtime was not found flashed in external flash.\n");
+    return 0;
+  }
+
+  if (version != MEADOW_OS_VERSION)
+  {
+    syslog(LOG_ERR, "Nuttx/Mono build mismatch. Nuttx version: %p - Mono version: %p ", MEADOW_OS_VERSION, version);
     return 0;
   }
 
