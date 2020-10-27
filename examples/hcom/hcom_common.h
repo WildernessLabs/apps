@@ -295,8 +295,11 @@ extern "C"
   // mono Visual Studio interactions
   int hcom_mono_remote_dbg_setup(void);
   void hcom_mono_remote_dbg_shutdown(void);
+  bool hcom_mono_remote_dbg_is_active(void);
+
 #if HCOM_VS_REMOTE_DEBUGGING_INCLUDE_IN_BUILD > 0  
   void hcom_mono_remote_dbg_recv_host_sending_to_mono(const uint8_t *recvPayload, size_t recvPayloadSize, uint32_t userData);
+  void hcom_mono_remote_dbg_enable(uint32_t userData);
 #endif
 
   // -----------------------------------------------

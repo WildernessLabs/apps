@@ -45,6 +45,11 @@
 #include <meadow/hcom_shared_common.h>
 #include <meadow/hcom_upd_shared.h>
 
+#if HCOM_VS_REMOTE_DEBUGGING_INCLUDE_IN_BUILD > 0
+#include <sys/socket.h>
+#include <sys/un.h>
+#endif
+
 #define HCOM_MONO_RUNTIME_TASK_STACKSIZE 32768
 
 // Note:
@@ -76,7 +81,9 @@ static int _stderr_fd;
 static bool hcom_mono_ctrl_are_needed_files_here(void);
 static bool hcom_mono_ctrl_should_mono_run(void);
 static bool hcom_mono_ctrl_did_mono_run_last_time(void);
+static int hcom_mono_remote_dbg_open_mono_sock(void);
 static int redirect_stdout_stderr(void);
+static int mono_main_proxy(int argc, char *argv[]);
 
 /****************************************************************************
  * Public Functions
@@ -109,7 +116,7 @@ int hcom_mono_ctrl_start_mono_main()
   int ret;
   int mono_pid;
 
-  // Turn on blue LED. It will stay on of mono doesn't start
+  // Config blue LED.
   ret = hcom_via_nx_gpio_config(hcom_via_nx_get_fd(), 
             HCOM_GPIO_DIG_NX_ID_BLUE_LED, HCOM_GPIO_DIGITAL_CONFIG_OUTPUT);
   if(ret < 0)
@@ -118,7 +125,8 @@ int hcom_mono_ctrl_start_mono_main()
               thisFile, __LINE__, ret);
     return -1;
   }
-
+ 
+  // Blue LED will stay on of mono doesn't start
   ret = hcom_via_nx_gpio_write(hcom_via_nx_get_fd(),
           HCOM_GPIO_DIG_NX_ID_BLUE_LED, HCOM_GPIO_DIGITAL_CMD_VALUE_LOW);
   if (ret < 0)
@@ -143,7 +151,7 @@ int hcom_mono_ctrl_start_mono_main()
   // Create a task to execute mono
   mono_pid = task_create("mono", HCOM_MONO_RUNTIME_TASK_PRIORITY,
                       CONFIG_PTHREAD_STACK_DEFAULT,
-                      (main_t)mono_main,
+                      (main_t)mono_main_proxy,
                       (FAR char * const *) NULL);
   if(mono_pid > 0)
   {
@@ -200,11 +208,12 @@ bool hcom_mono_ctrl_should_mono_run()
 
 //===================================================================
 // This bit is set everytime we attempt to start mono. Mono then clears
-// it once it's running. If this bit is set when hcom starts up, then
-// we don't start mono because something is wrong. This condition can
-// prevent host communications from happening.
+// it once it's running. If this bit is set when hcom starts, then
+// we don't start mono because something is wrong. This solves the 
+// condition can prevent all host communications.
 bool hcom_mono_ctrl_did_mono_run_last_time()
 {
+  // hcom_bbreg_is_bbr_bits_set_n_clear could be used
   if(hcom_bbreg_is_bbr_bit_set(HCOM_BBREG_MONO_LAST_RUN_LOCKUP_BIT))
   {
     // It should not be set unless mono locked up
@@ -346,11 +355,11 @@ int hcom_mono_ctrl_mono_appears_to_be_running()
   }
 
   // For this Mono main thread to access the nuttx side it needs to
-  // open and close the nx upd driver.
+  // open, use and close the nx upd driver.
   nx_access_fd = hcom_via_nx_upd_driver_open();
   if (nx_access_fd < 0)
   {
-    syslog(LOG_ERR, "%s@%d-setup hcom nx access:%d\n", thisFile, __LINE__, nx_access_fd);
+    hcom_logging_syslog(LOG_ERR, "%s@%d-setup hcom nx access:%d\n", thisFile, __LINE__, nx_access_fd);
     return nx_access_fd;
   }
 
@@ -360,7 +369,8 @@ int hcom_mono_ctrl_mono_appears_to_be_running()
   hcom_diag_trace_ramlog_mono_started();
 #endif
 
-  // Turn off blue LED
+  // Turn off blue LED. Must reconfigure because mono may have changed the
+  // configuration during startup
   ret = hcom_via_nx_gpio_config(nx_access_fd, 
             HCOM_GPIO_DIG_NX_ID_BLUE_LED, HCOM_GPIO_DIGITAL_CONFIG_OUTPUT);
   if(ret < 0)
@@ -381,7 +391,7 @@ int hcom_mono_ctrl_mono_appears_to_be_running()
   // Clear the flag so mono will start next time.
   hcom_bbreg_clear_bbr_bits_mono(nx_access_fd, HCOM_BBREG_MONO_LAST_RUN_LOCKUP_BIT);
 
-  // finished interacting with nuttx side
+  // Finished interacting with nuttx side
   hcom_via_nx_upd_driver_close(nx_access_fd);
 
   hcom_logging_syslog(LOG_NOTICE, "%s@%d-Mono has succesfully started\n", thisFile, __LINE__);
@@ -465,3 +475,95 @@ int redirect_stdout_stderr(void)
   }
   return OK;
 }
+
+#if HCOM_VS_REMOTE_DEBUGGING_INCLUDE_IN_BUILD > 0
+//==================================================================
+// Visual Studio debugging requires a socket connection. To save mono
+// from needing to do this, the following will open the mono end of the
+// socket and redirect the fd 
+int hcom_mono_remote_dbg_open_mono_sock()
+{
+  struct sockaddr_un myaddr;
+  socklen_t addrlen;
+  int ret;
+  int vsSockFd = -1;
+
+  vsSockFd = socket(PF_LOCAL, SOCK_STREAM, 0);
+  if (vsSockFd < 0)
+  {
+    syslog(LOG_ERR, "%s@%d-Error:Socket creation failed vsSockFd:%d errno:%d\n",
+              thisFile, __LINE__, vsSockFd, errno);
+    return vsSockFd;
+  }
+
+  // Connect the socket to the server
+  addrlen = strlen(HCOM_REMOTE_DBG_SOCKET_NAME);
+  if (addrlen > UNIX_PATH_MAX - 1)
+    addrlen = UNIX_PATH_MAX - 1;
+
+  myaddr.sun_family = AF_LOCAL;
+  strncpy(myaddr.sun_path, HCOM_REMOTE_DBG_SOCKET_NAME, addrlen);
+  myaddr.sun_path[addrlen] = '\0';
+  addrlen += sizeof(sa_family_t) + 1;
+ 
+  // p-m
+  syslog(1, "===> 1 VS Sock->Connect to '%s'...\n", HCOM_REMOTE_DBG_SOCKET_NAME); usleep(10 * 1000);
+
+  int attemptCnt = 0;
+  do
+  {
+    attemptCnt++;
+    if(attemptCnt > 5)
+      break;
+
+    ret = connect(vsSockFd, (struct sockaddr *)&myaddr, addrlen);
+    if (ret < 0)
+    {
+      syslog(LOG_INFO, "%s@%d-Connect attempt failed, will retry, ret: %d, errno:%d attempt:%d\n",
+                thisFile, __LINE__, ret, errno, attemptCnt);
+      sleep(1);
+    }
+  } while(ret < 0);
+
+  if(ret < 0)
+  {
+    syslog(LOG_ERR, "%s@%d-VS Debug connect attempt failed after %d attempts, ret: %d, errno:%d\n",
+                thisFile, __LINE__, attemptCnt, ret, errno);
+    return ret;
+  }
+  return vsSockFd;
+}
+#endif
+
+//==================================================================
+// In order to provide VS debugging with that proper socket port number
+// the newly created mono task comes here so that the main thread of
+// the mono task can open the port. 
+int mono_main_proxy(int argc, char *argv[])
+{
+  int dbgPortNumb = -1;
+
+  syslog(1, "%s@%d-about to check if remote dbg is active\n", thisFile, __LINE__); usleep(10 * 1000);
+  if(hcom_mono_remote_dbg_is_active())
+  {
+    syslog(1, "%s@%d-Remote dbg IS active\n", thisFile, __LINE__); usleep(10 * 1000);
+    dbgPortNumb = hcom_mono_remote_dbg_open_mono_sock();
+    if(dbgPortNumb < 0)
+    {
+      hcom_logging_syslog(LOG_ERR, "%s@%d-Opening remote dbg socket failed\n", thisFile, __LINE__);
+      // This will terminate this thread and task
+      return dbgPortNumb;
+    }
+  }
+
+  // Build additional command line arguments for mono
+  char *argsArray[1];
+  char argBuf1[16];
+  snprintf(argBuf1, 16, "--dbgPort=%d", dbgPortNumb);
+  argsArray[0] = argBuf1;
+  
+  // Launch mono_main
+  mono_main(1, argsArray);
+  return OK;
+}
+

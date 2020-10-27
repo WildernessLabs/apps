@@ -45,6 +45,7 @@
 
 #include "../hcom_common.h"
 #include <meadow/hcom_protocol.h>
+#include <meadow/hcom_bbreg_defn.h>
 
 #include <sys/socket.h>
 
@@ -66,11 +67,13 @@
  * Private Data
  ****************************************************************************/
 #if HCOM_VS_REMOTE_DEBUGGING_INCLUDE_IN_BUILD > 0
+
 static char *thisFile = __FILE__;
 
 static bool _shutting_down;
 static int _transmit_sd;
 static bool _hcom_mono_remote_dbg_running;
+static bool _hcom_mono_remote_dbg_socket_active;
 
 struct remote_dbg_session
 {
@@ -84,7 +87,7 @@ struct remote_dbg_session
  * Private Function Prototypes
  ****************************************************************************/
 static FAR void *hcom_mono_remote_dbg_pthread(FAR void *arg);
-
+static int hcom_mono_remote_dbg_startup(void);
 static int hcom_mono_remote_dbg_create_thread(void);
 static int hcom_mono_remote_dbg_create_server_socket(struct remote_dbg_session *dbgSock);
 static int hcom_mono_remote_dbg_connect_and_receive(struct remote_dbg_session *dbgSock, uint8_t *recvBuffer);
@@ -97,7 +100,7 @@ static int hcom_mono_remote_dbg_read_mono_send_to_host_loop(struct remote_dbg_se
  * Public Functions
  ****************************************************************************/
 
-#if HCOM_VS_REMOTE_DEBUGGING_INCLUDE_IN_BUILD == 0
+#if HCOM_VS_REMOTE_DEBUGGING_INCLUDE_IN_BUILD < 1
 int hcom_mono_remote_dbg_setup()
 {
   return OK;
@@ -111,13 +114,29 @@ int hcom_mono_remote_dbg_setup()
   _shutting_down = false;
   _transmit_sd = -1;
   _hcom_mono_remote_dbg_running = false;
-  
+  _hcom_mono_remote_dbg_socket_active = false;
+
+  // If required start VS Debugging
+  if(hcom_bbreg_is_bbr_bit_set(HCOM_BBREG_MONO_DEBUGGING_START_BIT))
+  {
+    hcom_mono_remote_dbg_startup();
+    
+    // Clear bit so no future Meadow restart will start debugging
+    hcom_bbreg_clear_bbr_bits(HCOM_BBREG_MONO_DEBUGGING_START_BIT);
+  }
+
   return OK;
 }
 
 //=======================================================================
+bool hcom_mono_remote_dbg_is_active()
+{
+  return _hcom_mono_remote_dbg_socket_active;
+}
+
+//=======================================================================
 // This can only be started by CLI / Visual Studio / VS Code command
-int hcom_mono_remote_dbg_lazy_startup(void)
+int hcom_mono_remote_dbg_startup(void)
 {
   int ret;
 
@@ -282,6 +301,7 @@ int hcom_mono_remote_dbg_create_server_socket(struct remote_dbg_session *dbgSock
     return ret;
   }
 
+  _hcom_mono_remote_dbg_socket_active = true;
   return OK;
 }
 
@@ -338,8 +358,13 @@ int hcom_mono_remote_dbg_accept_connection(struct remote_dbg_session *dbgSock)
 }
 
 //=================================================================
-// Note: since this is considered a stream we'll just receive and
-// forward whatever data happens to be ready, assuming the other
+// The next 2 functions send / received debugging information to/from
+// the host PC/Mac
+//=================================================================
+// This function forwards the mono generated debugging information to CLI
+// which will forward it to Visual Studio
+// Note: since this is considered a binary stream we'll just receive
+// and forward whatever data happens to be ready, assuming the other
 // end can piece it back together.
 int hcom_mono_remote_dbg_read_mono_send_to_host_loop(struct remote_dbg_session *dbgSock,
           uint8_t *recvBuffer)
@@ -380,7 +405,8 @@ int hcom_mono_remote_dbg_read_mono_send_to_host_loop(struct remote_dbg_session *
 #endif
 
     // Forward data as-is to CLI to forward to VS
-    ret = hcom_host_send_raw_string_msg(HCOM_HOST_REQUEST_MONO_DEBUGGER_MSG, 0, (char *)recvBuffer, nBytesRead,
+    ret = hcom_host_send_raw_string_msg(HCOM_HOST_REQUEST_DEBUGGING_MONO_DATA, 0,
+            (char *)recvBuffer, nBytesRead,
             thisFile, __LINE__);
   }
 
@@ -388,14 +414,10 @@ int hcom_mono_remote_dbg_read_mono_send_to_host_loop(struct remote_dbg_session *
 }
 
 //==========================================================================
-// This call is the result of a CLI command --VSDebug plus --VSDebugPort 4024.
-// This information is sent directly to mono to initiates host PC / Visual Studio debugging.
+// This information is forwarded to mono. It's debugging information.
 void hcom_mono_remote_dbg_recv_host_sending_to_mono(const uint8_t *recvPayload,
         size_t recvPayloadSize, uint32_t userData)
-{  
-  // If not already created, creates a thread to run debugging
-  hcom_mono_remote_dbg_lazy_startup();
-
+{
   if(_transmit_sd < 1)
   {
     hcom_logging_syslog(LOG_ERR, "%s@%d-message from host but no transmit_sd\n",
@@ -415,5 +437,13 @@ void hcom_mono_remote_dbg_recv_host_sending_to_mono(const uint8_t *recvPayload,
 #if HCOM_OUTPUT_DATA_BUFFER_INFO_VIA_SYSLOG > 0
   hcom_utils_diag_print_buffer(recvPayload, recvPayloadSize, LOG_DEBUG);
 #endif
+}
+
+//======================================================================================
+// This call is the result of a CLI command --StartDebugging
+// Called from Meadow.CLI to enable visual studio debugging support.
+void hcom_mono_remote_dbg_enable(uint32_t userData)
+{
+  hcom_bbreg_set_bbr_bits(HCOM_BBREG_MONO_DEBUGGING_START_BIT);
 }
 #endif
