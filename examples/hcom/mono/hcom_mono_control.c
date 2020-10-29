@@ -418,7 +418,7 @@ int redirect_stdout_stderr(void)
 
       if(errno != ENOENT)   // ENOENT = Error No Entity -> No such file or directory
       {
-        syslog(LOG_ERR, "%s@%d-Open of %s failed errno:%d\n",
+        hcom_logging_syslog(LOG_ERR, "%s@%d-Open of %s failed errno:%d\n",
           thisFile, __LINE__, HCOM_MONO_STDOUT_REDIRECT_FIFO, errno);
         _stdout_fd = -1;
         return 1;
@@ -433,7 +433,7 @@ int redirect_stdout_stderr(void)
     ret = dup2(_stdout_fd, STDOUT_FILENO);
     if (ret < 0)
     {
-      syslog(LOG_ERR, "%s@%d-redirect_writer: dup2 failed ret:%d errno:%d\n",
+      hcom_logging_syslog(LOG_ERR, "%s@%d-redirect_writer: dup2 failed ret:%d errno:%d\n",
                 thisFile, __LINE__, ret, errno);
       return -errno;
     }
@@ -453,7 +453,7 @@ int redirect_stdout_stderr(void)
 
       if(errno != ENOENT)   // ENOENT = Error No Entity -> No such file or directory
       {
-        syslog(LOG_ERR, "%s@%d-Open of %s failed errno:%d\n",
+        hcom_logging_syslog(LOG_ERR, "%s@%d-Open of %s failed errno:%d\n",
           thisFile, __LINE__, HCOM_MONO_STDERR_REDIRECT_FIFO, errno);
         _stderr_fd = -1;
         return 1;
@@ -468,7 +468,7 @@ int redirect_stdout_stderr(void)
     ret = dup2(_stderr_fd, STDERR_FILENO);
     if (ret < 0)
     {
-      syslog(LOG_ERR, "%s@%d-redirect_writer: dup2 failed ret:%d errno:%d\n",
+      hcom_logging_syslog(LOG_ERR, "%s@%d-redirect_writer: dup2 failed ret:%d errno:%d\n",
                 thisFile, __LINE__, ret, errno);
       return -errno;
     }
@@ -478,9 +478,9 @@ int redirect_stdout_stderr(void)
 
 #if HCOM_VS_REMOTE_DEBUGGING_INCLUDE_IN_BUILD > 0
 //==================================================================
-// Visual Studio debugging requires a socket connection. To save mono
-// from needing to do this, the following will open the mono end of the
-// socket and redirect the fd 
+// Mono debugging requires a socket connection. To save mono from needing
+// to open the socket we'll do it here. 
+// Called from mono_main_proxy() which calls mono_main 
 int hcom_mono_remote_dbg_open_mono_sock()
 {
   struct sockaddr_un myaddr;
@@ -491,24 +491,21 @@ int hcom_mono_remote_dbg_open_mono_sock()
   vsSockFd = socket(PF_LOCAL, SOCK_STREAM, 0);
   if (vsSockFd < 0)
   {
-    syslog(LOG_ERR, "%s@%d-Error:Socket creation failed vsSockFd:%d errno:%d\n",
+    hcom_logging_syslog(LOG_ERR, "%s@%d-Error:Socket creation failed vsSockFd:%d errno:%d\n",
               thisFile, __LINE__, vsSockFd, errno);
     return vsSockFd;
   }
 
   // Connect the socket to the server
-  addrlen = strlen(HCOM_REMOTE_DBG_SOCKET_NAME);
+  addrlen = strlen(HCOM_MONO_REMOTE_DBG_SOCKET_NAME);
   if (addrlen > UNIX_PATH_MAX - 1)
     addrlen = UNIX_PATH_MAX - 1;
 
   myaddr.sun_family = AF_LOCAL;
-  strncpy(myaddr.sun_path, HCOM_REMOTE_DBG_SOCKET_NAME, addrlen);
+  strncpy(myaddr.sun_path, HCOM_MONO_REMOTE_DBG_SOCKET_NAME, addrlen);
   myaddr.sun_path[addrlen] = '\0';
   addrlen += sizeof(sa_family_t) + 1;
  
-  // p-m
-  syslog(1, "===> 1 VS Sock->Connect to '%s'...\n", HCOM_REMOTE_DBG_SOCKET_NAME); usleep(10 * 1000);
-
   int attemptCnt = 0;
   do
   {
@@ -519,15 +516,15 @@ int hcom_mono_remote_dbg_open_mono_sock()
     ret = connect(vsSockFd, (struct sockaddr *)&myaddr, addrlen);
     if (ret < 0)
     {
-      syslog(LOG_INFO, "%s@%d-Connect attempt failed, will retry, ret: %d, errno:%d attempt:%d\n",
+      hcom_logging_syslog(LOG_INFO, "%s@%d-Connect attempt failed, will retry, ret: %d, errno:%d attempt:%d\n",
                 thisFile, __LINE__, ret, errno, attemptCnt);
-      sleep(1);
+      usleep(100 * 1000);
     }
   } while(ret < 0);
 
   if(ret < 0)
   {
-    syslog(LOG_ERR, "%s@%d-VS Debug connect attempt failed after %d attempts, ret: %d, errno:%d\n",
+    hcom_logging_syslog(LOG_ERR, "%s@%d-Mono Debug connect attempt failed after %d attempts, ret: %d, errno:%d\n",
                 thisFile, __LINE__, attemptCnt, ret, errno);
     return ret;
   }
@@ -541,29 +538,33 @@ int hcom_mono_remote_dbg_open_mono_sock()
 // the mono task can open the port. 
 int mono_main_proxy(int argc, char *argv[])
 {
-  int dbgPortNumb = -1;
+  int dbgSD = -1;
 
-  syslog(1, "%s@%d-about to check if remote dbg is active\n", thisFile, __LINE__); usleep(10 * 1000);
   if(hcom_mono_remote_dbg_is_active())
   {
-    syslog(1, "%s@%d-Remote dbg IS active\n", thisFile, __LINE__); usleep(10 * 1000);
-    dbgPortNumb = hcom_mono_remote_dbg_open_mono_sock();
-    if(dbgPortNumb < 0)
+    dbgSD = hcom_mono_remote_dbg_open_mono_sock();
+    if(dbgSD < 0)
     {
       hcom_logging_syslog(LOG_ERR, "%s@%d-Opening remote dbg socket failed\n", thisFile, __LINE__);
-      // This will terminate this thread and task
-      return dbgPortNumb;
+      return dbgSD;    // This will terminate this thread and task-> mono won't start
     }
   }
 
-  // Build additional command line arguments for mono
+  // Build additional command line argument(s) for mono
   char *argsArray[1];
-  char argBuf1[16];
-  snprintf(argBuf1, 16, "--dbgPort=%d", dbgPortNumb);
-  argsArray[0] = argBuf1;
+  char argBuf[16];
+
+  // e.g. --dbgSD=16
+  snprintf(argBuf, 16, "%s=%d", HCOM_MONO_REMOTE_DBG_CMD_LINE_SD, dbgSD);
+  argsArray[0] = argBuf;
   
-  // Launch mono_main
+  // Launch mono_main (or remote debugging test)
+#if HCOM_VS_DEBUGGING_TESTS_INCLUDE_IN_BUILD > 0
+  MonoVsRemoteDebugTestSetup(1, argsArray);
+#else
   mono_main(1, argsArray);
+#endif
+
   return OK;
 }
 
