@@ -101,8 +101,9 @@ int mono_main(int hcom_argc, char *hcom_argv[])
   int finalArgc = hcom_argc + mono_argc;
   DEBUGASSERT(finalArgc <= 8);
   int i, j;
-  // It seems that the app_path needs to be last so the hard code mono args
-  // except for app_path, then hcom args then app_path
+
+  // It appears that app_path needs to be last. So, copy all the hard code mono args
+  // except for the last one (app_path) and then hcom args and last app_path
   for(i = 0; i < mono_argc - 1; i++)
     finalArgv[i] = mono_argv[i];
   for(j = 0; i < finalArgc - 1; i++, j++)
@@ -121,16 +122,15 @@ int mono_main(int hcom_argc, char *hcom_argv[])
   mono_dl_register_library("System.Native", system_native_mappings);
   mono_dl_register_library("nuttx", meadow_mappings);
 
-  // Note: This call may need to be somewhere within mono.
-  // I put it here as a place holder. However, it seems to do the job.
-  // apparently some of the above calls hang up nuttx.
+  // Note: This call may need to be somewhere within mono. However, it seems to work
+  // well here. So far, one of the above calls hang up this thread before reaching
+  // this point.
   //
-  // Notify hcom that everything is running correctly
+  // Notify hcom that everything will run correctly. An error within this call
+  // will prevent mono from starting.
   ret = hcom_mono_ctrl_mono_appears_to_be_running();
   if (ret < 0)
-  {
-    return ret;    // Error message already output
-  }
+    return ret;
 
   ret = mono_main_driver(finalArgc, finalArgv);
   return ret;
