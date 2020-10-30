@@ -83,7 +83,7 @@ static bool hcom_mono_ctrl_should_mono_run(void);
 static bool hcom_mono_ctrl_did_mono_run_last_time(void);
 static int hcom_mono_remote_dbg_open_mono_sock(void);
 static int redirect_stdout_stderr(void);
-static int mono_main_proxy(int argc, char *argv[]);
+static int mono_main_proxy(int argcX, char *argvX[]);
 
 /****************************************************************************
  * Public Functions
@@ -536,9 +536,11 @@ int hcom_mono_remote_dbg_open_mono_sock()
 // In order to provide VS debugging with that proper socket port number
 // the newly created mono task comes here so that the main thread of
 // the mono task can open the port. 
-int mono_main_proxy(int argc, char *argv[])
+int mono_main_proxy(int argcX, char *argvX[])
 {
-  int dbgSD = -1;
+  int dbgSD;
+  int argc;
+  char *argv[1];
 
   if(hcom_mono_remote_dbg_is_active())
   {
@@ -548,21 +550,23 @@ int mono_main_proxy(int argc, char *argv[])
       hcom_logging_syslog(LOG_ERR, "%s@%d-Opening remote dbg socket failed\n", thisFile, __LINE__);
       return dbgSD;    // This will terminate this thread and task-> mono won't start
     }
+
+    // Add command line argument for mono
+    argc = 1;
+    char argBuf[16];
+    snprintf(argBuf, 16, "%s=%d", HCOM_MONO_REMOTE_DBG_CMD_LINE_SD, dbgSD);
+    argv[0] = argBuf;
+  }
+  else
+  {
+    argc = 0;
   }
 
-  // Build additional command line argument(s) for mono
-  char *argsArray[1];
-  char argBuf[16];
-
-  // e.g. --dbgSD=16
-  snprintf(argBuf, 16, "%s=%d", HCOM_MONO_REMOTE_DBG_CMD_LINE_SD, dbgSD);
-  argsArray[0] = argBuf;
-  
   // Launch mono_main (or remote debugging test)
 #if HCOM_VS_DEBUGGING_TESTS_INCLUDE_IN_BUILD > 0
-  MonoVsRemoteDebugTestSetup(1, argsArray);
+  MonoVsRemoteDebugTestSetup(argc, argv);
 #else
-  mono_main(1, argsArray);
+  mono_main(argc, argv);
 #endif
 
   return OK;

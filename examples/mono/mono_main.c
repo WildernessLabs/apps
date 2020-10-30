@@ -110,6 +110,11 @@ int mono_main(int hcom_argc, char *hcom_argv[])
     finalArgv[i] = hcom_argv[j];
   finalArgv[i] = mono_argv[mono_argc - 1];
 
+  // for(int check = 0; check < finalArgc; check++)
+  // {
+  //   syslog(1, "finalArgv[%d] is '%s'\n", check, finalArgv[check]);
+  // }
+
   setenv("MONO_LOG_LEVEL", "debug", 1);
   setenv("MONO_GC_PARAMS", "max-heap-size=8m,nursery-size=512k,soft-heap-limit=4m,major=marksweep", 1);
 
@@ -132,6 +137,7 @@ int mono_main(int hcom_argc, char *hcom_argv[])
   if (ret < 0)
     return ret;
 
+  // ret = mono_main_driver(mono_argc, mono_argv);
   ret = mono_main_driver(finalArgc, finalArgv);
   return ret;
 }
