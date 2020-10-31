@@ -135,7 +135,11 @@ int MonoDebugTestInitialize()
 //=================================================================
 FAR void *hcom_vs_debug_test_pthread(FAR void *arg)
 {
-  // syslog(2, "DBGTest->Thread running VS debug tests PID:%d\n", getpid());
+
+#if HCOM_DIAG_OUTPUT_SYSLOG_PID_OF_NEW_THREADS > 0
+  syslog(1, "New pthread [PID:%d],'%s'\n", getpid(), "debug_test_pthread");
+#endif
+
   MonoDebugTestExecute();
   return NULL;    // Keeps compiler happy
 }

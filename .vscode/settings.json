@@ -4,7 +4,11 @@
         "spicomms"
     ],
     "files.associations": {
-        "poll.h": "c"
+      "poll.h": "c",
+      "system_error": "c",
+      "type_traits": "c",
+      "xtr1common": "c"
     },
-    "cmake.configureOnOpen": false
+    "cmake.configureOnOpen": false,
+    "C_Cpp.dimInactiveRegions": false
 }

@@ -193,6 +193,10 @@ void *hcom_mono_stdout_pthread(FAR void *arg)
 {
   int ret;
 
+#if HCOM_DIAG_OUTPUT_SYSLOG_PID_OF_NEW_THREADS > 0
+  syslog(1, "New pthread [PID:%d],'%s'\n", getpid(), HCOM_THREAD_NAME_STDOUT_REDIRECT);
+#endif
+
   // Release startup manager to continue startup
   hcom_startup_mgr_release_sem();
 
@@ -261,8 +265,10 @@ int hcom_mono_stdout_read_fifo_loop()
   // Read
   while (!_shutting_down)
   {
+    syslog(1, "**** %s@%d-About to read from stdout fifo\n", thisFile, __LINE__);
     // Blocks until stdout writes something
     readReturn = read(_read_fd, buffer, HCOM_MONO_APP_STDOUT_REDIRECT_BUFF_SIZE);
+    syslog(1, "**** %s@%d-Read returned %d from stdout fifo\n", thisFile, __LINE__, readReturn);
     if (readReturn < 0 )
     {
       hcom_logging_syslog(LOG_ERR, "%s@%d-fifo read, readReturn:%d, errno:%d\n",
