@@ -265,10 +265,8 @@ int hcom_mono_stdout_read_fifo_loop()
   // Read
   while (!_shutting_down)
   {
-    syslog(1, "**** %s@%d-About to read from stdout fifo\n", thisFile, __LINE__);
     // Blocks until stdout writes something
     readReturn = read(_read_fd, buffer, HCOM_MONO_APP_STDOUT_REDIRECT_BUFF_SIZE);
-    syslog(1, "**** %s@%d-Read returned %d from stdout fifo\n", thisFile, __LINE__, readReturn);
     if (readReturn < 0 )
     {
       hcom_logging_syslog(LOG_ERR, "%s@%d-fifo read, readReturn:%d, errno:%d\n",
