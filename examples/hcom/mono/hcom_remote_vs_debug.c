@@ -431,7 +431,7 @@ void hcom_mono_remote_dbg_enable(uint32_t userData)
 {
   hcom_bbreg_set_bbr_bits(HCOM_BBREG_MONO_DEBUGGING_START_BIT);
 }
-#else
+#else   // #if HCOM_VS_REMOTE_DEBUGGING_INCLUDE_IN_BUILD > 0
 int hcom_mono_remote_dbg_setup()
 {
   return OK;

@@ -151,7 +151,11 @@ int hcom_mono_ctrl_start_mono_main()
   // Create a task to execute mono
   mono_pid = task_create("mono", HCOM_MONO_RUNTIME_TASK_PRIORITY,
                       CONFIG_PTHREAD_STACK_DEFAULT,
+#if HCOM_VS_REMOTE_DEBUGGING_INCLUDE_IN_BUILD > 0
                       (main_t)mono_main_proxy,
+#else
+                      (main_t)mono_main,
+#endif                      
                       (FAR char * const *) NULL);
   if(mono_pid > 0)
   {

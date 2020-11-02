@@ -103,7 +103,7 @@ int mono_main(int hcom_argc, char *hcom_argv[])
   int i, j;
 
   // It appears that app_path needs to be last. So, copy all the hard code mono args
-  // except for the last one (app_path) and then hcom args and last app_path
+  // except for app_path, then hcom args and last app_path.
   for(i = 0; i < mono_argc - 1; i++)
     finalArgv[i] = mono_argv[i];
   for(j = 0; i < finalArgc - 1; i++, j++)
