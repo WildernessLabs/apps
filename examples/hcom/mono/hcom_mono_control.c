@@ -81,10 +81,11 @@ static int _stderr_fd;
 static bool hcom_mono_ctrl_are_needed_files_here(void);
 static bool hcom_mono_ctrl_should_mono_run(void);
 static bool hcom_mono_ctrl_did_mono_run_last_time(void);
-static int hcom_mono_remote_dbg_open_mono_sock(void);
 static int redirect_stdout_stderr(void);
+#if HCOM_VS_REMOTE_DEBUGGING_INCLUDE_IN_BUILD > 0
+static int hcom_mono_remote_dbg_open_mono_sock(void);
 static int mono_main_proxy(int argcX, char *argvX[]);
-
+#endif
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -534,7 +535,6 @@ int hcom_mono_remote_dbg_open_mono_sock()
   }
   return vsSockFd;
 }
-#endif
 
 //==================================================================
 // In order to provide VS debugging with that proper socket port number
@@ -576,3 +576,4 @@ int mono_main_proxy(int argcX, char *argvX[])
   return OK;
 }
 
+#endif  // #if HCOM_VS_REMOTE_DEBUGGING_INCLUDE_IN_BUILD > 0
