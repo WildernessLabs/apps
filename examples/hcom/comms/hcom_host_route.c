@@ -296,7 +296,7 @@ void hcom_host_route_request_by_type(const uint8_t *recvOrigData, const size_t r
       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
       break;
 
-#if CONFIG_HCOM_MONO_REMOTE_DEBUGGING > 0
+#if defined (CONFIG_HCOM_MONO_REMOTE_DEBUGGING) 
     case HCOM_MDOW_REQUEST_MONO_START_DBG_SESSION:
       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
       hcom_mono_remote_dbg_enable(userData);
