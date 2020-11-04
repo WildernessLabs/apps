@@ -53,7 +53,7 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#if HCOM_STDOUT_STDERR_REDIRECT_INCLUDE_IN_BUILD > 0
+#if CONFIG_HCOM_MONO_STDERR_STDOUT > 0
 
 /* Configuration ************************************************************/
 
@@ -87,7 +87,7 @@ static int hcom_mono_stderr_route_mono_text_stderr(uint8_t *recvBuff, int numbBy
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
-#if HCOM_STDOUT_STDERR_REDIRECT_INCLUDE_IN_BUILD == 0
+#if CONFIG_HCOM_MONO_STDERR_STDOUT == 0
 int hcom_mono_stderr_read_setup()
 {
   return OK;
