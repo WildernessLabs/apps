@@ -220,26 +220,15 @@ int hcom_via_nx_cfg_kvp_get_value(int nx_access_fd, char *sectionName,
   get_cfg.return_value = returnValueBuf;
   get_cfg.return_size = returnBufLen;
 
-  syslog(2, "===>>> Calling via ioctl to Nuttx side\n");
-
   ret = ioctl(nx_access_fd, HCOM_NX_UPD_GET_CONFIG_VALUE, (unsigned long) &get_cfg);
-  syslog(2, "===>>> ioctl returned:%d\n", ret);
   if (ret < 0)
   {
-    // Since ioctl put error return into errno
-//     errno
-// #define MEADOW_CONFIG_ERROR_NO_KEY_FOUND -1
-// #define MEADOW_CONFIG_ERROR_CFG_FILE_OPEN -2
-// #define MEADOW_CONFIG_ERROR_DEST_BUF_TOO_SMALL -3
-// #define MEADOW_CONFIG_ERROR_MEM_ALLOC_ERROR -4
-
     // ioctl places any return value into errno and returns -1
     hcom_logging_syslog(LOG_ERR, "%s@%d-%s Failed to get key/value pair, ret:%d, errno:%d\n",
             thisFile, __LINE__, HCOM_NX_UPD_DRIVER_NAME, ret, errno);
     return -errno;      // ioctl puts returned int into errno
   }
 
-  syslog(2, "===>>> Successful ioctl to Nuttx side\n");
   return OK;
 }
 
