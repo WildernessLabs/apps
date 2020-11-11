@@ -209,6 +209,11 @@ void hcom_developer_tests_developer_2(uint32_t userData)
 //==============================================================
 void hcom_developer_tests_developer_3(uint32_t userData)
 {
+
+#if HCOM_INCLUDE_CONFIG_FILE_KVP_TESTS > 0
+  hcom_tests_config_kvp_get(userData);
+#endif
+
 #if HCOM_INCLUDE_BATTERY_BACKED_REG_TEST > 0
   if(userData == 0)
     hcom_bbr_tests();

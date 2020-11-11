@@ -365,6 +365,10 @@ extern "C"
 
   void hcom_via_nx_forward_cli_cmd_to_nx(int nx_access_fd, uint16_t hcomCmd, uint32_t userData);
   bool hcom_via_nx_is_mounted(int nx_access_fd, uint32_t partitionId);
+  int hcom_via_nx_cfg_kvp_get_value(int nx_access_fd, char *sectionName,
+        char *keyName, char returnValueBuf[], int returnBufLen);
+
+
   // These exist and work, however, direct registry access is currently
   // not supported.
   // int hcom_via_nx_set_register(uint32_t address, uint32_t value);
@@ -423,6 +427,10 @@ void hcom_bbr_tests(void);
 
 #if HCOM_VS_DEBUGGING_TESTS_INCLUDE_IN_BUILD > 0
 int MonoVsRemoteDebugTestSetup(int argc, char *argv[]);
+#endif
+
+#if HCOM_INCLUDE_CONFIG_FILE_KVP_TESTS > 0
+void hcom_tests_config_kvp_get(uint32_t userData);
 #endif
 
 #if defined(CONFIG_EXAMPLES_SQLITE_TESTS)

@@ -72,7 +72,8 @@ HCOM_SRCS = comms/hcom_host_encode.c \
 	nx_rqsts/hcom_via_nx_access.c \
 	tests/bbreg_tests.c \
 	tests/developer_tests.c \
-	tests/vs_debug_tests.c
+	tests/vs_debug_tests.c \
+	tests/config_kvp_tests.c
 
 ifeq ($(CONFIG_HCOM_ESP32_COMMS),y)
  HCOM_SRCS += esp32/hcom_esp32_execute.c \
