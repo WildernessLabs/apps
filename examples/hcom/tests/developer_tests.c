@@ -211,7 +211,7 @@ void hcom_developer_tests_developer_3(uint32_t userData)
 {
 
 #if HCOM_INCLUDE_CONFIG_FILE_KVP_TESTS > 0
-  hcom_tests_config_kvp_get(userData);
+  hcom_tests_ini_cfg_get_value_from_key(userData);
 #endif
 
 #if HCOM_INCLUDE_BATTERY_BACKED_REG_TEST > 0
