@@ -282,8 +282,11 @@ extern "C"
   size_t hcom_host_cobs_encoder(uint8_t source[], size_t startingOffset, size_t length, uint8_t encoded[]);
   size_t hcom_host_cobs_decoder(uint8_t encoded[], size_t length, uint8_t decoded[]);
 
+  // common utils
   int hcom_common_utils_setup(void);
   void hcom_common_utils_shutdown(void);
+  bool hcom_utils_ini_cfg_is_match(char *fileName, char *section, char *key, char *match);
+  int hcom_utils_ini_cfg_get_int(char *fileName, char *section, char *key);
 
   // bool hcom_utils_boot_time_qemu_check(void);
   void hcom_utils_dbg_gpio_1led_update(bool ledOn);
@@ -332,7 +335,7 @@ extern "C"
 
   void hcom_via_nx_forward_cli_cmd_to_nx(int nx_access_fd, uint16_t hcomCmd, uint32_t userData);
   bool hcom_via_nx_is_mounted(int nx_access_fd, uint32_t partitionId);
-  int hcom_via_nx_ini_cfg_get_value(int nx_access_fd, char *sectionName,
+  int hcom_via_nx_ini_cfg_get_value(int nx_access_fd, char *fileName, char *sectionName,
         char *keyName, char returnValueBuf[], int returnBufLen);
 
 
@@ -396,7 +399,7 @@ void hcom_bbr_tests(void);
 int MonoVsRemoteDebugTestSetup(int argc, char *argv[]);
 #endif
 
-#if HCOM_INCLUDE_INI_CFG_FILE_BASIC_TESTS > 0
+#if HCOM_INCLUDE_INI_CFG_TESTS_IN_BUILD > 0
 void hcom_tests_ini_cfg_get_value_from_key(uint32_t userData);
 #endif
 

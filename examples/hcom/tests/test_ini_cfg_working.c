@@ -41,7 +41,7 @@
 #include <meadow/hcom_upd_shared.h>
 #include <meadow/hcom_shared_common.h>
 
-#if HCOM_INCLUDE_INI_CFG_FILE_BASIC_TESTS > 0
+#if HCOM_INCLUDE_INI_CFG_TESTS_IN_BUILD > 0
 
 /****************************************************************************
  * Configuration file key value pair tests
@@ -72,9 +72,10 @@ pi = 3.14159           ; Test a floating point number
   char returnValueBuf[HCOM_TEST_INI_CFG_TEST_BUFFER_LEN];
   int returnBufLen = HCOM_TEST_INI_CFG_TEST_BUFFER_LEN;
 
-  ret = hcom_via_nx_ini_cfg_get_value(hcom_via_nx_get_fd(), sectionName,
+  ret = hcom_via_nx_ini_cfg_get_value(hcom_via_nx_get_fd(), NULL, sectionName,
         keyName, returnValueBuf, returnBufLen);
-
+  
+  // Greater than zero means parsing error
   if (ret > 0)
   {
     syslog(LOG_ERR, "test_ini_cfg_working-Encountered a parsing error on line:%d of config file\n", ret);

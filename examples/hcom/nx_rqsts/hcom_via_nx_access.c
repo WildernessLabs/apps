@@ -209,12 +209,13 @@ int hcom_via_nx_get_mcu_ser_numb(int nx_access_fd, char mcuSerNumb[16])
 
 //=============================================================
 // Find the configuration value from the provided section and key
-int hcom_via_nx_ini_cfg_get_value(int nx_access_fd, char *sectionName,
-        char *keyName, char returnValueBuf[], int returnBufLen)
+int hcom_via_nx_ini_cfg_get_value(int nx_access_fd, char *fileName,
+        char *sectionName, char *keyName, char returnValueBuf[], int returnBufLen)
 {
   int ret;
   struct hcom_nx_upd_ini_cfg_get_value_s get_cfg;
 
+  get_cfg.file_name = fileName;
   get_cfg.section_name = sectionName;
   get_cfg.key_name = keyName;
   get_cfg.return_value = returnValueBuf;

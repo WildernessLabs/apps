@@ -186,19 +186,9 @@ void hcom_diag_logging_change_trace_level(uint32_t userData)
       break;
   }
 
-  char returnValueBuf[32];
-  int returnBufLen = 32;
-  ret = hcom_via_nx_ini_cfg_get_value(hcom_via_nx_get_fd(), "startup",
-        "uart1", returnValueBuf, returnBufLen);
-  if(ret == OK && strcmp(returnValueBuf, "trace") == 0)
-  {
-    newSyslogMask |= LOG_MASK(LOG_NOTICE) | LOG_MASK(LOG_INFO);
-  }
-
 #if HCOM_FORCE_SYSLOG_MASK_F7_AND_UART1 > 0
   newSyslogMask |= LOG_MASK(LOG_NOTICE) | LOG_MASK(LOG_INFO);
 #endif
-
 
   hcom_bbreg_clear_then_set_bbr_bits(HCOM_BBREG_RESTART_SYSLOG_CONFIG_VALUE_MASK, newSyslogMask);
   int oldSyslogMask = setlogmask(newSyslogMask);
