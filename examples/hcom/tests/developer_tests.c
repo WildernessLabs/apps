@@ -210,7 +210,7 @@ void hcom_developer_tests_developer_2(uint32_t userData)
 void hcom_developer_tests_developer_3(uint32_t userData)
 {
 
-#if HCOM_INCLUDE_CONFIG_FILE_KVP_TESTS > 0
+#if HCOM_INCLUDE_INI_CFG_FILE_BASIC_TESTS > 0
   hcom_tests_ini_cfg_get_value_from_key(userData);
 #endif
 

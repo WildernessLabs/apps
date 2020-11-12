@@ -41,13 +41,13 @@
 #include <meadow/hcom_upd_shared.h>
 #include <meadow/hcom_shared_common.h>
 
-#if HCOM_INCLUDE_CONFIG_FILE_KVP_TESTS > 0
+#if HCOM_INCLUDE_INI_CFG_FILE_BASIC_TESTS > 0
 
 /****************************************************************************
  * Configuration file key value pair tests
  ****************************************************************************/
 
-#define HCOM_TEST_KVP_TEST_BUFFER_LEN 32
+#define HCOM_TEST_INI_CFG_TEST_BUFFER_LEN 32
 
 //================================================================
 void hcom_tests_ini_cfg_get_value_from_key(uint32_t userData)
@@ -69,8 +69,8 @@ pi = 3.14159           ; Test a floating point number
 
   char *sectionName = "user";
   char *keyName = "pi";
-  char returnValueBuf[HCOM_TEST_KVP_TEST_BUFFER_LEN];
-  int returnBufLen = HCOM_TEST_KVP_TEST_BUFFER_LEN;
+  char returnValueBuf[HCOM_TEST_INI_CFG_TEST_BUFFER_LEN];
+  int returnBufLen = HCOM_TEST_INI_CFG_TEST_BUFFER_LEN;
 
   ret = hcom_via_nx_ini_cfg_get_value(hcom_via_nx_get_fd(), sectionName,
         keyName, returnValueBuf, returnBufLen);
@@ -112,7 +112,7 @@ pi = 3.14159           ; Test a floating point number
       
     }
   }
-  syslog(2, "test_ini_cfg_working-Returned from KVP test Value:'%s', ret:%d\n", returnValueBuf, ret);
+  syslog(2, "test_ini_cfg_working-Returned from ini cfg test. Value:'%s', ret:%d\n", returnValueBuf, ret);
 }
 
 #endif
