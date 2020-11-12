@@ -153,32 +153,6 @@
 // PATH_MAX is defined by Nuttx in limits.h. It's 256 or less
 #define HCOM_MAX_PATH_AND_FILE_BUFF_LENGTH ((PATH_MAX * 2) + 2) // allocate
 
-//----------------------------------------------------------------
-// Circular buffer 
-struct host_com_cir_buffer_s
-{
-  uint8_t *bottom;    // bottom of buffer
-  uint8_t *top;       // top end of buffer
-  uint8_t *head;      // add data here
-  uint8_t *tail;      // remove from here
-  uint8_t delimiter;  // custom message delimiter
-};
-
-// Circular buffer return values
-enum hcom_comms_recv_buffer_return
-{
-  HCOM_CIR_BUF_INIT_OK,
-  HCOM_CIR_BUF_INIT_FAILED,
-
-  HCOM_CIR_BUF_ADD_SUCCESS,
-  HCOM_CIR_BUF_ADD_WONT_FIT,
-  HCOM_CIR_BUF_ADD_BAD_ARG,
-
-  HCOM_CIR_BUF_GET_FOUND_MSG,
-  HCOM_CIR_BUF_GET_NONE_FOUND,
-  HCOM_CIR_BUF_GET_DEST_NO_ROOM
-};
-
 //--------------------------------------------------------------------
 // This enum defines the current processing activity for a data packet
 // download.
@@ -307,13 +281,6 @@ extern "C"
   // Comms support, COBS encode and receive circular buffer
   size_t hcom_host_cobs_encoder(uint8_t source[], size_t startingOffset, size_t length, uint8_t encoded[]);
   size_t hcom_host_cobs_decoder(uint8_t encoded[], size_t length, uint8_t decoded[]);
-
-  int hcom_cirbuf_init(struct host_com_cir_buffer_s *hcom_cbuf, size_t totalCapacity, uint8_t delimiter);
-  size_t hcom_cirbuf_avail_space(struct host_com_cir_buffer_s *hcom_cbuf);
-  int hcom_cirbuf_add_bytes(struct host_com_cir_buffer_s *hcom_cbuf, uint8_t *newBytes, uint32_t bytesToAdd);
-  int hcom_cirbuf_get_next_packet(struct host_com_cir_buffer_s *hcom_cbuf, uint8_t *packetBuffer,
-                                  size_t packetBufferSize, size_t *packetLength);
-  int hcom_cirbuf_release_memory(struct host_com_cir_buffer_s *hcom_cbuf);
 
   int hcom_common_utils_setup(void);
   void hcom_common_utils_shutdown(void);

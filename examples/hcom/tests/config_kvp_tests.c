@@ -77,41 +77,42 @@ pi = 3.14159           ; Test a floating point number
 
   if (ret > 0)
   {
-    syslog(LOG_ERR, "Encountered a parsing error on line:%d of config file\n", ret);
+    syslog(LOG_ERR, "config_kvp_tests-Encountered a parsing error on line:%d of config file\n", ret);
   }
   else
   {
     switch(ret)
     {
       case MEADOW_CONFIG_ERROR_NO_KEY_FOUND:
-        syslog(LOG_ERR, "No matching key found:%d\n", ret);
+        syslog(LOG_ERR, "config_kvp_tests-No matching key found:%d\n", ret);
         break;
 
       case MEADOW_CONFIG_ERROR_CFG_FILE_OPEN:
-        syslog(LOG_ERR, "File could not be opened:%d\n", ret);
+        syslog(LOG_ERR, "config_kvp_tests-File could not be opened:%d\n", ret);
         break;
 
       case MEADOW_CONFIG_ERROR_PROVIDED_BUF_TOO_SMALL:
-        syslog(LOG_ERR, "Provided buffer too small. Results truncated:%d\n", ret);
+        syslog(LOG_ERR, "config_kvp_tests-Provided buffer too small. Results truncated:%d\n", ret);
         break;
 
       case MEADOW_CONFIG_ERROR_MEM_ALLOC_ERROR:
-        syslog(LOG_ERR, "Memory allocation error:%d\n", ret);
+        syslog(LOG_ERR, "config_kvp_tests-Memory allocation error:%d\n", ret);
         break;
 
       case MEADOW_CONFIG_ERROR_CFG_LINE_TOO_LONG:
-        syslog(LOG_ERR, "Line within file too long:%d\n", ret);
+        syslog(LOG_ERR, "config_kvp_tests-Line within file too long:%d\n", ret);
         break;
 
       case MEADOW_CONFIG_ERROR_CFG_FILE_READ_ERR:
-        syslog(LOG_ERR, "File read error:%d\n", ret);
+        syslog(LOG_ERR, "config_kvp_tests-File read error:%d\n", ret);
         break;
+
       default:
-        syslog(LOG_ERR, "Unknown error:%d\n", ret);
+        syslog(LOG_ERR, "config_kvp_tests-Unknown error:%d\n", ret);
       
     }
   }
-  syslog(2, "===>>> Returned from KVP test Value:'%s', ret:%d\n", returnValueBuf, ret);
+  syslog(2, "config_kvp_tests-Returned from KVP test Value:'%s', ret:%d\n", returnValueBuf, ret);
 }
 
 #endif

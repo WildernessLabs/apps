@@ -61,7 +61,7 @@ HCOM_SRCS = comms/hcom_host_encode.c \
 	file/hcom_file_dnld_proc.c \
 	file/hcom_file_lists.c \
 	file/hcom_file_write_delete.c \
-	misc/hcom_circular_buffer.c \
+	misc/meadow_cirbuf.c \
 	misc/hcom_common_utils.c \
 	mono/hcom_mono_control.c \
 	mono/hcom_remote_vs_debug.c \

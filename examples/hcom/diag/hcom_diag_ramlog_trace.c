@@ -40,6 +40,7 @@
 #include "hcom_common.h"
 #include <meadow/hcom_protocol.h>
 #include <meadow/hcom_bbreg_defn.h>
+#include <meadow/meadow_cirbuf.h>
 
 #include <sys/stat.h>
 #include <ctype.h>
