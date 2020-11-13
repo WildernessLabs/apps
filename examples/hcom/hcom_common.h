@@ -400,7 +400,7 @@ int MonoVsRemoteDebugTestSetup(int argc, char *argv[]);
 #endif
 
 #if HCOM_INCLUDE_INI_CFG_TESTS_IN_BUILD > 0
-void hcom_tests_ini_cfg_get_value_from_key(uint32_t userData);
+void hcom_tests_ini_cfg_execute_selected(uint32_t userData);
 #endif
 
 #if defined(CONFIG_EXAMPLES_SQLITE_TESTS)

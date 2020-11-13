@@ -153,7 +153,6 @@ int hcom_logging_syslog_mask_init()
 //=======================================================================================
 void hcom_diag_logging_change_trace_level(uint32_t userData)
 {
-  int ret;
   char hostMsg[HCOM_SHORT_HOST_STRING_BUFF_LENGTH];
   int stringLen;
   char *traceNew;
