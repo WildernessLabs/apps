@@ -1,5 +1,5 @@
 /****************************************************************************
- * \apps\examples\hcom\tests\test_ini_cfg_working.c
+ * \apps\examples\hcom\tests\meadow_ini_cfg_tests.c
  * 
  *   Copyright (C) 2019 - 2020 Wilderness Labs. All rights reserved.
  *   Author:  Wilderness Labs
@@ -156,7 +156,7 @@ void hcom_tests_ini_cfg_name_list(uint32_t userData)
       return;
   }
 
-  syslog(1, "%s@%d-Test Query - FileName:%s, Section:%s, Key:%s\n",
+  syslog(2, "%s@%d-Test Query - FileName:%s, Section:%s, Key:%s\n",
             __FILE__, __LINE__, fileName, sectionName, keyName);
 
   char returnValueBuf[HCOM_TEST_INI_CFG_TEST_BUFFER_LEN];
@@ -166,7 +166,7 @@ void hcom_tests_ini_cfg_name_list(uint32_t userData)
   
   if(ret == OK)
   {
-    syslog(1, "%s@%d-Test Results:'%s'\n", __FILE__, __LINE__, returnValueBuf);
+    syslog(2, "%s@%d-Test Results:'%s'\n", __FILE__, __LINE__, returnValueBuf);
   }
   hcom_tests_ini_cfg_show_return(ret);
 }
