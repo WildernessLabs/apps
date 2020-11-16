@@ -120,7 +120,7 @@ int hcom_esp32_exec_download_flash_start(const size_t entireFileSize,
   {
     stringLen = snprintf(hostMsg, HCOM_SHORT_HOST_STRING_BUFF_LENGTH,
             "Mono must be disabled for ESP32 file download");
-    hcom_logging_syslog(LOG_ERR, "%s@%d-\n", thisFile, __LINE__, hostMsg);
+    hcom_logging_syslog(LOG_ERR, "%s@%d-%s\n", thisFile, __LINE__, hostMsg);
     
     DEBUGASSERT(stringLen < HCOM_SHORT_HOST_STRING_BUFF_LENGTH);
     hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_ERROR, 0,

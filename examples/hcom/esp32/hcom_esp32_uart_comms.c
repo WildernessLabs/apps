@@ -36,11 +36,16 @@
 /****************************************************************************
  * Included Files
  ****************************************************************************/
+#define USE_PTHREAD_MUTEX_NOT_SEMAPHORE 0
 
 #include "../hcom_common.h"
 #include "hcom_esp32_comms.h"
 
 #include <nuttx/board.h>
+
+#if USE_PTHREAD_MUTEX_NOT_SEMAPHORE > 0
+#include <pthread.h>
+#endif
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -65,7 +70,13 @@ static char *thisFile = __FILE__;
 static bool _shutting_down;
 static int _esp32_read_fd;
 static int _esp32_write_fd;
+
+#if USE_PTHREAD_MUTEX_NOT_SEMAPHORE > 0
+static pthread_mutex_t mutex;
+static pthread_cond_t  cond;
+#else
 static sem_t _initalizeWaitSem;    /* Implements event waiting */
+#endif
 
 static uint8_t *esp32_read_buffer;
 static bool _esp_uart_initialized;
@@ -123,6 +134,7 @@ void hcom_esp32_uart_comms_shutdown()
     free(esp32_read_buffer);
 }
 
+#if USE_PTHREAD_MUTEX_NOT_SEMAPHORE < 1
 //===================================================================================
 // Wait for the thread holding semaphore to release it
 static void hcom_esp32_uart_takesem(void)
@@ -136,6 +148,7 @@ static void hcom_esp32_uart_takesem(void)
   }
   while (ret == -EINTR);
 }
+#endif
 
 //====================================================================
 // This initialize is done by the hcom caller
@@ -163,12 +176,32 @@ int hcom_esp32_uart_lazy_initialization()
     _init_failed = -ENOMEM;
     return -ENOMEM;
   }
-    
+
+//----
+#if USE_PTHREAD_MUTEX_NOT_SEMAPHORE > 0
+  syslog(1, "cond_test: Initializing mutex\n");
+  int status = pthread_mutex_init(&mutex, NULL);
+  if (status != 0)
+  {
+    syslog(1, "cond_test: ERROR pthread_mutex_init failed, status=%d\n", status);
+  }
+
+  /* Initialize the condition variable */
+
+  syslog(1, "cond_test: Initializing cond\n");
+  status = pthread_cond_init(&cond, NULL);
+  if (status != 0)
+  {
+    syslog(1, "cond_test: ERROR pthread_condinit failed, status=%d\n", status);
+  }
+//----
+#else
   // Initialize value to 0 for a 'signaling' semaphore to block
   // initially the calling thread until it is safe for it to proceed.
   sem_init(&_initalizeWaitSem, 0, 0);
   // Special non-standard nuttx function required for signaling semaphores
   sem_setprotocol(&_initalizeWaitSem, SEM_PRIO_NONE);
+#endif
 
   // Setup all the subordinate modules
   ret = hcom_esp32_recv_setup_lazy();
@@ -209,11 +242,42 @@ int hcom_esp32_uart_lazy_initialization()
     return ret;
   }
 
+#if USE_PTHREAD_MUTEX_NOT_SEMAPHORE > 0
+  // Lock
+  status = pthread_mutex_lock(&mutex);
+  if (status != 0)
+  {
+    syslog(1, "waiter_thread: ERROR pthread_mutex_lock failed, status=%d\n", status);
+  }
+
+  // WAIT. When the condition is met we'll wake up
+  syslog(1, "=== PID:%d %s@%d-WAITING\n", getpid(), thisFile, __LINE__);
+  status = pthread_cond_wait(&cond, &mutex);
+  syslog(1, "=== PID:%d %s@%d-NO LONGER WAITING\n", getpid(), thisFile, __LINE__);
+
+  // Unlock
+  status = pthread_mutex_unlock(&mutex);
+  if (status != 0)
+  {
+    syslog(1, "waiter_thread: ERROR waiter: pthread_mutex_unlock failed, status=%d\n", status);
+  }
+
+  syslog(1, "=== PID:%d %s@%d-Cond Destroy\n", getpid(), thisFile, __LINE__);
+  pthread_cond_destroy(&cond);   // p-m
+  syslog(1, "=== PID:%d %s@%d-Mutex Destroy\n", getpid(), thisFile, __LINE__);
+  pthread_mutex_destroy(&mutex);   // p-m
+  sleep(2);
+  syslog(1, "=== PID:%d %s@%d-Still Alive after 2 seconds.\n", getpid(), thisFile, __LINE__);
+#else
   // Wait for the new thread to finish its initialization before continuing.
-  hcom_esp32_uart_takesem();
+  hcom_esp32_uart_takesem();   // sem_wait(&_initalizeWaitSem)
 
   // This semaphore has done it's job
+  syslog(1, "=== PID:%d %s@%d-calling Semaphore Destroy\n", getpid(), thisFile, __LINE__);
   sem_destroy(&_initalizeWaitSem);
+  sleep(2);
+  syslog(1, "=== PID:%d %s@%d-Still Alive after 2 seconds.\n", getpid(), thisFile, __LINE__);
+#endif
   return OK;
 }
 
@@ -280,13 +344,47 @@ FAR void *hcom_esp32_uart_comms_pthread(FAR void *arg)
     hcom_logging_syslog(LOG_ERR, "%s@%d-phase 2 initialization failed\n", thisFile, __LINE__);
     // Error noted
     _init_failed = ret;
+    syslog(1, "=== PID:%d %s@%d-ERROR cannot open ports\n", getpid(), thisFile, __LINE__);
+#if USE_PTHREAD_MUTEX_NOT_SEMAPHORE > 0
+    pthread_mutex_unlock(&mutex);
+#else
     sem_post(&_initalizeWaitSem);  // Allow hcom thread to proceed
+#endif
     return NULL; //  This will terminate this thread
   }
 
-  // Thread created and initialization successful
-  sem_post(&_initalizeWaitSem);  // Allow hcom thread to proceed
+//------
+#if USE_PTHREAD_MUTEX_NOT_SEMAPHORE > 0
+  int status = pthread_mutex_lock(&mutex);
+  if (status != 0)
+  {
+    syslog(1, "thread_signaler: ERROR pthread_mutex_lock failed, status=%d\n", status);
+  }
 
+  // SIGNAL the waiting thread to wake up
+  syslog(1, "=== PID:%d %s@%d-SIGNALING WAITER\n", getpid(), thisFile, __LINE__);
+  status = pthread_cond_signal(&cond);
+  if (status != 0)
+  {
+    syslog(1, "thread_signaler: ERROR pthread_cond_signal failed, status=%d\n", status);
+  }
+
+  /* Release the mutex */
+  status = pthread_mutex_unlock(&mutex);
+  if (status != 0)
+  {
+    syslog(1, "thread_signaler: ERROR pthread_mutex_unlock failed, status=%d\n", status);
+  }
+
+//------
+
+  // Thread created and initialization successful. Therefore,
+  // we can free the hcom thread to continue.
+  syslog(1, "=== PID:%d %s@%d-Mutex unlock\n", getpid(), thisFile, __LINE__);
+  pthread_mutex_unlock(&mutex);
+#else
+  sem_post(&_initalizeWaitSem);  // Allow hcom thread to proceed
+#endif
   // Allow hcom thread to start before using this thread
   // This may not be needed on the apps side of things
   usleep(500 * 1000);
