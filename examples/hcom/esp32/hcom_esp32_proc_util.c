@@ -385,8 +385,6 @@ int hcom_esp32_util_init_comms_enter_boot_mode()
   }
   else
   {
-    int attempts = HCOM_ESP32_MAX_NUMB_CONNECT_ATTEMPTS - currentNumbAttempts;
-
     _connectionActive = true;
     // Give time for the other 7 sync responses to be received before
     // allowing the command to be processed

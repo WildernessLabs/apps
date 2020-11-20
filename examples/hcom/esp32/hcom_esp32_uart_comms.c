@@ -321,7 +321,7 @@ FAR void *hcom_esp32_uart_comms_pthread(FAR void *arg)
 //=============================================================
 // This initialiation is done by the thread created to receive from ESP32
 int hcom_esp32_uart_open_serial_ports()
-
+{
   // Open the uart for read
   _esp32_read_fd = open(HCOM_ESP32_FLASH_UART_DEV_NAME, O_RDONLY);
   if (_esp32_read_fd == -1)

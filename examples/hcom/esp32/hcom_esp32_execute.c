@@ -111,6 +111,8 @@ int hcom_esp32_exec_download_flash_start(const size_t entireFileSize,
   char hostMsg[HCOM_SHORT_HOST_STRING_BUFF_LENGTH];
   int stringLen = 0;
 
+  syslog(1, "%s@%d-START_ESP_FILE_TRANSFER\n", thisFile, __LINE__);
+
   // Verify that mono has been disabled
   if(hcom_mono_ctrl_is_mono_enabled())
   {
@@ -233,6 +235,7 @@ int hcom_esp32_exec_add_flash_data(const uint8_t *packet, const size_t packetSiz
   static size_t tempSaveBufLen;
   static off_t downloadBuffOffset;
 
+
   // First download packet of this file?
   if(hostSeqNumb == 1)
   {
@@ -248,7 +251,12 @@ int hcom_esp32_exec_add_flash_data(const uint8_t *packet, const size_t packetSiz
     isLastPacket = true;
   else
     isLastPacket = false;
-    
+
+  if(isLastPacket)    
+    syslog(1, "ESP32-Last data packet:%d\n", hostSeqNumb);
+  else
+    syslog(1, "ESP32-NOT last data packet:%d\n", hostSeqNumb);
+
   if(downloadBuffOffset == 0)
   {
     // Start of new download
@@ -317,7 +325,7 @@ int hcom_esp32_exec_add_flash_data(const uint8_t *packet, const size_t packetSiz
     if(isLastPacket)
     {
       // This IS the last packet (i.e. no more chances to download).
-      hcom_logging_syslog(LOG_DEBUG, "%s@%d-Last Packet, %s\n", thisFile, __LINE__,
+      hcom_logging_syslog(1, "%s@%d-Last Packet, %s\n", thisFile, __LINE__,
             tempSaveBufLen == 0 ? "save buf empty, exit" : "must send saved");
 
       if(tempSaveBufLen == 0)
@@ -370,6 +378,8 @@ int hcom_esp32_exec_buffer_to_esp32(uint8_t *downloadData, size_t dnldDataSize, 
   size_t paddingLength = 0;  
   struct HcomEsp32SecHdrData_s flashData;
   struct HcomEsp32UserRecvdData_s recvdData;
+
+  syslog(1, "%s@%d-END_ESP_FILE_TRANSFER\n", thisFile, __LINE__);
 
   if(dataDnldOffset == 0)
     return OK;
@@ -501,7 +511,7 @@ int hcom_esp32_exec_add_flash_end()
   DEBUGASSERT(recvdData.espHdr.command == Esp32CommandFlashEnd);
 
   hcom_esp32_stop_and_prep_for_restart();
-  
+
   ret = hcom_esp32_util_hardware_restart();
   if(ret < 0)
   {

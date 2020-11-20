@@ -141,7 +141,6 @@ void hcom_esp32_recv_expect_command_type(uint8_t expectCommand)
 // data is received
 void hcom_esp32_recv_start_of_communications()
 {
-  int cirbufDataSize = (HCOM_ESP_COMMS_MAX_ESP_PACKET_SIZE * 4) - hcom_cirbuf_avail_space(_esp_cir_buf);
   _startOfComms = true;
 }
 
@@ -159,7 +158,6 @@ int hcom_esp32_recv_handle_data(uint8_t *esp32_read_buffer, ssize_t bytesToAdd)
   // and end with 0xc0. If alot of text is added it can fill the cirbuf.
   if(_startOfComms)
   {
-    size_t orgBytesToAdd = bytesToAdd;
     while(*esp32_read_buffer != 0xc0)
     {
       esp32_read_buffer++;
