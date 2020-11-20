@@ -140,7 +140,7 @@ int hcom_diag_gpio_config_first_10_as_output()
     ret = hcom_via_nx_diag_gpio_write(hcom_via_nx_get_fd(), gpioOffset, 1);
     if(ret < 0)
     {
-      syslog(1, "hcom_via_nx_gpio_config value of:%d\n", gpioOffset);
+      hcom_logging_syslog(LOG_DEBUG, "hcom_via_nx_gpio_config value of:%d\n", gpioOffset);
       break;
     }
   }
@@ -160,7 +160,7 @@ int hcom_diag_gpio_config_first_10_as_output()
     ret = hcom_via_nx_diag_gpio_write(hcom_via_nx_get_fd(), gpioOffset, 0);
     if(ret < 0)
     {
-      syslog(1, "%s@%d-value of:%d\n", thisFile, __LINE__, gpioOffset);
+      hcom_logging_syslog(LOG_ERR, "%s@%d-value of:%d\n", thisFile, __LINE__, gpioOffset);
       break;
     }
   }

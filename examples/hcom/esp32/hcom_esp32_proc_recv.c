@@ -114,18 +114,12 @@ int hcom_esp32_recv_setup_lazy()
 //===================================================================
 void hcom_esp32_recv_shutdown()
 {
-  syslog(1, "***** 1a RECV shutdown\n"); usleep(20 * 1000);
   _shutting_down = true;
-  syslog(1, "***** 1b RECV shutdown\n"); usleep(20 * 1000);
 
   mq_close(recvMsgQueue);
-  syslog(1, "***** 2 RECV shutdown\n"); usleep(20 * 1000);
   mq_unlink(HCOM_ESP_COMMS_MSG_QUEUE_NAME);
-  syslog(1, "***** 3 RECV shutdown\n"); usleep(20 * 1000);
   hcom_cirbuf_release_memory(_esp_cir_buf);
-  syslog(1, "***** 4 RECV shutdown\n"); usleep(20 * 1000);
   free(_esp_cir_buf);
-  syslog(1, "***** 5 RECV shutdown\n"); usleep(20 * 1000);
 
   _shutting_down = false;
   _startOfComms = true;
@@ -147,13 +141,7 @@ void hcom_esp32_recv_expect_command_type(uint8_t expectCommand)
 // data is received
 void hcom_esp32_recv_start_of_communications()
 {
-  syslog(1, "====>>[PID:%d]-%s@%d-NOTIFIICATED-Start of communications indicated\n",
-      getpid(), thisFile, __LINE__); usleep(10 * 1000);
-
   int cirbufDataSize = (HCOM_ESP_COMMS_MAX_ESP_PACKET_SIZE * 4) - hcom_cirbuf_avail_space(_esp_cir_buf);
-  syslog(1, "====>>[PID:%d]-%s@%d-CIRBUF contains:%d bytes<<====\n",
-      getpid(), thisFile, __LINE__, cirbufDataSize); usleep(10 * 1000);
-
   _startOfComms = true;
 }
 
@@ -162,7 +150,6 @@ void hcom_esp32_recv_start_of_communications()
 int hcom_esp32_recv_handle_data(uint8_t *esp32_read_buffer, ssize_t bytesToAdd)
 {
   int ret;
-  static uint8_t dbgCount = 0;
   
   if(_shutting_down)
     return OK;
@@ -179,8 +166,6 @@ int hcom_esp32_recv_handle_data(uint8_t *esp32_read_buffer, ssize_t bytesToAdd)
       bytesToAdd--;
       if(bytesToAdd == 0)
       {
-        syslog(1, "====[PID:%d]-%s@%d-Throwing away %d unwanted characters\n",
-            getpid(), thisFile, __LINE__, orgBytesToAdd); usleep(10 * 1000);
         return OK;
       }
     }
@@ -193,23 +178,13 @@ int hcom_esp32_recv_handle_data(uint8_t *esp32_read_buffer, ssize_t bytesToAdd)
     if(ret == HCOM_CIR_BUF_ADD_SUCCESS)
     {
       _diagBufferedCount += bytesToAdd;
-      syslog(1, "====[PID:%d]-%s@%d-ADDED %d bytes to cirbuf, it contains:%d (avail:%d)\n",
-          getpid(), thisFile, __LINE__, bytesToAdd, _diagBufferedCount,
-          hcom_cirbuf_avail_space(_esp_cir_buf)); usleep(10 * 1000);
 
       DEBUGASSERT(_diagBufferedCount <= HCOM_ESP_COMMS_MAX_ESP_PACKET_SIZE * 4);
-
-      // p-m show on diag display what's happening w/o syslog
-      hcom_diag_gpio_write_byte(++dbgCount, 1);
       break;
     }
 
     if(ret == HCOM_CIR_BUF_ADD_WONT_FIT)
     {
-      syslog(1, "====[PID:%d]-%s@%d-WON'T FIT %d bytes into cirbuf, it contains:%d (avail:%d)\n",
-          getpid(), thisFile, __LINE__, bytesToAdd, _diagBufferedCount,
-          hcom_cirbuf_avail_space(_esp_cir_buf)); usleep(10 * 1000);
-
       // Wasn't possible to put these bytes in the buffer. We need to
       // process a few packets and then retry to add this data
       ret = hcom_esp32_recv_pull_and_process();
@@ -296,9 +271,6 @@ int hcom_esp32_recv_pull_and_process()
       else
       {
         _diagBufferedCount -= packetLength;
-        syslog(1, "====[PID:%d]-%s@%d-ORPHAN DATA-REMOVED %d bytes from cirbuf, it contains:%d (avail:%d)\n",
-            getpid(), thisFile, __LINE__, packetLength, _diagBufferedCount,
-            hcom_cirbuf_avail_space(_esp_cir_buf)); usleep(10 * 1000);
 
         hcom_logging_syslog(LOG_ERR, "%s@%d-Orphan Data:0x%02x\n",
                   thisFile, __LINE__, packetBuffer[packetLength-1]);
@@ -314,11 +286,6 @@ int hcom_esp32_recv_handle_bin_packet(uint8_t *binRecvdData, ssize_t binRecvdLen
 {
   int ret;
   struct HcomEsp32MqRecvdData_s mqRecvdData;
-
-  syslog(1, "====[PID:%d]-%s@%d-Processing ESP32 packet %d bytes long====\n",
-                          getpid(), thisFile, __LINE__, binRecvdLen);
-  hcom_diag_misc_print_buffer(binRecvdData, binRecvdLen, 1);
-  usleep(20 * 1000);
   
   // Check last character
   DEBUGASSERT(binRecvdData[binRecvdLen - 1] == 0xc0);
@@ -341,8 +308,6 @@ int hcom_esp32_recv_handle_bin_packet(uint8_t *binRecvdData, ssize_t binRecvdLen
   // binRecvdData[1] stores the esp command
   if(binRecvdData[1] != _currentExpectRecvCommand)
   {
-    syslog(1, "%s@%d-Recvd cmd 0x%02x-ignoring\n",
-             thisFile, __LINE__, binRecvdData[1], _currentExpectRecvCommand);
     hcom_logging_syslog(LOG_DEBUG, "%s@%d-Recvd cmd 0x%02x-ignoring\n",
              thisFile, __LINE__, binRecvdData[1], _currentExpectRecvCommand);
     return OK;    // Not an error. Just not needed.

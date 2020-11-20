@@ -302,6 +302,6 @@ enum Esp32Registers
   int hcom_esp32_util_write_register(uint32_t regAddr, uint32_t regValue);
   char *hcom_esp32_util_convert_esp32_cmd_to_string(uint8_t cmd);
   int hcom_esp32_util_hardware_restart(void);
-  void hcom_esp32_command_completed(void);
+  void hcom_esp32_stop_and_prep_for_restart(void);
 
 #endif // __CONFIGS_MEADOW_SRC_HCOM_ESP32_COMMON__H

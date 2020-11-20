@@ -500,14 +500,14 @@ int hcom_esp32_exec_add_flash_end()
   DEBUGASSERT(recvdData.espHdr.direction == 1);
   DEBUGASSERT(recvdData.espHdr.command == Esp32CommandFlashEnd);
 
-  hcom_esp32_command_completed();
-
+  hcom_esp32_stop_and_prep_for_restart();
+  
   ret = hcom_esp32_util_hardware_restart();
   if(ret < 0)
   {
     hcom_logging_syslog(LOG_ERR, "%s@%d-restart failed:%d\n", thisFile, __LINE__, ret);
   }
-
+  
   return ret;
 }
 

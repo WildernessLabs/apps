@@ -63,6 +63,7 @@
 static char *thisFile = __FILE__;
 
 static bool _shutting_down;
+static pthread_t _esp32_recv_thread;
 static int _esp32_read_fd;
 static int _esp32_write_fd;
 static sem_t _initalizeWaitSem;    /* Implements event waiting */
@@ -94,76 +95,47 @@ int hcom_esp32_uart_comms_setup()
   _esp32_write_fd = -1;
   _esp32_read_fd = -1;
 
-////////////////////////////////////////////
-// p-m THIS IS TEMPORARY UNTIL MARK'S CODE IS PUT INTO SERVICE
-  // Only configured here and left as output
-  int ret;
-  ret = hcom_via_nx_gpio_config(hcom_via_nx_get_fd(),HCOM_NX_GPIO_DIG_ID_ESP_RESET, HCOM_NX_GPIO_DIGITAL_CONFIG_OUTPUT);
-  if(ret < 0)                 
-  {
-    hcom_logging_syslog(LOG_CRIT, "%s@%d-gpio config:%d\n", thisFile, __LINE__, ret);
-    return ret;
-  }
-  
-  ret = hcom_via_nx_gpio_write(hcom_via_nx_get_fd(),HCOM_NX_GPIO_DIG_ID_ESP_RESET, HCOM_NX_GPIO_DIGITAL_CMD_VALUE_HIGH);
-  if(ret < 0)
-  {
-    hcom_logging_syslog(LOG_ERR, "%s@%d-gpio write:%d\n", thisFile, __LINE__, ret);
-    return ret;
-  }
-
-#if HCOM_ESP32_ALLOW_BOOT_PIN_TO_BE_INPUT > 0
-  // The boot pin needs to be an output for the operations of this module. However,
-  // the the boot pin servers as an input in other places. So, by default we leave
-  // it configured as an input pin unless needed.
-  ret = hcom_via_nx_gpio_config(hcom_via_nx_get_fd(),HCOM_NX_GPIO_DIG_ID_ESP_BOOT, HCOM_NX_GPIO_DIGITAL_CONFIG_INPUT);
-  if(ret < 0)
-  {
-    hcom_logging_syslog(LOG_CRIT, "%s@%d-gpio config:%d\n", thisFile, __LINE__, ret);
-    return ret;
-  }
-#else
-  // This is the only place this gpio is configured
-  ret = hcom_via_nx_gpio_config(hcom_via_nx_get_fd(),HCOM_NX_GPIO_DIG_ID_ESP_BOOT, HCOM_NX_GPIO_DIGITAL_CONFIG_OUTPUT);
-  if(ret < 0)
-  {
-    hcom_logging_syslog(LOG_CRIT, "%s@%d-gpio config:%d\n", thisFile, __LINE__, ret);
-    return ret;
-  }
-#endif
-
-///////////////////////////////////////////
   return OK;
 }
 
 //====================================================================
-// This is called after every command has finished. It will stop the
-// receive thread since the ESP32 constantly sends text when not
-// communicating with binary data.
-void hcom_esp32_command_completed()
+// This is called after some commands have finished. It stops the
+// receive thread. Why? Because the ESP32 constantly sends text when not
+// communicating with binary data. This is too expensive for the F7.`
+void hcom_esp32_stop_and_prep_for_restart()
 {
-  syslog(1, "***** Entered command complete\n");
   usleep(20 * 1000);
   hcom_esp32_uart_comms_shutdown();
-  syslog(1, "***** EVERYTHING HAS STOPPED\n");
   usleep(20 * 1000);
 }
 
 //====================================================================
 void hcom_esp32_uart_comms_shutdown()
 {
-  syslog(1, "***** 1a shutdown\n"); usleep(20 * 1000);
-  _shutting_down = true;  // Stop local thread
-  syslog(1, "***** 1b shutdown\n"); usleep(20 * 1000);
-  hcom_esp32_recv_shutdown();
-  syslog(1, "***** 2 shutdown\n"); usleep(20 * 1000);
-  hcom_esp32_xmit_shutdown();
-  syslog(1, "***** 3 shutdown\n"); usleep(20 * 1000);
-  hcom_esp32_exec_shutdown();
-  syslog(1, "***** 4 shutdown\n"); usleep(20 * 1000);
-  hcom_esp32_util_shutdown();
-  syslog(1, "***** 5 shutdown\n"); usleep(20 * 1000);
+  int ret;
+  syslog(1, "????? %s@%d-ENTERED uart comms shutdown\n", thisFile, __LINE__);
 
+  // ret = pthread_cancel(_esp32_recv_thread);  // Stop local receive thread
+  // if(ret != 0)
+  // {
+  //   syslog(1, "%s@%d-pthread cancel failed:%d, errno:%d\n", thisFile, __LINE__, ret, errno);
+  // }
+
+  _shutting_down = true;
+
+  hcom_esp32_recv_shutdown();
+  hcom_esp32_xmit_shutdown();
+  hcom_esp32_exec_shutdown();
+  hcom_esp32_util_shutdown();
+
+  ret = pthread_join(_esp32_recv_thread, NULL);
+  if(ret != 0)
+  {
+    syslog(1, "%s@%d-pthread join failed:%d, errno:%d\n", thisFile, __LINE__, ret, errno);
+    return;
+  }
+
+  // Safe to close everything
   if(_esp32_read_fd > -1)
   {
     close(_esp32_read_fd);
@@ -182,10 +154,6 @@ void hcom_esp32_uart_comms_shutdown()
   _esp_uart_initialized = false;
   _init_failed = 0;
   _shutting_down = false;
-  _esp32_write_fd = -1;
-  _esp32_read_fd = -1;
-
-  syslog(1, "***** 7 shutdown\n"); usleep(20 * 1000);
 }
 
 //===================================================================================
@@ -276,19 +244,12 @@ int hcom_esp32_uart_lazy_initialization()
     return ret;
   }
 
-  syslog(1, "====[PID:%d] %s@%d-Waiting for esp to open serial port\n",
-                    getpid(), thisFile, __LINE__); usleep(20 * 1000);
-                  
   // Wait for the new thread to finish its initialization before continuing.
   hcom_esp32_uart_takesem(&_initalizeWaitSem);
-  syslog(1, "====[PID:%d] %s@%d-sem_destroy being called\n",
-                    getpid(), thisFile, __LINE__); usleep(20 * 1000);
 
   // This semaphore has done it's job
   sem_destroy(&_initalizeWaitSem);
 
-  syslog(1, "====[PID:%d] %s@%d-Thread continues to excute esp32 command\n",
-                    getpid(), thisFile, __LINE__); usleep(20 * 1000);
   return OK;
 }
 
@@ -296,7 +257,6 @@ int hcom_esp32_uart_lazy_initialization()
 int hcom_esp32_uart_comms_make_thread()
 {
     int ret;
-    pthread_t thread;
     pthread_attr_t attr;
     struct sched_param param;
 
@@ -305,7 +265,7 @@ int hcom_esp32_uart_comms_make_thread()
     (void)pthread_attr_setschedparam(&attr, &param);
     (void)pthread_attr_setstacksize(&attr, HCOM_THREAD_STACKSIZE_ESP32_RECEIVE);
 
-    ret = pthread_create(&thread, &attr, hcom_esp32_uart_comms_pthread, NULL);
+    ret = pthread_create(&_esp32_recv_thread, &attr, hcom_esp32_uart_comms_pthread, NULL);
     if (ret < 0)
     {
       hcom_logging_syslog(LOG_CRIT, "%s@%d-Failed to create %s thread. Error:%d\n",
@@ -321,7 +281,7 @@ FAR void *hcom_esp32_uart_comms_pthread(FAR void *arg)
   int ret;
 
 #if HCOM_DIAG_OUTPUT_SYSLOG_PID_OF_NEW_THREADS > 0
-  syslog(1, "New pthread [PID:%d],'%s'\n", getpid(), HCOM_THREAD_NAME_ESP32_RECEIVE);
+  syslog(2, "New pthread [PID:%d],'%s'\n", getpid(), HCOM_THREAD_NAME_ESP32_RECEIVE);
 #endif
 
   // p-m Why only one chance to open serial port?
@@ -346,22 +306,21 @@ FAR void *hcom_esp32_uart_comms_pthread(FAR void *arg)
   while(!_shutting_down)
   {
     ret = hcom_esp32_uart_comms_read_serial_loop();
+    if(_shutting_down)
+      break;
+
     if(ret < 0)
     {
-      sleep(1);   // prevent tight loops
+      usleep(100 * 1000);   // prevent tight loops
     }
   }
 
-  sleep(2);
-  syslog(1, "ESP32 receive thread, exiting. Why? _shutting_down is true\n"); usleep(20 * 1000);
   return NULL;
 }
 
 //=============================================================
 // This initialiation is done by the thread created to receive from ESP32
 int hcom_esp32_uart_open_serial_ports()
-{
-  syslog(1, "====[PID:%d]-%s@%d-Opening serial port for read\n", getpid(), thisFile, __LINE__);
 
   // Open the uart for read
   _esp32_read_fd = open(HCOM_ESP32_FLASH_UART_DEV_NAME, O_RDONLY);
@@ -372,7 +331,6 @@ int hcom_esp32_uart_open_serial_ports()
     return -errno;
   }
 
-  syslog(1, "====[PID:%d]-%s@%d-Opening serial port for write\n", getpid(), thisFile, __LINE__);
   // Open the uart for send
   _esp32_write_fd = open(HCOM_ESP32_FLASH_UART_DEV_NAME, O_WRONLY);
   if (_esp32_write_fd == -1)
@@ -382,7 +340,6 @@ int hcom_esp32_uart_open_serial_ports()
     return -errno;
   }
 
-  syslog(1, "====[PID:%d]-%s@%d-Opened serial port\n", getpid(), thisFile, __LINE__);
   return OK;
 }
 
@@ -391,8 +348,6 @@ int hcom_esp32_uart_open_serial_ports()
 int hcom_esp32_uart_comms_read_serial_loop()
 {
   ssize_t readReturn;
-
-  // syslog(1, "====[PID:%d]-%s@%d-Entered read ESP32 serial, loop\n", getpid(), thisFile, __LINE__); usleep(10 * 1000);
 
   // Read uart
   while (!_shutting_down)
@@ -426,6 +381,9 @@ int hcom_esp32_uart_comms_read_serial_loop()
       }
     }
   }   // while (!_shutting_down)
+
+  if(_shutting_down)
+    return -1;
 
   return OK;
 }

@@ -118,9 +118,6 @@ void hcom_host_route_request_by_type(const uint8_t *recvOrigData, const size_t r
   hcom_logging_syslog(LOG_DEBUG, "-->Received %d bytes after header. Request Type:0x%04x\n",
             recvPayloadSize, requestType);
 
-  syslog(1, "-->[PID:%d]-Received %d bytes after header. Request Type:0x%04x\n",
-            getpid(), recvPayloadSize, requestType); usleep(10 * 1000);
-
   switch (requestType)
   {
     case HCOM_MDOW_REQUEST_START_FILE_TRANSFER:
