@@ -100,7 +100,7 @@ int hcom_mono_ctrl_mono_main_setup()
 
   // Configure Blue LED as output
   ret = hcom_via_nx_gpio_config(hcom_via_nx_get_fd(), 
-            HCOM_GPIO_DIG_NX_ID_BLUE_LED, HCOM_GPIO_DIGITAL_CONFIG_OUTPUT);
+            HCOM_NX_GPIO_DIG_ID_BLUE_LED, HCOM_NX_GPIO_DIGITAL_CONFIG_OUTPUT);
   if(ret < 0)
   {
     hcom_logging_syslog(LOG_ERR, "%s@%d-hcom_via_nx_gpio_config:%d\n",
@@ -111,7 +111,7 @@ int hcom_mono_ctrl_mono_main_setup()
 }
 
 //====================================================================
-// This function is responsible to start mono if it is desired and able
+// This function is responsible to start mono if it is desired and enabled
 int hcom_mono_ctrl_start_mono_main()
 {
   int ret;
@@ -119,7 +119,7 @@ int hcom_mono_ctrl_start_mono_main()
 
   // Config blue LED.
   ret = hcom_via_nx_gpio_config(hcom_via_nx_get_fd(), 
-            HCOM_GPIO_DIG_NX_ID_BLUE_LED, HCOM_GPIO_DIGITAL_CONFIG_OUTPUT);
+            HCOM_NX_GPIO_DIG_ID_BLUE_LED, HCOM_NX_GPIO_DIGITAL_CONFIG_OUTPUT);
   if(ret < 0)
   {
     hcom_logging_syslog(LOG_ERR, "%s@%d-hcom_via_nx_gpio_config:%d\n",
@@ -129,7 +129,7 @@ int hcom_mono_ctrl_start_mono_main()
  
   // Blue LED will stay on of mono doesn't start
   ret = hcom_via_nx_gpio_write(hcom_via_nx_get_fd(),
-          HCOM_GPIO_DIG_NX_ID_BLUE_LED, HCOM_GPIO_DIGITAL_CMD_VALUE_LOW);
+          HCOM_NX_GPIO_DIG_ID_BLUE_LED, HCOM_NX_GPIO_DIGITAL_CMD_VALUE_LOW);
   if (ret < 0)
   {
     hcom_logging_syslog(LOG_ERR, "%s@%d-hcom_via_nx_gpio_write, ret:%d, errno:%d\n",
@@ -141,6 +141,14 @@ int hcom_mono_ctrl_start_mono_main()
   {
     // Reason has been reported already, exit here
     return OK;
+  }
+
+  // Start espcp running
+  ret = hcom_via_nx_start_espcp_running(hcom_via_nx_get_fd());
+  if (ret < 0)
+  {
+    hcom_logging_syslog(LOG_ERR, "%s@%d-hcom_via_nx_start_espcp_running, ret:%d, errno:%d\n",
+              thisFile, __LINE__, ret, errno);
   }
 
   // Set the flag that can identify if mono locks up. It will be
@@ -383,7 +391,7 @@ int hcom_mono_ctrl_mono_appears_to_be_running()
   // Turn off blue LED. Must reconfigure because mono may have changed the
   // configuration during startup
   ret = hcom_via_nx_gpio_config(nx_access_fd, 
-            HCOM_GPIO_DIG_NX_ID_BLUE_LED, HCOM_GPIO_DIGITAL_CONFIG_OUTPUT);
+            HCOM_NX_GPIO_DIG_ID_BLUE_LED, HCOM_NX_GPIO_DIGITAL_CONFIG_OUTPUT);
   if(ret < 0)
   {
     hcom_logging_syslog(LOG_ERR, "%s@%d-hcom_via_nx_gpio_config:%d\n",
@@ -392,7 +400,7 @@ int hcom_mono_ctrl_mono_appears_to_be_running()
   }
 
   ret = hcom_via_nx_gpio_write(nx_access_fd,
-          HCOM_GPIO_DIG_NX_ID_BLUE_LED, HCOM_GPIO_DIGITAL_CMD_VALUE_HIGH);
+          HCOM_NX_GPIO_DIG_ID_BLUE_LED, HCOM_NX_GPIO_DIGITAL_CMD_VALUE_HIGH);
   if(ret < 0)
   {
     hcom_logging_syslog(LOG_ERR, "%s@%d-hcom_via_nx_gpio_write:%d\n", thisFile, __LINE__, ret);

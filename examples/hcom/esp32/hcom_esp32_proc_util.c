@@ -51,7 +51,6 @@
  * Private Data
  ****************************************************************************/
 
-static bool _shutting_down;
 static char _cmdStrBuff[8];   // Only for converting command to string
 
 // This is the command to sync the ESP32
@@ -66,26 +65,164 @@ static uint8_t hcom_esp_sync_msg[] =
  * Private Function Prototypes
  ****************************************************************************/
  
- static char *thisFile = __FILE__;
- static bool _connectionActive;
- static void hcom_esp32_util_gpio_enter_prog_mode(void);
+static char *thisFile = __FILE__;
+static bool _connectionActive;
+
+static void hcom_esp32_util_gpio_enter_prog_mode(void);
+static void hcom_esp32_util_read_esp32_mac_execute(void);
+static void hcom_esp32_util_restart_esp32_execute(void);
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
 int hcom_esp32_util_setup_lazy()
-{
-  _shutting_down = false;
-  _connectionActive = false;
+{  _connectionActive = false;
   return OK;
 }
 
 //====================================================================
 void hcom_esp32_util_shutdown()
 {
-  _shutting_down = true;
+  _connectionActive = false;
 }
+
+/////////////////////////////////////////////////////////////////////
+// OLD CODE for testing
+#define HCOM_ESP32_HACK_USE_NEW_CODE 0
+#if HCOM_ESP32_HACK_USE_NEW_CODE == 0
+//====================================================================
+// Reboot needed after programming to enter run mode
+int hcom_esp32_util_hardware_restart(void)
+{
+  int ret;
+  
+  _connectionActive = false;
+  
+  // Make sure the boot pin is high then drop the reset pin and raise it (toggle it).
+//#if HCOM_ESP32_ALLOW_BOOT_PIN_TO_BE_INPUT > 0
+  // The boot pin is used for input too so need to config
+  ret = hcom_via_nx_gpio_config(hcom_via_nx_get_fd(), HCOM_NX_GPIO_DIG_ID_ESP_BOOT, HCOM_NX_GPIO_DIGITAL_CONFIG_OUTPUT);
+  if(ret < 0)
+  {
+    hcom_logging_syslog(LOG_ERR, "%s@%d-gpio config 1:%d\n", thisFile, __LINE__, ret);
+    return ret;
+  }
+  usleep(10 * 1000);
+//#endif
+
+  // Insure boot pin is high, if it's low ESP32 will enter Boot Loader Mode
+  ret = hcom_via_nx_gpio_write(hcom_via_nx_get_fd(), HCOM_NX_GPIO_DIG_ID_ESP_BOOT, HCOM_NX_GPIO_DIGITAL_CMD_VALUE_HIGH);
+  if(ret < 0)
+  {
+    hcom_logging_syslog(LOG_ERR, "%s@%d-gpio write 1:%d\n", thisFile, __LINE__, ret);
+    return ret;
+  }
+
+  ret = hcom_via_nx_gpio_write(hcom_via_nx_get_fd(), HCOM_NX_GPIO_DIG_ID_ESP_RESET, HCOM_NX_GPIO_DIGITAL_CMD_VALUE_LOW);
+  if(ret < 0)
+  {
+    hcom_logging_syslog(LOG_ERR, "%s@%d-gpio write 2:%d\n", thisFile, __LINE__, ret);
+    return ret;
+  }
+
+  ret = hcom_via_nx_gpio_write(hcom_via_nx_get_fd(), HCOM_NX_GPIO_DIG_ID_ESP_RESET, HCOM_NX_GPIO_DIGITAL_CMD_VALUE_HIGH);
+  if(ret < 0)
+  {
+    hcom_logging_syslog(LOG_ERR, "%s@%d-gpio write 3:%d\n", thisFile, __LINE__, ret);
+    return ret;
+  }
+
+//#if HCOM_ESP32_ALLOW_BOOT_PIN_TO_BE_INPUT > 0
+  ret = hcom_via_nx_gpio_config(hcom_via_nx_get_fd(), HCOM_NX_GPIO_DIG_ID_ESP_BOOT, HCOM_NX_GPIO_DIGITAL_CONFIG_INPUT);
+  if(ret < 0)
+  {
+    hcom_logging_syslog(LOG_ERR, "%s@%d-gpio config 2:%d\n", thisFile, __LINE__, ret);
+    return ret;
+  }
+//#endif
+  return ret;
+}
+
+//====================================================================
+// The following sequence puts the ESP32 into programming mode
+// This mode is called Boot Loader mode in ESP32 documents
+void hcom_esp32_util_gpio_enter_prog_mode(void)
+{
+  int ret;
+
+  hcom_esp32_recv_start_of_communications();
+
+//#if HCOM_ESP32_ALLOW_BOOT_PIN_TO_BE_INPUT > 0
+  // The boot pin is only used for output when needed
+  ret = hcom_via_nx_gpio_config(hcom_via_nx_get_fd(), HCOM_NX_GPIO_DIG_ID_ESP_BOOT, HCOM_NX_GPIO_DIGITAL_CONFIG_OUTPUT);
+  if(ret < 0)
+  {
+    hcom_logging_syslog(LOG_ERR, "%s@%d-gpio config 1:%d\n", thisFile, __LINE__, ret);
+    return;
+  }
+  usleep(20 * 1000);
+//#endif
+
+  // Pull boot pin low. Then pull reset low and release reset pin. At this
+  // moment the boot pin is read by the ESP32. If low the ESP32 enters bootloader.
+  ret = hcom_via_nx_gpio_write(hcom_via_nx_get_fd(), HCOM_NX_GPIO_DIG_ID_ESP_BOOT, HCOM_NX_GPIO_DIGITAL_CMD_VALUE_LOW);
+  if(ret < 0)
+  {
+    hcom_logging_syslog(LOG_ERR, "%s@%d-gpio write 1:%d\n", thisFile, __LINE__, ret);
+    return;
+  }
+
+  ret = hcom_via_nx_gpio_write(hcom_via_nx_get_fd(), HCOM_NX_GPIO_DIG_ID_ESP_RESET, HCOM_NX_GPIO_DIGITAL_CMD_VALUE_LOW);
+  if(ret < 0)
+  {
+    hcom_logging_syslog(LOG_ERR, "%s@%d-gpio write 2:%d\n", thisFile, __LINE__, ret);
+    return;
+  }
+  usleep(10 * 1000);
+  
+  ret = hcom_via_nx_gpio_write(hcom_via_nx_get_fd(), HCOM_NX_GPIO_DIG_ID_ESP_RESET, HCOM_NX_GPIO_DIGITAL_CMD_VALUE_HIGH);
+  if(ret < 0)
+  {
+    hcom_logging_syslog(LOG_ERR, "%s@%d-gpio write 3:%d\n", thisFile, __LINE__, ret);
+    return;
+  }
+  usleep(20 * 1000);
+
+  // Boot pin's been read by now
+  ret = hcom_via_nx_gpio_write(hcom_via_nx_get_fd(), HCOM_NX_GPIO_DIG_ID_ESP_BOOT, HCOM_NX_GPIO_DIGITAL_CMD_VALUE_HIGH);
+  if(ret < 0)
+  {
+    hcom_logging_syslog(LOG_ERR, "%s@%d-gpio write 4:%d\n", thisFile, __LINE__, ret);
+    return;
+  }
+
+//#if HCOM_ESP32_ALLOW_BOOT_PIN_TO_BE_INPUT > 0
+  ret = hcom_via_nx_gpio_config(hcom_via_nx_get_fd(), HCOM_NX_GPIO_DIG_ID_ESP_BOOT, HCOM_NX_GPIO_DIGITAL_CONFIG_INPUT);
+  if(ret < 0)
+  {
+    hcom_logging_syslog(LOG_ERR, "%s@%d-gpio config 2:%d\n", thisFile, __LINE__, ret);
+    return;
+  }
+//#endif
+}
+#else
+////////////////////////////////////////////////////////////////////
+// New code
+
+// From HCOMs perspective you only need to consider three scenarios:
+// 1. Do I need to start the application?
+// 2. Do I need to program the ESP32
+// 3. Do I need access to the config data for the ESP subsystem (version number etc.)
+//
+// Starting the Application?
+//  - Call espcp_init  and for get it.
+// Or Programming the ESP32?
+//  - Call espcp_enter_programming_mode and then do your stuff.
+// Accessing ESP Config Data?
+// - There is no config data available until you have called espcp_init so the locking
+// methods have nothing to work with (they are going through a null pointer).  This only
+// really makes sense after espcp_init has been called.
 
 //====================================================================
 // Reboot needed after programming to enter run mode
@@ -93,13 +230,15 @@ int hcom_esp32_util_hardware_restart(void)
 {
   int ret;
 
+syslog(1, "====[PID:%d] %s@%d-next calling espcp restart esp32\n", getpid(), thisFile, __LINE__); usleep(20 * 1000);
+
   // The actual code is in espcp_coprocessor.c
   ret = hcom_via_nx_esp32_restart_esp32(hcom_via_nx_get_fd());
-  
   if(ret < 0)
   {
     hcom_logging_syslog(LOG_ERR, "%s@%d-ESP32 restart ret:%d\n", thisFile, __LINE__, ret);
   }
+syslog(1, "====[PID:%d] %s@%d-returned from espcp restart esp32\n", getpid(), thisFile, __LINE__); usleep(20 * 1000);
 
   _connectionActive = false;
   return ret;
@@ -113,13 +252,17 @@ void hcom_esp32_util_gpio_enter_prog_mode(void)
   int ret;
 
   // The actual code is in espcp_coprocessor.c
+syslog(1, "====[PID:%d] %s@%d-next calling espcp enter prog mode\n", getpid(), thisFile, __LINE__); usleep(20 * 1000);
   ret = hcom_via_nx_esp32_enter_prog_mode(hcom_via_nx_get_fd());
   if(ret < 0)
   {
     hcom_logging_syslog(LOG_ERR, "%s@%d-entering prog mode:%d\n", thisFile, __LINE__, ret);
     return;
   }
+syslog(1, "====[PID:%d] %s@%d-returned from espcp enter prog mode\n", getpid(), thisFile, __LINE__); usleep(20 * 1000);
 }
+#endif
+////////////////////////////////////////////////////////////////////
 
 //====================================================================
 // Takes care of the GPIO and sending the synchronization messages.
@@ -127,17 +270,23 @@ void hcom_esp32_util_gpio_enter_prog_mode(void)
 // can be specified.
 int hcom_esp32_util_init_comms_enter_boot_mode()
 {
-#define HCOM_ESP32_MAX_NUMB_CONNECT_ATTEMPTS 40
+#define HCOM_ESP32_MAX_NUMB_CONNECT_ATTEMPTS 60   // TESTING
+// #define HCOM_ESP32_MAX_NUMB_CONNECT_ATTEMPTS 40
   int ret;
   struct HcomEsp32UserRecvdData_s esp32UserMsg[1];
   int currentNumbAttempts = HCOM_ESP32_MAX_NUMB_CONNECT_ATTEMPTS;
 
+syslog(1, "====[PID:%d] %s@%d-Entered enter boot mode\n", getpid(), thisFile, __LINE__); usleep(20 * 1000);
+
   if(_connectionActive)
     return OK;
 
+syslog(1, "====[PID:%d] %s@%d-next uart lazy init\n", getpid(), thisFile, __LINE__); usleep(20 * 1000);
+
+
   // Make sure everything has been initialized. Note: this call will
   // in turn call all the setup_exp32_xxx_xxx_lazy functions. It will
-  // only do this once.
+  // also create a thread to read the data sent from ESP32.
   ret = hcom_esp32_uart_lazy_initialization();
   if(ret < 0)
   {
@@ -145,9 +294,13 @@ int hcom_esp32_util_init_comms_enter_boot_mode()
     return ret;
   }
 
+syslog(1, "====[PID:%d] %s@%d-next hcom_esp32_recv_expect_command_type\n", getpid(), thisFile, __LINE__); usleep(20 * 1000);
+
   hcom_esp32_recv_expect_command_type(Esp32CommandUndefined);
 
-  // Restart the esp32 hardware
+syslog(1, "====[PID:%d] %s@%d-next hcom_esp32_util_hardware_restart\n", getpid(), thisFile, __LINE__); usleep(20 * 1000);
+
+  // Restart the esp32 hardware via gpio
   ret = hcom_esp32_util_hardware_restart();
   if(ret < 0)
   {
@@ -155,15 +308,19 @@ int hcom_esp32_util_init_comms_enter_boot_mode()
     return ret;
   }
 
-  // Put the esp into programming mode
+syslog(1, "====[PID:%d] %s@%d-next hcom_esp32_util_gpio_enter_prog_mode\n", getpid(), thisFile, __LINE__); usleep(20 * 1000);
+
+  // Put the esp into programming mode via gpio
   hcom_esp32_util_gpio_enter_prog_mode();
+
+syslog(1, "====[PID:%d] %s@%d-next sleep for 1.25 seconds\n", getpid(), thisFile, __LINE__); usleep(20 * 1000);
 
   // The esp will send text for about 1.1 seconds so we'll just wait
   usleep(1250 * 1000);
 
+syslog(1, "====[PID:%d] %s@%d-awake - attempt to communication with ESPCP\n", getpid(), thisFile, __LINE__); usleep(20 * 1000);
   // From now on we should only receive binary information. Send sync commands
   // until esp32 responds by echoing the sync command.
-
   do
   {
     currentNumbAttempts--;  // Attempts vary from 1 to n.
@@ -171,6 +328,7 @@ int hcom_esp32_util_init_comms_enter_boot_mode()
     // 100 ms seems to be a reasonable compromise. Much faster and ESP32 never responses
     // (it's probably too busy handling these commands) and slower just takes longer to
     // sync
+    // This function returns ret >= 0 if we receive the expected response
     ret = hcom_esp32_xmit_build_and_send_msg(hcom_esp_sync_msg, sizeof(hcom_esp_sync_msg),
             Esp32CommandSynchronise, HCOM_ESP_XMIT_CONNECT_DELAY_MS, esp32UserMsg);
     if(ret >= 0)
@@ -179,8 +337,8 @@ int hcom_esp32_util_init_comms_enter_boot_mode()
     }
     else if(ret == -ETIMEDOUT)
     {
-      hcom_logging_syslog(LOG_INFO, "%s@%d-Xmit timed out after %d ms, %d retries remain\n",
-                thisFile, __LINE__, HCOM_ESP_XMIT_CONNECT_DELAY_MS, currentNumbAttempts);
+      // hcom_logging_syslog(LOG_INFO, "%s@%d-Xmit timed out after %d ms, %d retries remain\n",
+      //           thisFile, __LINE__, HCOM_ESP_XMIT_CONNECT_DELAY_MS, currentNumbAttempts);
       continue;     // try again
     }
     else
@@ -194,13 +352,18 @@ int hcom_esp32_util_init_comms_enter_boot_mode()
   currentNumbAttempts--;   // if no attempts left return -1
   if(currentNumbAttempts == -1)
   {
+    syslog(1, "====[PID:%d] %s@%d-FAILED communication with ESP\n", getpid(), thisFile, __LINE__); usleep(10 * 1000);
     hcom_logging_syslog(LOG_ERR, "%s@%d-No connection after %d attempts\n", thisFile, __LINE__,
               HCOM_ESP32_MAX_NUMB_CONNECT_ATTEMPTS);
   }
   else
   {
-    _connectionActive = true;    
-    // Give time for the other 7 responses to be received before
+    int attempts = HCOM_ESP32_MAX_NUMB_CONNECT_ATTEMPTS - currentNumbAttempts;
+    syslog(1, "====[PID:%d] %s@%d-SUCCESS communication with ESP after %d attempts\n",
+              getpid(), thisFile, __LINE__, attempts); usleep(10 * 1000);
+
+    _connectionActive = true;
+    // Give time for the other 7 sync responses to be received before
     // allowing the command to be processed
     usleep(100 * 1000);
   }
@@ -250,6 +413,14 @@ int hcom_esp32_util_write_register(uint32_t regAddr, uint32_t regValue)
 // Host command to restart the ESP32 arrives here
 void hcom_esp32_util_restart_esp32(uint32_t userData)
 {
+  hcom_esp32_util_restart_esp32_execute();
+  hcom_esp32_command_completed();
+}
+
+//====================================================================
+// Host command to restart the ESP32 arrives here
+void hcom_esp32_util_restart_esp32_execute()
+{
   int ret;
   int stringLen;
   char hostMsg[HCOM_SHORT_HOST_STRING_BUFF_LENGTH];
@@ -282,11 +453,21 @@ void hcom_esp32_util_restart_esp32(uint32_t userData)
 // Host command to read the ESP32's Mac address arrives here
 void hcom_esp32_util_read_esp32_mac(uint32_t userData)
 {
+  hcom_esp32_util_read_esp32_mac_execute();
+  hcom_esp32_command_completed();
+}
+
+//====================================================================
+// Read the ESP32's Mac address executes here
+void hcom_esp32_util_read_esp32_mac_execute()
+{
   int ret;
   int stringLen;  
   uint32_t chipIdInfo;
   uint32_t chipMac1;
   uint32_t chipMac2;
+
+  syslog(1, "====[PID:%d] %s@%d-ENTRY-->READ MAC\n", getpid(), thisFile, __LINE__); usleep(20 * 1000);
 
   if(hcom_mono_ctrl_is_mono_enabled())
   {
@@ -299,6 +480,7 @@ void hcom_esp32_util_read_esp32_mac(uint32_t userData)
     return;
   }
 
+  syslog(1, "====[PID:%d] %s@%d-READ MAC-Calling-->enter boot mode\n", getpid(), thisFile, __LINE__); usleep(20 * 1000);
   ret = hcom_esp32_util_init_comms_enter_boot_mode();
   if(ret < 0)
   {

@@ -56,7 +56,6 @@
  ****************************************************************************/
 static char *thisFile = __FILE__;
 
-static bool _shutting_down;
 static uint32_t _espSeqNumb;
 static size_t _totalSizeOfDownload;
 static uint32_t _targetAddr;
@@ -77,8 +76,6 @@ static uint32_t hcom_esp32_exec_era_time_per_mega_byte(size_t xmit_size);
 
 int hcom_esp32_exec_setup_lazy()
 {
-  _shutting_down = false;
-
   // We'll assemble multiple hcom downloads into this buffer.
  _downloadBuffer = malloc(HCOM_ESP32_LONGEST_FLASH_MSG_LENGTH);
   DEBUGASSERT(_downloadBuffer != NULL);
@@ -89,7 +86,6 @@ int hcom_esp32_exec_setup_lazy()
 //====================================================================
 void hcom_esp32_exec_shutdown()
 {
-  _shutting_down = true;
   free(_downloadBuffer);
 }
 
@@ -366,7 +362,7 @@ int hcom_esp32_exec_add_flash_data(const uint8_t *packet, const size_t packetSiz
 }
 
 //====================================================================
-// The data in the packets is actually downloaed here.
+// The data in the packets is actually downloaded here.
 int hcom_esp32_exec_buffer_to_esp32(uint8_t *downloadData, size_t dnldDataSize, bool isLastDownload)
 {
   int ret;
@@ -503,6 +499,8 @@ int hcom_esp32_exec_add_flash_end()
 
   DEBUGASSERT(recvdData.espHdr.direction == 1);
   DEBUGASSERT(recvdData.espHdr.command == Esp32CommandFlashEnd);
+
+  hcom_esp32_command_completed();
 
   ret = hcom_esp32_util_hardware_restart();
   if(ret < 0)

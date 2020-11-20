@@ -62,10 +62,6 @@
 
 #define HCOM_ESP32_ALLOW_BOOT_PIN_TO_BE_INPUT 1
 
-// GPIO for controlling ESP32 enable and boot pins
-#define HCOM_ESP32_DIGITAL_OUTPUT_STATE_LOW false   // For open drain this is N-MOS on
-#define HCOM_ESP32_DIGITAL_OUTPUT_STATE_HIGH true   // For open drain this is N-MOS off
-
 struct hcom_esp32_cir_buffer_s
 {
   uint8_t *bottom; // bottom of buffer
@@ -289,6 +285,7 @@ enum Esp32Registers
   void hcom_esp32_recv_shutdown(void);
   int hcom_esp32_recv_handle_data(uint8_t *esp32_read_buffer, ssize_t readReturn);
   void hcom_esp32_recv_expect_command_type(uint8_t expectCommand);
+  void hcom_esp32_recv_start_of_communications(void);
 
   // ESP32 Transmit data processing
   int hcom_esp32_xmit_setup_lazy(void);
@@ -305,5 +302,6 @@ enum Esp32Registers
   int hcom_esp32_util_write_register(uint32_t regAddr, uint32_t regValue);
   char *hcom_esp32_util_convert_esp32_cmd_to_string(uint8_t cmd);
   int hcom_esp32_util_hardware_restart(void);
+  void hcom_esp32_command_completed(void);
 
 #endif // __CONFIGS_MEADOW_SRC_HCOM_ESP32_COMMON__H

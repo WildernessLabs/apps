@@ -40,6 +40,8 @@
 #include "../hcom_common.h"
 #include <meadow/hcom_protocol.h>
 
+#include <nuttx/config.h>
+
 
 #if defined (CONFIG_HCOM_ESP32_COMMS)
 #include "../esp32/hcom_esp32_comms.h"
@@ -89,8 +91,8 @@ void hcom_host_route_request_by_type(const uint8_t *recvOrigData, const size_t r
   {
     char hostMsg[HCOM_SHORT_HOST_STRING_BUFF_LENGTH];
     int stringLen = snprintf(hostMsg, HCOM_SHORT_HOST_STRING_BUFF_LENGTH, 
-          "Meadow is expecting a newer CLI version. Please update your connecting computer." \
-          " (version received::%04x needed:%04x).",
+          "Meadow is expecting a newer CLI Protocol version. Please update Meadow.CLI on your connecting computer." \
+          " (version received::%04x required:%04x).",
           protocolVersion, (uint16_t)HCOM_PROTOCOL_HCOM_VERSION_NUMBER);
 
     DEBUGASSERT(stringLen < HCOM_SHORT_HOST_STRING_BUFF_LENGTH);
@@ -115,6 +117,9 @@ void hcom_host_route_request_by_type(const uint8_t *recvOrigData, const size_t r
 
   hcom_logging_syslog(LOG_DEBUG, "-->Received %d bytes after header. Request Type:0x%04x\n",
             recvPayloadSize, requestType);
+
+  syslog(1, "-->[PID:%d]-Received %d bytes after header. Request Type:0x%04x\n",
+            getpid(), recvPayloadSize, requestType); usleep(10 * 1000);
 
   switch (requestType)
   {

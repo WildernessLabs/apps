@@ -322,9 +322,10 @@ extern "C"
   int hcom_via_nx_restart_meadow(int nx_access_fd);
   int hcom_via_nx_get_mcu_id(int nx_access_fd, uint8_t uniqueId[12]);
   int hcom_via_nx_get_mcu_ser_numb(int nx_access_fd, char mcuSerNumb[16]);
-  int hcom_via_nx_esp32_enter_prog_mode(int nx_access_fd);
   void hcom_via_nx_restore_uart_reconfig(int nx_access_fd, uint32_t uartId);
+  int hcom_via_nx_esp32_enter_prog_mode(int nx_access_fd);
   int hcom_via_nx_esp32_restart_esp32(int nx_access_fd);
+  int hcom_via_nx_start_espcp_running(int nx_access_fd);
   void hcom_via_nx_diag_fd_inode(int nx_access_fd, int fd);
   void hcom_via_nx_diag_fd_inode_read(int nx_access_fd, int fd, struct inode **inodeOut);
   int hcom_via_nx_gpio_config(int nx_access_fd, int gpioHcomId, uint8_t configValue);
@@ -332,6 +333,7 @@ extern "C"
   int hcom_via_nx_diag_gpio_config(int nx_access_fd, int gpioHcomId, uint8_t configValue);
   int hcom_via_nx_diag_gpio_write(int nx_access_fd, int gpioHcomId, uint8_t cmdValue);
   int hcom_via_nx_diag_gpio_write_byte(int nx_access_fd, uint8_t byteValue, uint8_t rangeId);
+  int hcom_via_nx_diag_gpio_make_defns(int nx_access_fd);
 
   void hcom_via_nx_forward_cli_cmd_to_nx(int nx_access_fd, uint16_t hcomCmd, uint32_t userData);
   bool hcom_via_nx_is_mounted(int nx_access_fd, uint32_t partitionId);
@@ -378,7 +380,8 @@ extern "C"
 
 #if HCOM_INCLUDE_IN_BUILD_DIAGNOSTIC_GPIO_CODE > 0
   int hcom_diag_gpio_setup(void);
-  int hcom_diag_gpio_config_all_as_output(void);
+  int hcom_diag_gpio_config_first_10_as_output(void);
+  int hcom_diag_gpio_config_D03_to_D10_as_output(void);
   int hcom_diag_gpio_config_one_output(int gpioHcomId);
   int hcom_diag_gpio_output_cmd_led(int ledNumber, bool turnOn);
   int hcom_diag_gpio_write_byte(uint8_t byteValue, uint8_t rangeId);

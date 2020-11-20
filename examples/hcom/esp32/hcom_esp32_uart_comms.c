@@ -36,16 +36,11 @@
 /****************************************************************************
  * Included Files
  ****************************************************************************/
-#define USE_PTHREAD_MUTEX_NOT_SEMAPHORE 0
 
 #include "../hcom_common.h"
 #include "hcom_esp32_comms.h"
 
 #include <nuttx/board.h>
-
-#if USE_PTHREAD_MUTEX_NOT_SEMAPHORE > 0
-#include <pthread.h>
-#endif
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -70,13 +65,7 @@ static char *thisFile = __FILE__;
 static bool _shutting_down;
 static int _esp32_read_fd;
 static int _esp32_write_fd;
-
-#if USE_PTHREAD_MUTEX_NOT_SEMAPHORE > 0
-static pthread_mutex_t mutex;
-static pthread_cond_t  cond;
-#else
 static sem_t _initalizeWaitSem;    /* Implements event waiting */
-#endif
 
 static uint8_t *esp32_read_buffer;
 static bool _esp_uart_initialized;
@@ -105,18 +94,75 @@ int hcom_esp32_uart_comms_setup()
   _esp32_write_fd = -1;
   _esp32_read_fd = -1;
 
+////////////////////////////////////////////
+// p-m THIS IS TEMPORARY UNTIL MARK'S CODE IS PUT INTO SERVICE
+  // Only configured here and left as output
+  int ret;
+  ret = hcom_via_nx_gpio_config(hcom_via_nx_get_fd(),HCOM_NX_GPIO_DIG_ID_ESP_RESET, HCOM_NX_GPIO_DIGITAL_CONFIG_OUTPUT);
+  if(ret < 0)                 
+  {
+    hcom_logging_syslog(LOG_CRIT, "%s@%d-gpio config:%d\n", thisFile, __LINE__, ret);
+    return ret;
+  }
+  
+  ret = hcom_via_nx_gpio_write(hcom_via_nx_get_fd(),HCOM_NX_GPIO_DIG_ID_ESP_RESET, HCOM_NX_GPIO_DIGITAL_CMD_VALUE_HIGH);
+  if(ret < 0)
+  {
+    hcom_logging_syslog(LOG_ERR, "%s@%d-gpio write:%d\n", thisFile, __LINE__, ret);
+    return ret;
+  }
+
+#if HCOM_ESP32_ALLOW_BOOT_PIN_TO_BE_INPUT > 0
+  // The boot pin needs to be an output for the operations of this module. However,
+  // the the boot pin servers as an input in other places. So, by default we leave
+  // it configured as an input pin unless needed.
+  ret = hcom_via_nx_gpio_config(hcom_via_nx_get_fd(),HCOM_NX_GPIO_DIG_ID_ESP_BOOT, HCOM_NX_GPIO_DIGITAL_CONFIG_INPUT);
+  if(ret < 0)
+  {
+    hcom_logging_syslog(LOG_CRIT, "%s@%d-gpio config:%d\n", thisFile, __LINE__, ret);
+    return ret;
+  }
+#else
+  // This is the only place this gpio is configured
+  ret = hcom_via_nx_gpio_config(hcom_via_nx_get_fd(),HCOM_NX_GPIO_DIG_ID_ESP_BOOT, HCOM_NX_GPIO_DIGITAL_CONFIG_OUTPUT);
+  if(ret < 0)
+  {
+    hcom_logging_syslog(LOG_CRIT, "%s@%d-gpio config:%d\n", thisFile, __LINE__, ret);
+    return ret;
+  }
+#endif
+
+///////////////////////////////////////////
   return OK;
+}
+
+//====================================================================
+// This is called after every command has finished. It will stop the
+// receive thread since the ESP32 constantly sends text when not
+// communicating with binary data.
+void hcom_esp32_command_completed()
+{
+  syslog(1, "***** Entered command complete\n");
+  usleep(20 * 1000);
+  hcom_esp32_uart_comms_shutdown();
+  syslog(1, "***** EVERYTHING HAS STOPPED\n");
+  usleep(20 * 1000);
 }
 
 //====================================================================
 void hcom_esp32_uart_comms_shutdown()
 {
-  _shutting_down = true;
-
+  syslog(1, "***** 1a shutdown\n"); usleep(20 * 1000);
+  _shutting_down = true;  // Stop local thread
+  syslog(1, "***** 1b shutdown\n"); usleep(20 * 1000);
   hcom_esp32_recv_shutdown();
+  syslog(1, "***** 2 shutdown\n"); usleep(20 * 1000);
   hcom_esp32_xmit_shutdown();
+  syslog(1, "***** 3 shutdown\n"); usleep(20 * 1000);
   hcom_esp32_exec_shutdown();
+  syslog(1, "***** 4 shutdown\n"); usleep(20 * 1000);
   hcom_esp32_util_shutdown();
+  syslog(1, "***** 5 shutdown\n"); usleep(20 * 1000);
 
   if(_esp32_read_fd > -1)
   {
@@ -131,24 +177,32 @@ void hcom_esp32_uart_comms_shutdown()
   }
 
   if(esp32_read_buffer != NULL)
-    free(esp32_read_buffer);
+     free(esp32_read_buffer);
+
+  _esp_uart_initialized = false;
+  _init_failed = 0;
+  _shutting_down = false;
+  _esp32_write_fd = -1;
+  _esp32_read_fd = -1;
+
+  syslog(1, "***** 7 shutdown\n"); usleep(20 * 1000);
 }
 
-#if USE_PTHREAD_MUTEX_NOT_SEMAPHORE < 1
 //===================================================================================
 // Wait for the thread holding semaphore to release it
-static void hcom_esp32_uart_takesem(void)
+static void hcom_esp32_uart_takesem(sem_t *semaphore)
 {
   int ret;
+  DEBUGASSERT(semaphore != NULL);
+
   do
   {
-    ret = sem_wait(&_initalizeWaitSem);    // Take the semaphore (perhaps waiting)
+    ret = sem_wait(semaphore);    // Take the semaphore (perhaps waiting)
     // The only case that an error should occur here is if the wait was awakened by a signal
     DEBUGASSERT(ret == OK || ret == -EINTR);
   }
   while (ret == -EINTR);
 }
-#endif
 
 //====================================================================
 // This initialize is done by the hcom caller
@@ -157,7 +211,7 @@ static void hcom_esp32_uart_takesem(void)
 int hcom_esp32_uart_lazy_initialization()
 {
   int ret;
-  
+
   // Already initialized?
   if(_esp_uart_initialized)
   {
@@ -177,31 +231,11 @@ int hcom_esp32_uart_lazy_initialization()
     return -ENOMEM;
   }
 
-//----
-#if USE_PTHREAD_MUTEX_NOT_SEMAPHORE > 0
-  syslog(1, "cond_test: Initializing mutex\n");
-  int status = pthread_mutex_init(&mutex, NULL);
-  if (status != 0)
-  {
-    syslog(1, "cond_test: ERROR pthread_mutex_init failed, status=%d\n", status);
-  }
-
-  /* Initialize the condition variable */
-
-  syslog(1, "cond_test: Initializing cond\n");
-  status = pthread_cond_init(&cond, NULL);
-  if (status != 0)
-  {
-    syslog(1, "cond_test: ERROR pthread_condinit failed, status=%d\n", status);
-  }
-//----
-#else
   // Initialize value to 0 for a 'signaling' semaphore to block
   // initially the calling thread until it is safe for it to proceed.
   sem_init(&_initalizeWaitSem, 0, 0);
   // Special non-standard nuttx function required for signaling semaphores
   sem_setprotocol(&_initalizeWaitSem, SEM_PRIO_NONE);
-#endif
 
   // Setup all the subordinate modules
   ret = hcom_esp32_recv_setup_lazy();
@@ -242,67 +276,19 @@ int hcom_esp32_uart_lazy_initialization()
     return ret;
   }
 
-#if USE_PTHREAD_MUTEX_NOT_SEMAPHORE > 0
-  // Lock
-  status = pthread_mutex_lock(&mutex);
-  if (status != 0)
-  {
-    syslog(1, "waiter_thread: ERROR pthread_mutex_lock failed, status=%d\n", status);
-  }
-
-  // WAIT. When the condition is met we'll wake up
-  syslog(1, "=== PID:%d %s@%d-WAITING\n", getpid(), thisFile, __LINE__);
-  status = pthread_cond_wait(&cond, &mutex);
-  syslog(1, "=== PID:%d %s@%d-NO LONGER WAITING\n", getpid(), thisFile, __LINE__);
-
-  // Unlock
-  status = pthread_mutex_unlock(&mutex);
-  if (status != 0)
-  {
-    syslog(1, "waiter_thread: ERROR waiter: pthread_mutex_unlock failed, status=%d\n", status);
-  }
-
-  syslog(1, "=== PID:%d %s@%d-Cond Destroy\n", getpid(), thisFile, __LINE__);
-  pthread_cond_destroy(&cond);   // p-m
-  syslog(1, "=== PID:%d %s@%d-Mutex Destroy\n", getpid(), thisFile, __LINE__);
-  pthread_mutex_destroy(&mutex);   // p-m
-  sleep(2);
-  syslog(1, "=== PID:%d %s@%d-Still Alive after 2 seconds.\n", getpid(), thisFile, __LINE__);
-#else
+  syslog(1, "====[PID:%d] %s@%d-Waiting for esp to open serial port\n",
+                    getpid(), thisFile, __LINE__); usleep(20 * 1000);
+                  
   // Wait for the new thread to finish its initialization before continuing.
-  hcom_esp32_uart_takesem();   // sem_wait(&_initalizeWaitSem)
+  hcom_esp32_uart_takesem(&_initalizeWaitSem);
+  syslog(1, "====[PID:%d] %s@%d-sem_destroy being called\n",
+                    getpid(), thisFile, __LINE__); usleep(20 * 1000);
 
   // This semaphore has done it's job
-  syslog(1, "=== PID:%d %s@%d-calling Semaphore Destroy\n", getpid(), thisFile, __LINE__);
   sem_destroy(&_initalizeWaitSem);
-  sleep(2);
-  syslog(1, "=== PID:%d %s@%d-Still Alive after 2 seconds.\n", getpid(), thisFile, __LINE__);
-#endif
-  return OK;
-}
 
-//=============================================================
-// This initialiation is done by the thread created to receive from ESP32
-int hcom_esp32_uart_open_serial_ports()
-{
-  // Open the uart for read
-  _esp32_read_fd = open(HCOM_ESP32_FLASH_UART_DEV_NAME, O_RDONLY);
-  if (_esp32_read_fd == -1)
-  {
-    hcom_logging_syslog(LOG_ERR, "%s@%d-open of %s for read failed. errno:%d\n", thisFile, __LINE__,
-        HCOM_ESP32_FLASH_UART_DEV_NAME, errno);
-    return -errno;
-  }
-
-  // Open the uart for send
-  _esp32_write_fd = open(HCOM_ESP32_FLASH_UART_DEV_NAME, O_WRONLY);
-  if (_esp32_write_fd == -1)
-  {
-    hcom_logging_syslog(LOG_ERR, "%s@%d-open of %s for write failed. errno:%d\n", thisFile, __LINE__,
-        HCOM_ESP32_FLASH_UART_DEV_NAME, errno);
-    return -errno;
-  }
-
+  syslog(1, "====[PID:%d] %s@%d-Thread continues to excute esp32 command\n",
+                    getpid(), thisFile, __LINE__); usleep(20 * 1000);
   return OK;
 }
 
@@ -338,55 +324,23 @@ FAR void *hcom_esp32_uart_comms_pthread(FAR void *arg)
   syslog(1, "New pthread [PID:%d],'%s'\n", getpid(), HCOM_THREAD_NAME_ESP32_RECEIVE);
 #endif
 
+  // p-m Why only one chance to open serial port?
   ret = hcom_esp32_uart_open_serial_ports();
   if(ret < 0)
   {
-    hcom_logging_syslog(LOG_ERR, "%s@%d-phase 2 initialization failed\n", thisFile, __LINE__);
-    // Error noted
+    hcom_logging_syslog(LOG_ERR, "%s@%d-open serial port failed\n", thisFile, __LINE__);
     _init_failed = ret;
-    syslog(1, "=== PID:%d %s@%d-ERROR cannot open ports\n", getpid(), thisFile, __LINE__);
-#if USE_PTHREAD_MUTEX_NOT_SEMAPHORE > 0
-    pthread_mutex_unlock(&mutex);
-#else
     sem_post(&_initalizeWaitSem);  // Allow hcom thread to proceed
-#endif
     return NULL; //  This will terminate this thread
   }
 
-//------
-#if USE_PTHREAD_MUTEX_NOT_SEMAPHORE > 0
-  int status = pthread_mutex_lock(&mutex);
-  if (status != 0)
-  {
-    syslog(1, "thread_signaler: ERROR pthread_mutex_lock failed, status=%d\n", status);
-  }
-
-  // SIGNAL the waiting thread to wake up
-  syslog(1, "=== PID:%d %s@%d-SIGNALING WAITER\n", getpid(), thisFile, __LINE__);
-  status = pthread_cond_signal(&cond);
-  if (status != 0)
-  {
-    syslog(1, "thread_signaler: ERROR pthread_cond_signal failed, status=%d\n", status);
-  }
-
-  /* Release the mutex */
-  status = pthread_mutex_unlock(&mutex);
-  if (status != 0)
-  {
-    syslog(1, "thread_signaler: ERROR pthread_mutex_unlock failed, status=%d\n", status);
-  }
-
-//------
-
-  // Thread created and initialization successful. Therefore,
-  // we can free the hcom thread to continue.
-  syslog(1, "=== PID:%d %s@%d-Mutex unlock\n", getpid(), thisFile, __LINE__);
-  pthread_mutex_unlock(&mutex);
-#else
+  // Thread created and initialization successful
   sem_post(&_initalizeWaitSem);  // Allow hcom thread to proceed
-#endif
-  // Allow hcom thread to start before using this thread
-  // This may not be needed on the apps side of things
+
+  // Allow hcom thread to start before using this thread. Without
+  // this delay this thread start receiving ascii from ESP32 before
+  // we are ready to do anything with it.
+  // Consider something more deterministic?
   usleep(500 * 1000);
 
   while(!_shutting_down)
@@ -398,7 +352,38 @@ FAR void *hcom_esp32_uart_comms_pthread(FAR void *arg)
     }
   }
 
+  sleep(2);
+  syslog(1, "ESP32 receive thread, exiting. Why? _shutting_down is true\n"); usleep(20 * 1000);
   return NULL;
+}
+
+//=============================================================
+// This initialiation is done by the thread created to receive from ESP32
+int hcom_esp32_uart_open_serial_ports()
+{
+  syslog(1, "====[PID:%d]-%s@%d-Opening serial port for read\n", getpid(), thisFile, __LINE__);
+
+  // Open the uart for read
+  _esp32_read_fd = open(HCOM_ESP32_FLASH_UART_DEV_NAME, O_RDONLY);
+  if (_esp32_read_fd == -1)
+  {
+    hcom_logging_syslog(LOG_ERR, "%s@%d-open of %s for read failed. errno:%d\n", thisFile, __LINE__,
+        HCOM_ESP32_FLASH_UART_DEV_NAME, errno);
+    return -errno;
+  }
+
+  syslog(1, "====[PID:%d]-%s@%d-Opening serial port for write\n", getpid(), thisFile, __LINE__);
+  // Open the uart for send
+  _esp32_write_fd = open(HCOM_ESP32_FLASH_UART_DEV_NAME, O_WRONLY);
+  if (_esp32_write_fd == -1)
+  {
+    hcom_logging_syslog(LOG_ERR, "%s@%d-open of %s for write failed. errno:%d\n", thisFile, __LINE__,
+        HCOM_ESP32_FLASH_UART_DEV_NAME, errno);
+    return -errno;
+  }
+
+  syslog(1, "====[PID:%d]-%s@%d-Opened serial port\n", getpid(), thisFile, __LINE__);
+  return OK;
 }
 
 //====================================================================
@@ -407,10 +392,15 @@ int hcom_esp32_uart_comms_read_serial_loop()
 {
   ssize_t readReturn;
 
+  // syslog(1, "====[PID:%d]-%s@%d-Entered read ESP32 serial, loop\n", getpid(), thisFile, __LINE__); usleep(10 * 1000);
+
   // Read uart
   while (!_shutting_down)
   {
     readReturn = read(_esp32_read_fd, esp32_read_buffer, HCOM_ESP32_FLASH_UART_READ_BUF_SIZE);
+    if(_shutting_down)
+      break;
+
     if (readReturn < 0 )
     {
       hcom_logging_syslog(LOG_ERR, "%s@%d-esp read ret:%d, errno:%d\n", thisFile, __LINE__,
@@ -420,12 +410,14 @@ int hcom_esp32_uart_comms_read_serial_loop()
     
     if (readReturn == 0)    // EOF
     {
+      // syslog(1, "====[PID:%d]-%s@%d-Read EOF from ESP32 serial port\n", getpid(), thisFile, __LINE__); usleep(10 * 1000);
       hcom_logging_syslog(LOG_WARNING, "%s@%d-UART read=0 (EOF)\n", thisFile, __LINE__);
       sleep(1);
       continue;
     }
     else
     {
+      // syslog(1, "====[PID:%d]-%s@%d-Read %d bytes from ESP32 serial port\n", getpid(), thisFile, __LINE__, readReturn); usleep(10 * 1000);
       int ret = hcom_esp32_recv_handle_data(esp32_read_buffer, readReturn);
       if(ret < 0)
       {
@@ -466,4 +458,3 @@ int hcom_esp32_uart_comms_write_serial(uint8_t* espWriteBuf, size_t espWriteSize
   }
   return writeRet;
 }
-
