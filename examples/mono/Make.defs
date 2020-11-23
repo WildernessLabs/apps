@@ -36,20 +36,20 @@
 
 ifeq ($(CONFIG_EXAMPLES_MONO),y)
   CONFIGURED_APPS += examples/mono
-  MONO_DIR = $(TOPDIR)/../mono/mono
-  MONO_AOBJS = $(MONO_DIR)/sgen/.libs/libmonosgen.a \
-               $(MONO_DIR)/mini/.libs/libmini.a \
-               $(MONO_DIR)/mini/.libs/libmono-dbg.a \
-               $(MONO_DIR)/mini/.libs/libmono-ee-interp.a \
-               $(MONO_DIR)/eglib/.libs/libeglib.a \
-               $(MONO_DIR)/metadata/.libs/libmonoruntime-config.a \
-               $(MONO_DIR)/metadata/.libs/libmonoruntimesgen.a \
-               $(MONO_DIR)/utils/.libs/libmonoutils.a
+  MONO_DIR = $(TOPDIR)/../mono-bin/native
+  MONO_AOBJS = $(MONO_DIR)/libmonosgen.a \
+               $(MONO_DIR)/libmini.a \
+               $(MONO_DIR)/libmono-dbg.a \
+               $(MONO_DIR)/libmono-ee-interp.a \
+               $(MONO_DIR)/libeglib.a \
+               $(MONO_DIR)/libmonoruntime-config.a \
+               $(MONO_DIR)/libmonoruntimesgen.a \
+               $(MONO_DIR)/libmonoutils.a
   ifeq ($(ENABLE_NETCORE),1)
     MONO_AOBJS += $(MONO_DIR)/../../runtime/src/libraries/Native/build/System.Native/System.Native.a
   else
-    MONO_AOBJS += $(MONO_DIR)/dis/libmonodis.a \
-                  $(MONO_DIR)/native/.libs/libmono-native.a
+    MONO_AOBJS += $(MONO_DIR)/libmonodis.a \
+                  $(MONO_DIR)/libmono-native.a
   endif
   MONO_LIBM=
 else
