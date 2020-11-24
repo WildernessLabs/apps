@@ -65,7 +65,7 @@
 static char *thisFile = __FILE__;
 
 static int _currentHcomDataPacketAction;
-static bool _fileSystemOpenFailed;
+static bool _initFileSysError;
 static bool _fileDownloadFailedNoted;
 
 static char *_fileNameBuffer;               // F7 Flash file system
@@ -136,7 +136,7 @@ void hcom_file_dnld_proc_flash_file_sys_begin(const uint8_t *recvPacketData,
   _lastPercentSent = 0;
   _xferCalcFullFileSize = 0;
   _xferMeadowCalcCrc = 0; // Setup for checksum calculation of orig file
-  _fileSystemOpenFailed = false;
+  _initFileSysError = false;
   _fileDownloadFailedNoted = false;
   _fileNameBuffer = NULL;
   
@@ -175,12 +175,12 @@ void hcom_file_dnld_proc_flash_file_sys_begin(const uint8_t *recvPacketData,
   ret = hcom_file_write_del_open_active_file(partitionId, HCOM_FILE_MOUNT_POINT_TARGET, _fileNameBuffer);
   if (ret < 0)
   {
-    _fileSystemOpenFailed = true;
+    _initFileSysError = true;
     _currentHcomDataPacketAction = HcomDnldActionNone;
     hcom_logging_syslog(LOG_ERR, "%s@%d-from call to open file in flash:%d\n", thisFile, __LINE__, ret);
   }
 
-  if (_fileSystemOpenFailed)
+  if (_initFileSysError)
     stringLen = snprintf(hostMsg, HCOM_SHORT_HOST_STRING_BUFF_LENGTH,
           "File download to Meadow failed to start for '%s'", _fileNameBuffer);
   else
@@ -202,13 +202,28 @@ void hcom_file_dnld_proc_esp32_flash_begin(const uint8_t *recvPacketData,
   char hostMsg[HCOM_SHORT_HOST_STRING_BUFF_LENGTH];
   int stringLen = 0;
 
-  DEBUGASSERT(requestType == HCOM_MDOW_REQUEST_START_ESP_FILE_TRANSFER);
-
   _lastPercentSent = 0;
   _xferCalcFullFileSize = 0;
-  _fileSystemOpenFailed = false;
+  _initFileSysError = false;
   _fileDownloadFailedNoted = false;
   _fileNameBuffer = NULL;
+
+  DEBUGASSERT(requestType == HCOM_MDOW_REQUEST_START_ESP_FILE_TRANSFER);
+
+  // Verify that mono has been disabled
+  if(hcom_mono_ctrl_is_mono_enabled())
+  {
+    stringLen = snprintf(hostMsg, HCOM_SHORT_HOST_STRING_BUFF_LENGTH,
+            "Mono must be disabled for ESP32 file download");
+    hcom_logging_syslog(LOG_ERR, "%s@%d-%s\n", thisFile, __LINE__, hostMsg);
+    
+    DEBUGASSERT(stringLen < HCOM_SHORT_HOST_STRING_BUFF_LENGTH);
+    hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_ERROR, 0,
+            hostMsg, thisFile, __LINE__);
+            
+    _initFileSysError = true;
+    return;
+  }
 
 #if HCOM_RECV_DEBUG_TIMING
   _dbgReceptionBeganAt = hcom_utils_get_current_time64();
@@ -240,12 +255,12 @@ void hcom_file_dnld_proc_esp32_flash_begin(const uint8_t *recvPacketData,
   ret = hcom_esp32_exec_download_flash_start(_xferRecvFullFileSize, _xferTargetMcuAddr);
   if (ret < 0)
   {
-    _fileSystemOpenFailed = true;
+    _initFileSysError = true;
     _currentHcomDataPacketAction = HcomDnldActionNone;
     hcom_logging_syslog(LOG_ERR, "%s@%d-download flash start transfer:%d\n", thisFile, __LINE__, ret);
   }
 
-  if (_fileSystemOpenFailed)
+  if (_initFileSysError)
     stringLen = snprintf(hostMsg, HCOM_SHORT_HOST_STRING_BUFF_LENGTH,
           "File download to ESP32 flash at '0x%08x' did not begin", _xferTargetMcuAddr);
   else
@@ -266,7 +281,7 @@ void hcom_file_dnld_proc_recvd_file_data(const uint8_t *packet, const size_t pac
   int ret;
   int msgOffset = sizeof(uint16_t); // size of sequence number
 
-  if (_fileSystemOpenFailed)
+  if (_initFileSysError)
   {
     if(!_fileDownloadFailedNoted)
     {
@@ -347,14 +362,10 @@ void hcom_file_dnld_proc_flash_file_sys_end(uint32_t userData)
   char *sendMsgToHost;
   int stringLen = 0;
   uint16_t requestType;
-  
-  hcom_logging_syslog(LOG_NOTICE, "End of file transfer\n");
-
-  DEBUGASSERT(_currentHcomDataPacketAction == HcomDnldActionMeadowFileXfer);
 
   // At present the CLI isn't smart enough to know that continuing to send data
   // when the file could not be opened is a waste of time.
-  if (_fileSystemOpenFailed)
+  if (_initFileSysError)
   {
     if(_fileNameBuffer != NULL)
     {
@@ -363,6 +374,10 @@ void hcom_file_dnld_proc_flash_file_sys_end(uint32_t userData)
     }
     return;
   }
+
+  hcom_logging_syslog(LOG_NOTICE, "End of file transfer\n");
+
+  DEBUGASSERT(_currentHcomDataPacketAction == HcomDnldActionMeadowFileXfer);
 
   ret = hcom_file_write_del_close_active_file();
   if (ret < 0)
@@ -440,6 +455,13 @@ void hcom_file_dnld_proc_esp32_flash_end(uint32_t userData)
   bool lastFile = userData == 1 ? true : false;
   int stringLen = 0;
   uint16_t requestType;
+
+  // At present the CLI isn't smart enough to know that continuing to send data
+  // when the file could not be opened is a waste of time.
+  if(_initFileSysError)
+  {
+    return;
+  }
 
   hcom_logging_syslog(LOG_NOTICE, "End of ESP32 transfer\n");
 

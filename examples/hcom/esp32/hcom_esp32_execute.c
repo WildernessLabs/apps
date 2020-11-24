@@ -111,19 +111,6 @@ int hcom_esp32_exec_download_flash_start(const size_t entireFileSize,
   char hostMsg[HCOM_SHORT_HOST_STRING_BUFF_LENGTH];
   int stringLen = 0;
 
-  // Verify that mono has been disabled
-  if(hcom_mono_ctrl_is_mono_enabled())
-  {
-    stringLen = snprintf(hostMsg, HCOM_SHORT_HOST_STRING_BUFF_LENGTH,
-            "Mono must be disabled for ESP32 file download");
-    hcom_logging_syslog(LOG_ERR, "%s@%d-%s\n", thisFile, __LINE__, hostMsg);
-    
-    DEBUGASSERT(stringLen < HCOM_SHORT_HOST_STRING_BUFF_LENGTH);
-    hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_ERROR, 0,
-            hostMsg, thisFile, __LINE__);
-    return -1;
-  }
-
   // Verify file is not too large to fit in 4MB ESP32-PICO-D4 flash
   if(entireFileSize > HCOM_ESP32_PICO_D4_FLASH_SIZE)
   {
@@ -405,7 +392,7 @@ int hcom_esp32_exec_buffer_to_esp32(uint8_t *downloadData, size_t dnldDataSize, 
 
   hcom_logging_syslog(LOG_DEBUG, "%s@%d-SENDING DATA PACKET, seq:%d\n",
             thisFile, __LINE__, _espSeqNumb - 1);
-            
+
 #if HCOM_OUTPUT_DATA_BUFFER_INFO_VIA_SYSLOG > 0
   hcom_diag_misc_print_buffer(_downloadBuffer, dataDnldOffset, LOG_DEBUG);
 #endif

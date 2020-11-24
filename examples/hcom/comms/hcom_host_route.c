@@ -141,6 +141,8 @@ void hcom_host_route_request_by_type(const uint8_t *recvOrigData, const size_t r
     //-------------------------------------------------
 #if defined (CONFIG_HCOM_ESP32_COMMS)
     // ESP32 follow
+    // Note: Start file transfer provides the 'Accepted' message and
+    // end file transfer the 'Concluded' message
     case HCOM_MDOW_REQUEST_START_ESP_FILE_TRANSFER:
       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
       hcom_file_dnld_proc_esp32_flash_begin(recvPayload, recvPayloadSize, userData, requestType);
