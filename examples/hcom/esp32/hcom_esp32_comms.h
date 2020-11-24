@@ -288,7 +288,7 @@ enum Esp32Registers
   void hcom_esp32_recv_shutdown(void);
   int hcom_esp32_recv_handle_data(uint8_t *esp32_read_buffer, ssize_t readReturn);
   void hcom_esp32_recv_expect_command_type(uint8_t expectCommand);
-  void hcom_esp32_recv_start_of_communications(void);
+  void hcom_esp32_recv_starting_communications(void);
 
   // ESP32 Transmit data processing
   int hcom_esp32_xmit_setup_lazy(void);

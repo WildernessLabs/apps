@@ -55,7 +55,7 @@ static char *thisFile = __FILE__;
 static bool _shutting_down;
 static mqd_t recvMsgQueue = 0;
 static struct mq_attr recvMsgQAttr;
-static bool _startOfComms;
+static bool _waitingForBinary;
 static uint8_t _currentExpectRecvCommand;
 static struct host_com_cir_buffer_s *_esp_cir_buf;
 
@@ -77,7 +77,7 @@ static int hcom_esp32_recv_slip_decoder(uint8_t *encodedMsg, ssize_t encodedMsgL
 int hcom_esp32_recv_setup_lazy()
 {
   _shutting_down = false;
-  _startOfComms = true;
+  _waitingForBinary = true;
   _currentExpectRecvCommand = Esp32CommandUndefined;  
   _diagBufferedCount = 0;
 
@@ -122,7 +122,7 @@ void hcom_esp32_recv_shutdown()
   free(_esp_cir_buf);
 
   _shutting_down = false;
-  _startOfComms = true;
+  _waitingForBinary = true;
   _currentExpectRecvCommand = Esp32CommandUndefined;  
   _diagBufferedCount = 0;
 }
@@ -137,11 +137,11 @@ void hcom_esp32_recv_expect_command_type(uint8_t expectCommand)
 }
 
 //===================================================================
-// This prevents text from being put into the cirbuf until binary
-// data is received
-void hcom_esp32_recv_start_of_communications()
+// Called when about to enter programming mode. This prevents text from
+// being put into the cirbuf until binary data is received
+void hcom_esp32_recv_starting_communications()
 {
-  _startOfComms = true;
+  _waitingForBinary = true;
 }
 
 //===================================================================
@@ -153,10 +153,10 @@ int hcom_esp32_recv_handle_data(uint8_t *esp32_read_buffer, ssize_t bytesToAdd)
   if(_shutting_down)
     return OK;
 
-  // At the beginning there's a flood of text. This needs to be ignored
-  // until the slip data is seen. Slip encoded data from the esp32 start
-  // and end with 0xc0. If alot of text is added it can fill the cirbuf.
-  if(_startOfComms)
+  // When first put into programming mode there's a flood of text. This needs
+  // to be ignored until the slip data is seen. Slip encoded data from the
+  // esp32 start and end with 0xc0. If this text is added, overfills the cirbuf.
+  if(_waitingForBinary)
   {
     while(*esp32_read_buffer != 0xc0)
     {
@@ -167,7 +167,7 @@ int hcom_esp32_recv_handle_data(uint8_t *esp32_read_buffer, ssize_t bytesToAdd)
         return OK;
       }
     }
-    _startOfComms = false;
+    _waitingForBinary = false;
   }
 
   while (true)

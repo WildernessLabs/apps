@@ -117,8 +117,8 @@ void hcom_file_dnld_restore_to_inactive_state()
 }
 
 //==========================================================================
-// Beginning of a file download into the flash file systej 
-// Note:This function is shared by all download types that store in the
+// Beginning of a file download into the flash file system
+// Note: This function is shared by all download types that store in the
 // flash file system.
 void hcom_file_dnld_proc_flash_file_sys_begin(const uint8_t *recvPacketData,
           const size_t recvPacketDataSize, uint32_t partitionId, uint16_t requestType)
@@ -234,7 +234,7 @@ void hcom_file_dnld_proc_esp32_flash_begin(const uint8_t *recvPacketData,
                           (recvPacketData[msgOffset + 2] << 16) + (recvPacketData[msgOffset + 3] << 24);
   msgOffset += sizeof(uint32_t);
 
-  // Checksum not used by ESP32. ESP32 uses MD5 calculation
+  // Account for checksum which is not used by ESP32. ESP32 uses MD5 calculation instead
   msgOffset += sizeof(uint32_t);
 
   // Destination address within the target MCU (only used by ESP32)
@@ -257,7 +257,7 @@ void hcom_file_dnld_proc_esp32_flash_begin(const uint8_t *recvPacketData,
   {
     _initFileSysError = true;
     _currentHcomDataPacketAction = HcomDnldActionNone;
-    hcom_logging_syslog(LOG_ERR, "%s@%d-download flash start transfer:%d\n", thisFile, __LINE__, ret);
+    hcom_logging_syslog(LOG_ERR, "%s@%d-download ESP32 start transfer:%d\n", thisFile, __LINE__, ret);
   }
 
   if (_initFileSysError)

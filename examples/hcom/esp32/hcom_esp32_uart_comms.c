@@ -99,9 +99,12 @@ int hcom_esp32_uart_comms_setup()
 }
 
 //====================================================================
-// This is called after some commands have finished. It stops the
-// receive thread. Why? Because the ESP32 constantly sends text when not
-// communicating with binary data. This is too expensive for the F7.`
+// This is called after most/all commands have finished. It stops the
+// receive thread and prepares the system to restart.
+// Why? Because the ESP32 constantly sends text when not communicating
+// in binary data. We cannot afford such an expensive operation for
+// the F7 MCU. And this functionality will only be used < 0.0001% of
+// the time.
 void hcom_esp32_stop_and_prep_for_restart()
 {
   usleep(20 * 1000);
@@ -282,7 +285,8 @@ FAR void *hcom_esp32_uart_comms_pthread(FAR void *arg)
   syslog(2, "New pthread [PID:%d],'%s'\n", getpid(), HCOM_THREAD_NAME_ESP32_RECEIVE);
 #endif
 
-  // p-m Why only one chance to open serial port?
+  // Note: only one chance to open serial port. Should this be in the main
+  // receiving loop?
   ret = hcom_esp32_uart_open_serial_ports();
   if(ret < 0)
   {

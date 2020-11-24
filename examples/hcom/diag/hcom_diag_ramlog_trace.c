@@ -163,8 +163,12 @@ void hcom_diag_trace_ramlog_shutdown()
 
   if(_singleMsgBuf != NULL)
     free(_singleMsgBuf);
+
   if(_ramlog_cbuf != NULL)
+  {
+    hcom_cirbuf_release_memory(_ramlog_cbuf);
     free(_ramlog_cbuf);
+  }
 }
 
 //==========================================================================

@@ -193,7 +193,7 @@ void hcom_esp32_util_gpio_enter_prog_mode(void)
 {
   int ret;
 
-  hcom_esp32_recv_start_of_communications();
+  hcom_esp32_recv_starting_communications();
 
 //#if HCOM_ESP32_ALLOW_BOOT_PIN_TO_BE_INPUT > 0
   // The boot pin is only used for output when needed
