@@ -110,16 +110,11 @@ void hcom_esp32_stop_and_prep_for_restart()
 }
 
 //====================================================================
+// Both hcom_esp32_stop_and_prep_for_restart() and Startup Manager call
+// here
 void hcom_esp32_uart_comms_shutdown()
 {
   int ret;
-  syslog(1, "????? %s@%d-ENTERED uart comms shutdown\n", thisFile, __LINE__);
-
-  // ret = pthread_cancel(_esp32_recv_thread);  // Stop local receive thread
-  // if(ret != 0)
-  // {
-  //   syslog(1, "%s@%d-pthread cancel failed:%d, errno:%d\n", thisFile, __LINE__, ret, errno);
-  // }
 
   _shutting_down = true;
 
@@ -128,14 +123,17 @@ void hcom_esp32_uart_comms_shutdown()
   hcom_esp32_exec_shutdown();
   hcom_esp32_util_shutdown();
 
+  // Kill esp32 receive thread
+  pthread_cancel(_esp32_recv_thread);
+
   ret = pthread_join(_esp32_recv_thread, NULL);
   if(ret != 0)
   {
-    syslog(1, "%s@%d-pthread join failed:%d, errno:%d\n", thisFile, __LINE__, ret, errno);
+    syslog(LOG_ERR, "%s@%d-pthread join failed:%d, errno:%d\n", thisFile, __LINE__, ret, errno);
     return;
   }
 
-  // Safe to close everything
+  // Close everything open
   if(_esp32_read_fd > -1)
   {
     close(_esp32_read_fd);
@@ -307,7 +305,9 @@ FAR void *hcom_esp32_uart_comms_pthread(FAR void *arg)
   {
     ret = hcom_esp32_uart_comms_read_serial_loop();
     if(_shutting_down)
+    {
       break;
+    }
 
     if(ret < 0)
     {
@@ -354,7 +354,9 @@ int hcom_esp32_uart_comms_read_serial_loop()
   {
     readReturn = read(_esp32_read_fd, esp32_read_buffer, HCOM_ESP32_FLASH_UART_READ_BUF_SIZE);
     if(_shutting_down)
+    {
       break;
+    }
 
     if (readReturn < 0 )
     {
@@ -365,14 +367,12 @@ int hcom_esp32_uart_comms_read_serial_loop()
     
     if (readReturn == 0)    // EOF
     {
-      // syslog(1, "====[PID:%d]-%s@%d-Read EOF from ESP32 serial port\n", getpid(), thisFile, __LINE__); usleep(10 * 1000);
       hcom_logging_syslog(LOG_WARNING, "%s@%d-UART read=0 (EOF)\n", thisFile, __LINE__);
       sleep(1);
       continue;
     }
     else
     {
-      // syslog(1, "====[PID:%d]-%s@%d-Read %d bytes from ESP32 serial port\n", getpid(), thisFile, __LINE__, readReturn); usleep(10 * 1000);
       int ret = hcom_esp32_recv_handle_data(esp32_read_buffer, readReturn);
       if(ret < 0)
       {

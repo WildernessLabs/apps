@@ -111,8 +111,6 @@ int hcom_esp32_exec_download_flash_start(const size_t entireFileSize,
   char hostMsg[HCOM_SHORT_HOST_STRING_BUFF_LENGTH];
   int stringLen = 0;
 
-  syslog(1, "%s@%d-START_ESP_FILE_TRANSFER\n", thisFile, __LINE__);
-
   // Verify that mono has been disabled
   if(hcom_mono_ctrl_is_mono_enabled())
   {
@@ -212,14 +210,21 @@ int hcom_esp32_exec_download_flash_start(const size_t entireFileSize,
           thisFile, __LINE__, flashBegin.eraseSize, flashBegin.numbBlocks,
           flashBegin.downloadWriteSize, flashBegin.downloadOffset);
 
+  // syslog(2, %s@%d-Start of ESP32 download. Sending Flash Begin command.\n", thisFile, __LINE__);
+  // uint64_t dbgFlashEraseStart = hcom_utils_get_current_time64();
+
   // This command also erases all needed flash, thus needing a bit more time
   ret = hcom_esp32_xmit_build_and_send_msg((uint8_t *)&flashBegin, HCOM_ESP32_PROTOCOL_BEGIN_HDR_LENGTH,
         Esp32CommandFlashBegin, hcom_esp32_exec_era_time_per_mega_byte(entireFileSize), &recvdData);
   if(ret < 0)
   {
-    hcom_logging_syslog(LOG_ERR, "%s@%d-FLASH_BEGIN %d\n", thisFile, __LINE__, ret);
+    hcom_logging_syslog(LOG_ERR, "%s@%d-Begin flash ret:%d\n", thisFile, __LINE__, ret);
     return -1;
   }
+
+  // uint64_t dbgFlashEraseEnd = hcom_utils_get_current_time64();
+  // syslog(2, %s@%d-Flash Begin done (esp32 flash erased). Took:%llu mSec\n",
+  //           thisFile, __LINE__, (dbgFlashEraseEnd - dbgFlashEraseStart) / 1000000);
   return OK;
 }
 
@@ -234,7 +239,6 @@ int hcom_esp32_exec_add_flash_data(const uint8_t *packet, const size_t packetSiz
   static uint8_t *tempSaveBuffer;
   static size_t tempSaveBufLen;
   static off_t downloadBuffOffset;
-
 
   // First download packet of this file?
   if(hostSeqNumb == 1)
@@ -251,11 +255,6 @@ int hcom_esp32_exec_add_flash_data(const uint8_t *packet, const size_t packetSiz
     isLastPacket = true;
   else
     isLastPacket = false;
-
-  if(isLastPacket)    
-    syslog(1, "ESP32-Last data packet:%d\n", hostSeqNumb);
-  else
-    syslog(1, "ESP32-NOT last data packet:%d\n", hostSeqNumb);
 
   if(downloadBuffOffset == 0)
   {
@@ -324,8 +323,8 @@ int hcom_esp32_exec_add_flash_data(const uint8_t *packet, const size_t packetSiz
 
     if(isLastPacket)
     {
-      // This IS the last packet (i.e. no more chances to download).
-      hcom_logging_syslog(1, "%s@%d-Last Packet, %s\n", thisFile, __LINE__,
+      // This is the last packet (i.e. no more chances to download).
+      hcom_logging_syslog(LOG_DEBUG, "%s@%d-Last Packet, %s\n", thisFile, __LINE__,
             tempSaveBufLen == 0 ? "save buf empty, exit" : "must send saved");
 
       if(tempSaveBufLen == 0)
@@ -379,13 +378,11 @@ int hcom_esp32_exec_buffer_to_esp32(uint8_t *downloadData, size_t dnldDataSize, 
   struct HcomEsp32SecHdrData_s flashData;
   struct HcomEsp32UserRecvdData_s recvdData;
 
-  syslog(1, "%s@%d-END_ESP_FILE_TRANSFER\n", thisFile, __LINE__);
-
   if(dataDnldOffset == 0)
     return OK;
 
   // Note: the first 16 bytes of this buffer have been reserved for
-  // this HcomEsp32SecHdrData_s structures data
+  // this HcomEsp32SecHdrData_s structure's data
   flashData.dataSize = HCOM_ESP32_BOOT_LOADER_PAYLOAD_SIZE;
   flashData.sequence = _espSeqNumb++;    // starts at 0
   flashData.zero1 = 0;
@@ -408,6 +405,7 @@ int hcom_esp32_exec_buffer_to_esp32(uint8_t *downloadData, size_t dnldDataSize, 
 
   hcom_logging_syslog(LOG_DEBUG, "%s@%d-SENDING DATA PACKET, seq:%d\n",
             thisFile, __LINE__, _espSeqNumb - 1);
+            
 #if HCOM_OUTPUT_DATA_BUFFER_INFO_VIA_SYSLOG > 0
   hcom_diag_misc_print_buffer(_downloadBuffer, dataDnldOffset, LOG_DEBUG);
 #endif
@@ -441,16 +439,16 @@ int hcom_esp32_exec_buffer_to_esp32(uint8_t *downloadData, size_t dnldDataSize, 
     flashMd5.zero2 = 0;
 
     ret = hcom_esp32_xmit_build_and_send_msg((uint8_t *)&flashMd5, HCOM_ESP32_PROTOCOL_FLASH_MD5_HDR_LENGTH,
-          Esp32CommandSpiFlashMd5, HCOM_ESP_XMIT_TYPICAL_DELAY_MS, &recvdData);
+          Esp32CommandSpiFlashMd5, HCOM_ESP_XMIT_CALC_MD5_DELAY_MS, &recvdData);
     if(ret < 0)
     {
-      hcom_logging_syslog(LOG_ERR, "%s@%d-FLASH_BEGIN:%d\n", thisFile, __LINE__, ret);
+      hcom_logging_syslog(LOG_ERR, "%s@%d-Request ESP32 to calc MD5:%d\n", thisFile, __LINE__, ret);
       return ret;
     }
 
     recvdData.recvdData[HCOM_PROTOCOL_REQUEST_MD5_HASH_LENGTH] = '\0';
 
-    // Save for reading
+    // Save for later use
     strcpy(_espCalcMd5Hash, (char *)recvdData.recvdData);
   }
   return OK;
@@ -509,15 +507,7 @@ int hcom_esp32_exec_add_flash_end()
 
   DEBUGASSERT(recvdData.espHdr.direction == 1);
   DEBUGASSERT(recvdData.espHdr.command == Esp32CommandFlashEnd);
-
-  hcom_esp32_stop_and_prep_for_restart();
-
-  ret = hcom_esp32_util_hardware_restart();
-  if(ret < 0)
-  {
-    hcom_logging_syslog(LOG_ERR, "%s@%d-restart failed:%d\n", thisFile, __LINE__, ret);
-  }
-  
+    
   return ret;
 }
 

@@ -143,14 +143,18 @@ int hcom_mono_ctrl_start_mono_main()
     return OK;
   }
 
+  //------------------------------------------------------------
   // Start espcp running
+#if defined(CONFIG_MEADOW_ESPCP_MANAGER)
   ret = hcom_via_nx_start_espcp_running(hcom_via_nx_get_fd());
   if (ret < 0)
   {
     hcom_logging_syslog(LOG_ERR, "%s@%d-hcom_via_nx_start_espcp_running, ret:%d, errno:%d\n",
               thisFile, __LINE__, ret, errno);
   }
+#endif
 
+  //------------------------------------------------------------
   // Set the flag that can identify if mono locks up. It will be
   // cleared by mono once mono is running correctly.
   hcom_bbreg_set_bbr_bits(HCOM_BBREG_MONO_LAST_RUN_LOCKUP_BIT);

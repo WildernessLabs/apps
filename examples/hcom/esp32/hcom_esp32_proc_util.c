@@ -98,17 +98,17 @@ int hcom_esp32_util_setup_lazy()
     return ret;
   }
 
-#if HCOM_ESP32_ALLOW_BOOT_PIN_TO_BE_INPUT > 0
-  // The boot pin needs to be an output for the operations of this module. However,
-  // the the boot pin servers as an input in other places. So, by default we leave
-  // it configured as an input pin unless needed.
-  ret = hcom_via_nx_gpio_config(hcom_via_nx_get_fd(),HCOM_NX_GPIO_DIG_ID_ESP_BOOT, HCOM_NX_GPIO_DIGITAL_CONFIG_INPUT);
-  if(ret < 0)
-  {
-    hcom_logging_syslog(LOG_CRIT, "%s@%d-gpio config:%d\n", thisFile, __LINE__, ret);
-    return ret;
-  }
-#else
+// #if HCOM_ESP32_ALLOW_BOOT_PIN_TO_BE_INPUT > 0
+//   // The boot pin needs to be an output for the operations of this module. However,
+//   // the the boot pin servers as an input in other places. So, by default we leave
+//   // it configured as an input pin unless needed.
+//   ret = hcom_via_nx_gpio_config(hcom_via_nx_get_fd(),HCOM_NX_GPIO_DIG_ID_ESP_BOOT, HCOM_NX_GPIO_DIGITAL_CONFIG_INPUT);
+//   if(ret < 0)
+//   {
+//     hcom_logging_syslog(LOG_CRIT, "%s@%d-gpio config:%d\n", thisFile, __LINE__, ret);
+//     return ret;
+//   }
+// #else
   // This is the only place this gpio is configured
   ret = hcom_via_nx_gpio_config(hcom_via_nx_get_fd(),HCOM_NX_GPIO_DIG_ID_ESP_BOOT, HCOM_NX_GPIO_DIGITAL_CONFIG_OUTPUT);
   if(ret < 0)
@@ -116,7 +116,7 @@ int hcom_esp32_util_setup_lazy()
     hcom_logging_syslog(LOG_CRIT, "%s@%d-gpio config:%d\n", thisFile, __LINE__, ret);
     return ret;
   }
-#endif
+// #endif
 
 ///////////////////////////////////////////
 #endif
@@ -272,7 +272,7 @@ int hcom_esp32_util_hardware_restart(void)
 {
   int ret;
 
-syslog(1, "====[PID:%d] %s@%d-next calling espcp restart esp32\n", getpid(), thisFile, __LINE__); usleep(20 * 1000);
+syslog(1, "====[PID:%d] %s@%d-calling espcp restart esp32\n", getpid(), thisFile, __LINE__); usleep(20 * 1000);
 
   // The actual code is in espcp_coprocessor.c
   ret = hcom_via_nx_esp32_restart_esp32(hcom_via_nx_get_fd());
@@ -294,7 +294,7 @@ void hcom_esp32_util_gpio_enter_prog_mode(void)
   int ret;
 
   // The actual code is in espcp_coprocessor.c
-syslog(1, "====[PID:%d] %s@%d-next calling espcp enter prog mode\n", getpid(), thisFile, __LINE__); usleep(20 * 1000);
+syslog(1, "====[PID:%d] %s@%d-calling espcp enter prog mode\n", getpid(), thisFile, __LINE__); usleep(20 * 1000);
   ret = hcom_via_nx_esp32_enter_prog_mode(hcom_via_nx_get_fd());
   if(ret < 0)
   {
@@ -312,8 +312,7 @@ syslog(1, "====[PID:%d] %s@%d-returned from espcp enter prog mode\n", getpid(), 
 // can be specified.
 int hcom_esp32_util_init_comms_enter_boot_mode()
 {
-#define HCOM_ESP32_MAX_NUMB_CONNECT_ATTEMPTS 60   // TESTING
-// #define HCOM_ESP32_MAX_NUMB_CONNECT_ATTEMPTS 40
+#define HCOM_ESP32_MAX_NUMB_CONNECT_ATTEMPTS 40
   int ret;
   struct HcomEsp32UserRecvdData_s esp32UserMsg[1];
   int currentNumbAttempts = HCOM_ESP32_MAX_NUMB_CONNECT_ATTEMPTS;

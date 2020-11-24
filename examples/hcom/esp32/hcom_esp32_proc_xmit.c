@@ -246,6 +246,7 @@ int hcom_esp32_xmit_wait_for_response(struct HcomEsp32MqRecvdData_s *mqRecvdData
 
   for(;;)
   {
+    // Calculate where the clock should be when this times out
     clock_gettime(CLOCK_REALTIME, &timeoutTime);
     long secDelayComponent = milliSecDelay/1000;
     timeoutTime.tv_sec += secDelayComponent;

@@ -205,9 +205,12 @@ struct HcomEsp32SecHdrSpiParms_s
                                                 HCOM_ESP32_BOOT_LOADER_PAYLOAD_SIZE
 
 #define HCOM_ESP_XMIT_TYPICAL_DELAY_MS      1000
-#define HCOM_ESP_XMIT_FLASH_DELAY_MS        3000
+#define HCOM_ESP_XMIT_CALC_MD5_DELAY_MS     2000
 #define HCOM_ESP_XMIT_CONNECT_DELAY_MS      100
-#define HCOM_ESP32_ERASE_TIME_PER_MEGA_BYTE 3000
+// ESP32 code had time per mega byte at 3000 but had trouble because
+// the time for large files was greater.
+#define HCOM_ESP_XMIT_FLASH_DELAY_MS        5000
+#define HCOM_ESP32_ERASE_TIME_PER_MEGA_BYTE 5000
 
 enum hcom_esp32_recv_buffer_return
 {

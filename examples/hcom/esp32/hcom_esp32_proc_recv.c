@@ -248,10 +248,6 @@ int hcom_esp32_recv_pull_and_process()
 
         _diagBufferedCount -= packetLength;
 
-        // syslog(1, "====[PID:%d]-%s@%d-BINARY-REMOVED %d bytes from cirbuf, it contains:%d (avail:%d)\n",
-        //     getpid(), thisFile, __LINE__, packetLength, _diagBufferedCount,
-        //     hcom_cirbuf_avail_space(_esp_cir_buf)); usleep(10 * 1000);
-
         ret = hcom_esp32_recv_handle_bin_packet(packetBuffer, packetLength);
         if(ret < 0)
         {

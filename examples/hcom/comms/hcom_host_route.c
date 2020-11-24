@@ -115,20 +115,20 @@ void hcom_host_route_request_by_type(const uint8_t *recvOrigData, const size_t r
   const uint8_t *recvPayload = recvOrigData + msgOffset;
   const size_t recvPayloadSize = recvOrigDataSize - msgOffset;
 
-  hcom_logging_syslog(LOG_DEBUG, "-->Received %d bytes after header. Request Type:0x%04x\n",
+  hcom_logging_syslog(LOG_DEBUG, "-->Received non-data cmd. %d bytes in header. RqstType:0x%04x\n",
             recvPayloadSize, requestType);
 
   switch (requestType)
   {
     case HCOM_MDOW_REQUEST_START_FILE_TRANSFER:
       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-      hcom_file_dnld_proc_begin(recvPayload, recvPayloadSize, userData, requestType);
+      hcom_file_dnld_proc_flash_file_sys_begin(recvPayload, recvPayloadSize, userData, requestType);
       break;
       
     // Note: Start file transfer provides the 'Accepted' message and
     // end file transfer the 'Concluded' message
     case HCOM_MDOW_REQUEST_END_FILE_TRANSFER:
-      hcom_file_dnld_proc_end(userData);
+      hcom_file_dnld_proc_flash_file_sys_end(userData);
       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
       break;
 
@@ -143,13 +143,13 @@ void hcom_host_route_request_by_type(const uint8_t *recvOrigData, const size_t r
     // ESP32 follow
     case HCOM_MDOW_REQUEST_START_ESP_FILE_TRANSFER:
       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-      hcom_file_dnld_proc_begin(recvPayload, recvPayloadSize, userData, requestType);
+      hcom_file_dnld_proc_esp32_flash_begin(recvPayload, recvPayloadSize, userData, requestType);
       break;
 
     // Note: Start file transfer provides the 'Accepted' message and
     // end file transfer the 'Concluded' message
     case HCOM_MDOW_REQUEST_END_ESP_FILE_TRANSFER:
-      hcom_file_dnld_proc_end(userData);
+      hcom_file_dnld_proc_esp32_flash_end(userData);
       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
       break;
 
@@ -253,13 +253,13 @@ void hcom_host_route_request_by_type(const uint8_t *recvOrigData, const size_t r
     // 1. CLI sends this first
     case HCOM_MDOW_REQUEST_MONO_UPDATE_RUNTIME:
       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-      hcom_file_dnld_proc_begin(recvPayload, recvPayloadSize, userData, requestType);
+      hcom_file_dnld_proc_flash_file_sys_begin(recvPayload, recvPayloadSize, userData, requestType);
       break;
       
       // 2. CLI sends data.....
       // 3. CLI sends the file end
     case HCOM_MDOW_REQUEST_MONO_UPDATE_FILE_END:
-      hcom_file_dnld_proc_end(userData);
+      hcom_file_dnld_proc_flash_file_sys_end(userData);
       // Next copy the file to flash area, this must be done on the nuttx
       // side. This will take several seconds because it first erases the
       // 2 MB flash area and then copies the 2 MB file.

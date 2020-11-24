@@ -89,7 +89,8 @@
 #define HCOM_THREAD_STACKSIZE_HCOM_RECEIVE 65536
 
 // Insure hcom recv thread runs before esp32 recv
-#define HCOM_THREAD_PRIORITY_ESP32_RECEIVE (HCOM_THREAD_PRIORITY_HCOM_RECEIVE - 1)
+// But this thread needs to be ahead of the following
+#define HCOM_THREAD_PRIORITY_ESP32_RECEIVE 130
 #define HCOM_THREAD_NAME_ESP32_RECEIVE "EspRecv"
 #define HCOM_THREAD_STACKSIZE_ESP32_RECEIVE 2048
 
@@ -120,7 +121,8 @@
 // #define HCOM_RECV_TIMEOUT_DEFAULT_SECONDS 60
 #define HCOM_RECV_TIMEOUT_DEFAULT_SECONDS (5 * 60)    // 5 minutes
 // #define HCOM_RECV_TIMEOUT_DEFAULT_SECONDS (1 * 60 * 60) // once an hour report hcom thread running
-#define HCOM_RECV_TIMEOUT_ACTIVE_SECONDS 5
+
+#define HCOM_RECV_TIMEOUT_ACTIVE_SECONDS 10
 
 #define HCOM_CONNECTION_TIMEOUT_STARTUP 250 * 1000    // At startup we connect quickly
 #define HCOM_CONNECTION_TIMEOUT_RUNNING 5000 * 1000   // If no host connection at first wait longer
@@ -232,9 +234,12 @@ extern "C"
   int hcom_file_dnld_proc_setup(void);
   bool hcom_file_dnld_proc_is_active(void);
   void hcom_file_dnld_restore_to_inactive_state(void);
-  void hcom_file_dnld_proc_begin(const uint8_t *recvPacketData,
+  void hcom_file_dnld_proc_flash_file_sys_begin(const uint8_t *recvPacketData,
       const size_t recvPacketDataSize,uint32_t partitionId, uint16_t requestType);
-  void hcom_file_dnld_proc_end(uint32_t user_data);
+  void hcom_file_dnld_proc_esp32_flash_begin(const uint8_t *recvPacketData,
+      const size_t recvPacketDataSize,uint32_t partitionId, uint16_t requestType);
+  void hcom_file_dnld_proc_flash_file_sys_end(uint32_t user_data);
+  void hcom_file_dnld_proc_esp32_flash_end(uint32_t user_data);
   void hcom_file_dnld_proc_recvd_file_data(const uint8_t *packet, const size_t packetSize, uint16_t seqNumb);
   void hcom_file_write_del_remove_file_start(const uint8_t *recvPacketData, const size_t recvPacketDataSize, uint32_t user_data);
 
@@ -287,6 +292,7 @@ extern "C"
   void hcom_common_utils_shutdown(void);
   bool hcom_utils_ini_cfg_is_match(char *fileName, char *section, char *key, char *match);
   int hcom_utils_ini_cfg_get_int(char *fileName, char *section, char *key);
+  uint64_t hcom_utils_get_current_time64(void);
 
   // bool hcom_utils_boot_time_qemu_check(void);
   void hcom_utils_dbg_gpio_1led_update(bool ledOn);
