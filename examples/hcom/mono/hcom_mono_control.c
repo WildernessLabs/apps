@@ -308,14 +308,14 @@ bool hcom_mono_ctrl_are_needed_files_here()
 // Determine the state of the mono run flag.
 // The bit is set when mono is disabled
 // Note: at startup this gets call several times to optimze could
-// cache value on first call and not call ini cfg but once. HOwever,
-// this would mean a restart would be necessary if meadow.cfg changed
+// cache value on first call. However, this would mean a restart
+// would be necessary if meadow.cfg changed
 bool hcom_mono_ctrl_is_mono_enabled()
 {
   // Check ini config file to override the user request
   if(hcom_via_nx_ini_cfg_get_match(NULL, "startup", "monorun", "no"))
   {
-    // config file says monorun=no
+    // config file contains 'monorun=no'
     return false;
   }
 
@@ -350,7 +350,6 @@ void hcom_mono_ctrl_report_mono_enabled_state(uint32_t userData)
 {
   char *monoStartupMsg;
 
-  syslog(1, "**** %s@%d-Calling hcom_mono_ctrl_is_mono_enabled()\n", thisFile, __LINE__); usleep(10 * 1000);
   if(hcom_mono_ctrl_is_mono_enabled())
     monoStartupMsg = "On reset, Meadow will start MONO and run app.exe";
   else

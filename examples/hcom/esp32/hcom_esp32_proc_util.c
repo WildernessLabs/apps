@@ -273,16 +273,12 @@ int hcom_esp32_util_hardware_restart(void)
 {
   int ret;
 
-syslog(1, "====[PID:%d] %s@%d-calling espcp restart esp32\n", getpid(), thisFile, __LINE__); usleep(20 * 1000);
-
   // The actual code is in espcp_coprocessor.c
   ret = hcom_via_nx_esp32_restart_esp32();
   if(ret < 0)
   {
     hcom_logging_syslog(LOG_ERR, "%s@%d-ESP32 restart ret:%d\n", thisFile, __LINE__, ret);
   }
-syslog(1, "====[PID:%d] %s@%d-returned from espcp restart esp32\n", getpid(), thisFile, __LINE__); usleep(20 * 1000);
-
   _connectionActive = false;
   return ret;
 }
@@ -295,14 +291,12 @@ void hcom_esp32_util_gpio_enter_prog_mode(void)
   int ret;
 
   // The actual code is in espcp_coprocessor.c
-syslog(1, "====[PID:%d] %s@%d-calling espcp enter prog mode\n", getpid(), thisFile, __LINE__); usleep(20 * 1000);
   ret = hcom_via_nx_esp32_enter_prog_mode();
   if(ret < 0)
   {
     hcom_logging_syslog(LOG_ERR, "%s@%d-entering prog mode:%d\n", thisFile, __LINE__, ret);
     return;
   }
-syslog(1, "====[PID:%d] %s@%d-returned from espcp enter prog mode\n", getpid(), thisFile, __LINE__); usleep(20 * 1000);
 }
 ////////////////////////////////////////////////////////////////////
 #endif
@@ -440,7 +434,6 @@ void hcom_esp32_util_restart_esp32(uint32_t userData)
   int stringLen;
   char hostMsg[HCOM_SHORT_HOST_STRING_BUFF_LENGTH];
 
-  syslog(1, "**** %s@%d-Calling hcom_mono_ctrl_is_mono_enabled()\n", thisFile, __LINE__); usleep(10 * 1000);
   if(hcom_mono_ctrl_is_mono_enabled())
   {
     stringLen = snprintf(hostMsg, HCOM_SHORT_HOST_STRING_BUFF_LENGTH,
@@ -477,7 +470,6 @@ void hcom_esp32_util_read_esp32_mac(uint32_t userData)
   uint32_t chipMac1;
   uint32_t chipMac2;
 
-  syslog(1, "**** %s@%d-Calling hcom_mono_ctrl_is_mono_enabled()\n", thisFile, __LINE__); usleep(10 * 1000);
   if(hcom_mono_ctrl_is_mono_enabled())
   {
     char hostMsg[HCOM_SHORT_HOST_STRING_BUFF_LENGTH];
