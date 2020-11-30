@@ -105,7 +105,7 @@ int hcom_logging_syslog_mask_init()
   _syslogMask = hcom_bbreg_read_bbr_and_right_justify(HCOM_BBREG_RESTART_SYSLOG_CONFIG_VALUE_MASK);
   
   // Check ini config file for trace levels that may be added
-  int iniValue = hcom_utils_ini_cfg_get_int_default(NULL, "startup", "tracelevel", 0);
+  int iniValue = hcom_via_nx_ini_cfg_get_int_default(NULL, "startup", "tracelevel", 0);
   switch(iniValue)
   {
     case 0:
@@ -159,6 +159,8 @@ int hcom_logging_syslog_mask_init()
 #endif
 
   // Provide some information that may be useful
+  syslog(1, "**** %s@%d-Calling hcom_mono_ctrl_is_mono_enabled()\n", thisFile, __LINE__); usleep(10 * 1000);
+
   hcom_logging_syslog(LOG_NOTICE, "Meadow %s (%s@%s) %s, Mono:%s, Trace level:0x%02x, to:%s, type:%s\n",
         HCOM_DEVICE_INFO_MEADOW_OS_VERSION, __DATE__, __TIME__, 
         isPowerOnRestart ? "power-on restart" :"rebooted",

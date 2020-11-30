@@ -81,6 +81,7 @@ int hcom_esp32_util_setup_lazy()
 
 #if HCOM_ESP32_HACK_USE_NEW_CODE == 0
 ////////////////////////////////////////////
+// WHEN REMOVING THIS ALSO DELETE meadow_ini_cfg_get_int() IN configs\stm32f777zit6-meadow\src\inicfg\meadow_inicfg.c
 // p-m THIS IS TEMPORARY UNTIL MARK'S CODE IS PUT INTO SERVICE
   // Only configured here and left as output
   int ret;
@@ -439,6 +440,7 @@ void hcom_esp32_util_restart_esp32(uint32_t userData)
   int stringLen;
   char hostMsg[HCOM_SHORT_HOST_STRING_BUFF_LENGTH];
 
+  syslog(1, "**** %s@%d-Calling hcom_mono_ctrl_is_mono_enabled()\n", thisFile, __LINE__); usleep(10 * 1000);
   if(hcom_mono_ctrl_is_mono_enabled())
   {
     stringLen = snprintf(hostMsg, HCOM_SHORT_HOST_STRING_BUFF_LENGTH,
@@ -475,6 +477,7 @@ void hcom_esp32_util_read_esp32_mac(uint32_t userData)
   uint32_t chipMac1;
   uint32_t chipMac2;
 
+  syslog(1, "**** %s@%d-Calling hcom_mono_ctrl_is_mono_enabled()\n", thisFile, __LINE__); usleep(10 * 1000);
   if(hcom_mono_ctrl_is_mono_enabled())
   {
     char hostMsg[HCOM_SHORT_HOST_STRING_BUFF_LENGTH];
