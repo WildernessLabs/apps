@@ -109,9 +109,9 @@ void hcom_misc_rqst_get_device_info(uint32_t userData)
     return;
   }
 
-  ret = hcom_via_nx_ini_cfg_get_value(NULL, "operation", "deviceName",
-        deviceNameBuf, MEADOW_DEFAULT_INI_CFG_BUF_LEN);
-  if(ret < 0)
+  ret = hcom_via_nx_ini_cfg_get_value(NULL, MEADOW_INI_CFG_OPERATION_SECTION,
+                    MEADOW_INI_CFG_DEV_NAME_KEY, deviceNameBuf, MEADOW_DEFAULT_INI_CFG_BUF_LEN);
+  if(ret != OK)
   {
     hcom_logging_syslog(LOG_NOTICE, "%s@%d-Get device info error:%d\n", thisFile, __LINE__, ret);
     return;
@@ -147,9 +147,11 @@ void hcom_misc_rqst_get_device_name(uint32_t userData)
   char returnValueBuf[MEADOW_DEFAULT_INI_CFG_BUF_LEN];
   char hostMsg[HCOM_SHORT_HOST_STRING_BUFF_LENGTH];
 
-  ret = hcom_via_nx_ini_cfg_get_value(NULL, "operation", "deviceName",
-        returnValueBuf, HCOM_SHORT_HOST_STRING_BUFF_LENGTH);
-  if(ret < 0)
+  // On error the call returns a text error message in the return buffer
+  // if it's large enough
+  ret = hcom_via_nx_ini_cfg_get_value(NULL, MEADOW_INI_CFG_OPERATION_SECTION,
+              MEADOW_INI_CFG_DEV_NAME_KEY, returnValueBuf, HCOM_SHORT_HOST_STRING_BUFF_LENGTH);
+  if(ret != OK)
     requestType = HCOM_HOST_REQUEST_TEXT_ERROR;
   else
     requestType = HCOM_HOST_REQUEST_TEXT_DEVICE_INFO;
