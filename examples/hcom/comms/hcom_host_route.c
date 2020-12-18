@@ -212,7 +212,7 @@ void hcom_host_route_request_by_type(const uint8_t *recvOrigData, const size_t r
       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_RECONNECT, userData,
           thisFile, __LINE__);
-      hcom_via_nx_restart_meadow();
+      hcom_via_nx_host_restart_meadow();
       break;
 
     case HCOM_MDOW_REQUEST_PART_RENEW_FILE_SYS:
@@ -220,7 +220,7 @@ void hcom_host_route_request_by_type(const uint8_t *recvOrigData, const size_t r
       hcom_via_nx_forward_cli_cmd_to_nx(requestType, userData);
       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_RECONNECT, userData,
           thisFile, __LINE__);
-      hcom_via_nx_restart_meadow();
+      hcom_via_nx_host_restart_meadow();
       break;
 
     case HCOM_MDOW_REQUEST_BULK_FLASH_ERASE:
@@ -228,7 +228,7 @@ void hcom_host_route_request_by_type(const uint8_t *recvOrigData, const size_t r
       hcom_via_nx_forward_cli_cmd_to_nx(requestType, userData);
       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_RECONNECT, userData,
           thisFile, __LINE__);
-      hcom_via_nx_restart_meadow();
+      hcom_via_nx_host_restart_meadow();
       break;
 
     case HCOM_MDOW_REQUEST_MONO_DISABLE:
@@ -236,7 +236,7 @@ void hcom_host_route_request_by_type(const uint8_t *recvOrigData, const size_t r
       hcom_mono_ctrl_disable_mono(userData);
       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_RECONNECT, userData,
           thisFile, __LINE__);
-      hcom_via_nx_restart_meadow();
+      hcom_via_nx_host_restart_meadow();
       break;
 
     case HCOM_MDOW_REQUEST_MONO_ENABLE:
@@ -244,13 +244,13 @@ void hcom_host_route_request_by_type(const uint8_t *recvOrigData, const size_t r
       hcom_mono_ctrl_enable_mono(userData);
       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_RECONNECT, userData,
           thisFile, __LINE__);
-      hcom_via_nx_restart_meadow();
+      hcom_via_nx_host_restart_meadow();
       break;
 
     case HCOM_MDOW_REQUEST_ENTER_DFU_MODE:
       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
       hcom_misc_rqst_enter_dfu_mode(userData);
-      hcom_via_nx_restart_meadow();
+      hcom_via_nx_only_restart_meadow();
       break;
 
     case HCOM_MDOW_REQUEST_MONO_FLASH:
@@ -318,7 +318,7 @@ void hcom_host_route_request_by_type(const uint8_t *recvOrigData, const size_t r
       hcom_mono_remote_dbg_enable(userData);
 
       // This will restart meadow and send the concluded message on restart
-      hcom_via_nx_restart_meadow();
+      hcom_via_nx_host_restart_meadow();
       break;
       
       // Debugging data received from VS via CLI
