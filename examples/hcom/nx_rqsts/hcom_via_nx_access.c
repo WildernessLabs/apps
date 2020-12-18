@@ -320,6 +320,22 @@ int hcom_via_nx_restart_meadow()
 }
 
 //=============================================================
+// This is a stub for restarting meadow
+int hcom_via_nx_put_meadow_into_dfu_mode()
+{
+  int ret;
+
+  ret = ioctl(_nx_access_fd, HCOM_NX_UPD_ENTER_INTO_DEF_MODE, (unsigned long) NULL);
+  if (ret < 0)
+  {
+    hcom_logging_syslog(LOG_ERR, "%s@%d-%s Failed to enter dfu mode, errno:%d\n",
+            thisFile, __LINE__, HCOM_NX_UPD_DRIVER_NAME, errno);
+    return -errno;      // ioctl puts returned int into errno
+  }
+  return OK;
+}
+
+//=============================================================
 // This is a stub for starting ESPCP
 int hcom_via_nx_start_espcp_running()
 {
