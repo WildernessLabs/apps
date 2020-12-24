@@ -362,6 +362,7 @@ bool hcom_via_nx_ini_cfg_get_match(char *fileName, char *sectionName,
   void hcom_diag_trace_do_not_send_to_uart1(uint32_t userData);
 
   int hcom_diag_misc_setup(void);
+  int hcom_diag_nsh_support_setup(void);
 #if HCOM_NUTT_SHELL_LAUNCHER_INCLUDE_IN_BUILD > 0
   void hcom_diag_misc_launch_nsh(uint32_t userData);
 #endif
