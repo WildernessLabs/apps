@@ -47,27 +47,28 @@
 // #include <arch/board/boardctl.h>
 // #include <sys/boardctl.h>
 
+
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
-
 #if HCOM_NUTT_SHELL_LAUNCHER_INCLUDE_IN_BUILD > 0 &&  !defined (CONFIG_SYSTEM_NSH)
 #warning"HCOM_NUTT_SHELL_LAUNCHER_INCLUDE_IN_BUILD is > 0 but CONFIG_SYSTEM_NSH is not defined"
 #endif
 
-// #if HCOM_NUTT_SHELL_LAUNCHER_INCLUDE_IN_BUILD > 0
+#if HCOM_NUTT_SHELL_LAUNCHER_INCLUDE_IN_BUILD > 0
+/* Configuration ************************************************************/
 
+// Select the approprate one
 // #define HCOM_DIAG_NSH_SERIAL_DEVICE "/dev/ttyS0"  // This is UART1
 // #define HCOM_DIAG_NSH_SERIAL_DEVICE "/dev/ttyS1"  // This is UART4
 #define HCOM_DIAG_NSH_SERIAL_DEVICE "/dev/ttyS3"  // This is UART6
 
-/* Configuration ************************************************************/
 /****************************************************************************
  * Private Data
  ****************************************************************************/
 static char *thisFile = __FILE__;
-
 static bool _nsh_enabled;
+
 
 /****************************************************************************
  * Private Function Prototypes
@@ -168,11 +169,6 @@ void hcom_diag_misc_launch_nsh(uint32_t userData)
             "It is not possible to disable NSH", thisFile, __LINE__);
     return;
   }
-
-// #else // HCOM_NUTT_SHELL_LAUNCHER_INCLUDE_IN_BUILD
-//   hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0, 
-//           "NuttShell not available", thisFile, __LINE__);
-// #endif // HCOM_NUTT_SHELL_LAUNCHER_INCLUDE_IN_BUILD
 }
 
 //====================================================================
@@ -268,3 +264,15 @@ int nsh_main_proxy(int argcx, char *argvx[])
   // Only here if NSH terminated
   return OK;
 }
+#else // HCOM_NUTT_SHELL_LAUNCHER_INCLUDE_IN_BUILD
+int hcom_diag_nsh_support_setup()
+{
+  return OK;
+}
+
+void hcom_diag_misc_launch_nsh(uint32_t userData)
+{
+  hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0, 
+          "NuttShell not available", __FILE__, __LINE__);
+}
+#endif // HCOM_NUTT_SHELL_LAUNCHER_INCLUDE_IN_BUILD
