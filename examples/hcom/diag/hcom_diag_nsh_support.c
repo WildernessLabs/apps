@@ -40,14 +40,6 @@
 #include "../hcom_common.h"
 #include <meadow/hcom_protocol.h>
 
-// #include <nuttx/arch.h>
-// #include <nuttx/mtd/mtd.h>
-// #include <nuttx/userspace.h>
-
-// #include <arch/board/boardctl.h>
-// #include <sys/boardctl.h>
-
-
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
