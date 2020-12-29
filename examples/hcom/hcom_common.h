@@ -74,7 +74,7 @@
 // Thread priorities and names
 // Note: pthreads cannot be named. The name below are only for
 // error messages ect.
-#define HCOM_THREAD_PRIORITY_HCOM_RECEIVE 240
+#define HCOM_THREAD_PRIORITY_HCOM_RECEIVE 210
 #define HCOM_THREAD_NAME_HCOM_RECEIVE "HcomRecv"
 #define HCOM_THREAD_STACKSIZE_HCOM_RECEIVE 65536
 

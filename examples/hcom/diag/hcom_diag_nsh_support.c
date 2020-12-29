@@ -80,7 +80,8 @@ int hcom_diag_nsh_support_setup()
 }
 
 //=======================================================================================
-// Below is the need configuration changes to support NSH while running Meadow
+// Below is the need configuration changes to support NSH while running Meadow. ATM
+// running mono kills NSH. 
 // Background
 // Mono routes all Console.Write() calls to stdout. To get Console.Write() calls to output
 // on CLI, stdout need to be redirected. However, normally this would mean that all
