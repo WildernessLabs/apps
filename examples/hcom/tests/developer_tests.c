@@ -61,7 +61,9 @@
  ****************************************************************************/
 void hcom_developer_tests_developer_1(uint32_t userData)
 {
-
+#if defined (HCOM_INCLUDE_SD_CARD_TESTS_IN_BUILD)
+  hcom_tests_sd_card_entry(userData);
+#endif
 }
 
 //==============================================================

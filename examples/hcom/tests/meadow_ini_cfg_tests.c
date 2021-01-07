@@ -41,8 +41,7 @@
 #include <meadow/hcom_upd_shared.h>
 #include <meadow/hcom_shared_common.h>
 
-// #if HCOM_INCLUDE_INI_CFG_TESTS_IN_BUILD > 0
-#if 1
+#if HCOM_INCLUDE_INI_CFG_TESTS_IN_BUILD > 0
 
 /****************************************************************************
  * Configuration file key value pair tests

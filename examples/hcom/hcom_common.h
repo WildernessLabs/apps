@@ -411,6 +411,10 @@ void hcom_tests_ini_cfg_execute_selected(uint32_t userData);
 void hcom_meadow_sqlite_tests(uint32_t userData);
 #endif
 
+#if defined(HCOM_INCLUDE_SD_CARD_TESTS_IN_BUILD)
+void hcom_tests_sd_card_entry(uint32_t userData);
+#endif
+
 //------------------------------------------------
 #endif // __ASSEMBLY__
 
