@@ -79,13 +79,15 @@ void hcom_misc_rqst_get_device_info(uint32_t userData)
   csvDevInfo = malloc(HCOM_LARGE_HOST_STRING_BUFF_LENGTH);
   if(csvDevInfo == NULL)
   {
+    char errMsg[HCOM_SHORT_HOST_STRING_BUFF_LENGTH];
+
     hcom_logging_syslog(LOG_ERR, "%s@%d-Alloc failed\n", thisFile, __LINE__);
-    stringLen = snprintf(csvDevInfo, HCOM_SHORT_HOST_STRING_BUFF_LENGTH,
+
+    stringLen = snprintf(errMsg, HCOM_SHORT_HOST_STRING_BUFF_LENGTH,
             "Memory allocation error. No results can be sent");
-    
-    DEBUGASSERT(stringLen < HCOM_LARGE_HOST_STRING_BUFF_LENGTH);
+    DEBUGASSERT(stringLen < HCOM_SHORT_HOST_STRING_BUFF_LENGTH);
     hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_ERROR, 0,
-            csvDevInfo, thisFile, __LINE__);
+            errMsg, thisFile, __LINE__);
     return;
   }
 

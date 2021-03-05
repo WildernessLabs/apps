@@ -40,7 +40,8 @@
 #include "../hcom_common.h"
 #include <meadow/hcom_upd_shared.h>
 #include <meadow/hcom_gpio_defn_diag.h>
-
+#include <meadow/hcom_shared_common.h>
+#include <meadow/hcom_protocol.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -61,12 +62,14 @@
  ****************************************************************************/
 void hcom_developer_tests_developer_1(uint32_t userData)
 {
+  syslog(2, "Entered hcom_developer_tests_developer_1(%d)\n", userData);
 
 }
 
 //==============================================================
 void hcom_developer_tests_developer_2(uint32_t userData)
 {
+  syslog(2, "Entered hcom_developer_tests_developer_2(%d)\n", userData);
 
 #if defined(CONFIG_EXAMPLES_SQLITE_TESTS)
   hcom_meadow_sqlite_tests(userData);
@@ -77,6 +80,8 @@ void hcom_developer_tests_developer_2(uint32_t userData)
 //==============================================================
 void hcom_developer_tests_developer_3(uint32_t userData)
 {
+  syslog(2, "Entered hcom_developer_tests_developer_3(%d)\n", userData);
+
 #if HCOM_INCLUDE_INI_CFG_TESTS_IN_BUILD > 0
   hcom_tests_ini_cfg_execute_selected(userData);
 #endif
@@ -90,7 +95,14 @@ void hcom_developer_tests_developer_3(uint32_t userData)
 //==============================================================
 void hcom_developer_tests_developer_4(uint32_t userData)
 {
+  // syslog(2, "Entered hcom_developer_tests_developer_4(%d)\n", userData);
+
+#if defined(HCOM_INCLUDE_EMBEDDED_ETHERNET_TESTS)
+  // This is done in Nuttx Land
+  hcom_via_nx_forward_cli_cmd_to_nx(HCOM_MDOW_REQUEST_DEVELOPER_4, userData);
+#else
   // Shows all devices within Nuttx system on cli
   hcom_file_lists_all_dev_dir_and_files_start(userData);
+#endif
 }
 

@@ -411,6 +411,12 @@ void hcom_tests_ini_cfg_execute_selected(uint32_t userData);
 void hcom_meadow_sqlite_tests(uint32_t userData);
 #endif
 
+#if defined(HCOM_INCLUDE_EMBEDDED_ETHERNET_TESTS)
+void hcom_enet_test_selector(int userData);
+int hcom_ethernet_ping_tests(uint32_t userData);
+// int hcom_ethernet_ping6_tests(uint32_t userData);
+#endif
+
 //------------------------------------------------
 #endif // __ASSEMBLY__
 
