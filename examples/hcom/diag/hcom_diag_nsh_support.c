@@ -84,6 +84,7 @@ int hcom_diag_nsh_support_setup()
 // Information
 // Any of the Meadow UARTs can be used based on the #define HCOM_DIAG_NSH_SERIAL_DEVICE.
 // The CLI command --NshEnable will automatically set userData to the needed value of 1.
+// 1 = enabled and any other value was intended to disable NSH.
 // NSH can only be enabled once from the CLI. After this the _nsh_enable flag will be set
 // true and prevents nsh from being re-started.
 // A nice, but not needed, feature would be to find a different method to determine

@@ -409,6 +409,15 @@ int hcom_main(int argc, char *argv[])
   syslog(2, "Startup Manager 20\n"); usleep(20 * 1000);
 #endif
 
+#if defined (CONFIG_SYSTEM_NSH)
+  if(hcom_via_nx_ini_cfg_get_match(NULL, MEADOW_INI_CFG_STARTUP_SECTION,
+        MEADOW_INI_CFG_NSH_STARTUP_KEY, MEADOW_INI_CFG_TEST_TRUE))
+  {
+    // Creates a task to run NSH
+    hcom_diag_misc_launch_nsh(1);
+  }
+#endif
+
   // Last stop, start mono
   hcom_mono_ctrl_start_mono_main();
 

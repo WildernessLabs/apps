@@ -127,7 +127,7 @@ int hcom_mono_ctrl_start_mono_main()
     return -1;
   }
  
-  // Blue LED will stay on of mono doesn't start
+  // Blue LED will stay on if mono doesn't start
   ret = hcom_via_nx_gpio_write(HCOM_NX_GPIO_DIG_ID_BLUE_LED, HCOM_NX_GPIO_DIGITAL_CMD_VALUE_LOW);
   if (ret < 0)
   {

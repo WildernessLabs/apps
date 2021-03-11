@@ -328,6 +328,12 @@ void hcom_host_route_request_by_type(const uint8_t *recvOrigData, const size_t r
       break;
 #endif
 
+    case HCOM_MDOW_REQUEST_ENABLE_DISABLE_NSH:
+      hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
+      hcom_diag_misc_launch_nsh(userData);
+      hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
+      break;
+      
     case HCOM_MDOW_REQUEST_DEVELOPER_1:
       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
       hcom_developer_tests_developer_1(userData);
@@ -354,12 +360,6 @@ void hcom_host_route_request_by_type(const uint8_t *recvOrigData, const size_t r
 
     //------------------------------------------------------
     // The following do nothing
-    case HCOM_MDOW_REQUEST_ENABLE_DISABLE_NSH:
-      hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-      hcom_diag_misc_launch_nsh(userData);
-      hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
-      break;
-
     case HCOM_MDOW_REQUEST_S25FL_QSPI_INIT:
       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
 //       hcom_developer_tests_flash_qspi_init(userData);

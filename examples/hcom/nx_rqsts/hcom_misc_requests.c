@@ -140,7 +140,7 @@ void hcom_misc_rqst_get_device_info(uint32_t userData)
 }
 
 //======================================================================================
-// The device name  comes from the configuration file, meadow.cfg
+// The device name comes from the configuration file, meadow.cfg
 void hcom_misc_rqst_get_device_name(uint32_t userData)
 {
   int ret;
