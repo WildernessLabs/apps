@@ -661,9 +661,9 @@ void hcom_via_nx_forward_cli_cmd_to_nx(uint16_t hcomCmd, uint32_t userData)
 }
 
 // No direct register access seems to be possible. The following functions
-// provide access. However, the caller needs to know the correct register
-// address. Since this is difficult on the apps side of nuttx other means
-// have been implemented.
+// provide indirect access. However, the caller needs to know the correct
+// register address. Since this is difficult on the apps side of nuttx other
+// means have been implemented.
 // BUT, KEEPING THE CODE IN THE CASE SOME FUTURE NEED ARISES
 // //=============================================================
 // int hcom_via_nx_set_register(uint32_t address, uint32_t value)
