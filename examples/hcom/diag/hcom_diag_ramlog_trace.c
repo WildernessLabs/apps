@@ -121,7 +121,7 @@ int hcom_diag_trace_ramlog_setup()
     _trace_ramlog_to_uart1 = true;
   }
 
-#if HCOM_FORCE_SYSLOG_MASK_F7_AND_UART1 > 0
+#if HCOM_FORCE_SYSLOG_OUTPUT_TO_UART1 > 0
   _trace_ramlog_to_uart1 = true;
 #endif
 
