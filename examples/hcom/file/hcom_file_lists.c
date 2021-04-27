@@ -58,8 +58,6 @@ static char *thisFile = __FILE__;
 /****************************************************************************
  * Private Function Prototypes
  ****************************************************************************/
-static uint32_t hcom_file_lists_calc_crc_for_file(char *completeFilePath, off_t *fileSize,
-          uint32_t *blockSizeKB);
 static int hcom_file_lists_all_dev_dir_and_files(const char *name, int indent, uint32_t userData);
 
 /****************************************************************************

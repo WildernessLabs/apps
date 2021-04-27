@@ -385,8 +385,14 @@ void hcom_file_dnld_proc_flash_file_sys_end(uint32_t userData)
     hcom_logging_syslog(LOG_ERR, "%s@%d-File %s close:%d\n", thisFile, __LINE__, _fileNameBuffer, ret);
   }
 
+  off_t fileSize;
+  uint32_t blockSizeKB;
+  uint32_t actualFileCrc = hcom_file_lists_calc_crc_for_file(_fileNameBuffer,
+                &fileSize, &blockSizeKB);
+
   // Compare results and report to host
-  if (_xferMeadowCalcCrc == _xferRecvFullFileCrc && _xferCalcFullFileSize == _xferRecvFullFileSize)
+  if (_xferMeadowCalcCrc == _xferRecvFullFileCrc && _xferMeadowCalcCrc == actualFileCrc
+              && _xferCalcFullFileSize == _xferRecvFullFileSize)
   {
     stringLen = snprintf(hostMsg, HCOM_SHORT_HOST_STRING_BUFF_LENGTH,
         "Download of '%s' success (checksums calc:0x%08X, expected:0x%08X)",
@@ -396,11 +402,11 @@ void hcom_file_dnld_proc_flash_file_sys_end(uint32_t userData)
   }
   else
   {
-    if (_xferMeadowCalcCrc != _xferRecvFullFileCrc)
+    if (_xferMeadowCalcCrc != _xferRecvFullFileCrc || _xferMeadowCalcCrc != actualFileCrc)
     {
       stringLen = snprintf(hostMsg, HCOM_SHORT_HOST_STRING_BUFF_LENGTH,
-              "Download of '%s' failed due to checksum mismatch, Meadow calculated:0x%08X, received from CLI:0x%08X",
-              _fileNameBuffer, _xferMeadowCalcCrc, _xferRecvFullFileCrc);
+              "Download of '%s' failed due to checksum mismatch, file:0x%08X, download:0x%08X, received from CLI:0x%08X",
+              _fileNameBuffer, actualFileCrc, _xferMeadowCalcCrc, _xferRecvFullFileCrc);
       sendMsgToHost = hostMsg;
       requestType = HCOM_HOST_REQUEST_TEXT_ERROR;
     }
