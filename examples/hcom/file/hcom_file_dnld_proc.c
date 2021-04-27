@@ -74,6 +74,7 @@ static uint32_t _xferRecvFullFileSize;      // Both
 static uint32_t _xferMeadowCalcCrc = 0;     // This is over all the payload (original data)
 static uint32_t _xferCalcFullFileSize = 0;  // This is the size of the original
 static uint32_t _xferCalcPacketCrc = 0;     // This is over all packets
+static uint32_t _partitionId = 0;
 static int _dbgNumbPacketsRecvd = 0;
 static int _lastPercentSent;
 
@@ -129,8 +130,10 @@ void hcom_file_dnld_proc_flash_file_sys_begin(const uint8_t *recvPacketData,
   char hostMsg[HCOM_SHORT_HOST_STRING_BUFF_LENGTH];
   int stringLen = 0;
 
-#ifndef CONFIG_MTD_PARTITION
-  partitionId = 0;    // Ignore any other partition value
+#ifdef CONFIG_MTD_PARTITION
+  _partitionId = partitionId;
+#else
+  _partitionId = 0;    // Ignore any other partition value
 #endif
 
   _lastPercentSent = 0;
@@ -172,7 +175,7 @@ void hcom_file_dnld_proc_flash_file_sys_begin(const uint8_t *recvPacketData,
           thisFile, __LINE__, _xferRecvFullFileSize, _xferRecvFullFileCrc, _fileNameBuffer);
 
   // Adding file to F7 file system
-  ret = hcom_file_write_del_open_active_file(partitionId, HCOM_FILE_MOUNT_POINT_TARGET, _fileNameBuffer);
+  ret = hcom_file_write_del_open_active_file(_partitionId, HCOM_FILE_MOUNT_POINT_TARGET, _fileNameBuffer);
   if (ret < 0)
   {
     _initFileSysError = true;
@@ -193,6 +196,7 @@ void hcom_file_dnld_proc_flash_file_sys_begin(const uint8_t *recvPacketData,
 }
 
 //============================================================================
+// There is no partitioning in ESP32 file system
 void hcom_file_dnld_proc_esp32_flash_begin(const uint8_t *recvPacketData,
           const size_t recvPacketDataSize, uint32_t partitionId, uint16_t requestType)
 {
@@ -385,11 +389,29 @@ void hcom_file_dnld_proc_flash_file_sys_end(uint32_t userData)
     hcom_logging_syslog(LOG_ERR, "%s@%d-File %s close:%d\n", thisFile, __LINE__, _fileNameBuffer, ret);
   }
 
-  off_t fileSize;
-  uint32_t blockSizeKB;
-  uint32_t actualFileCrc = hcom_file_lists_calc_crc_for_file(_fileNameBuffer,
-                &fileSize, &blockSizeKB);
+  // Construct file name
+  char *completeNameBuf = malloc(HCOM_MAX_PATH_AND_FILE_BUFF_LENGTH);
+  char *fullMountPtName = malloc(HCOM_MAX_PATH_AND_FILE_BUFF_LENGTH);
 
+#ifdef CONFIG_MTD_PARTITION
+  stringLen = snprintf(fullMountPtName, HCOM_MAX_PATH_AND_FILE_BUFF_LENGTH, "%s%d",
+            HCOM_FILE_MOUNT_POINT_TARGET, _partitionId);
+  DEBUGASSERT(stringLen < HCOM_MAX_PATH_AND_FILE_BUFF_LENGTH);
+#else
+  strcpy(fullMountPtName, HCOM_FILE_MOUNT_POINT_TARGET);
+#endif
+
+  stringLen = snprintf(completeNameBuf, HCOM_MAX_PATH_AND_FILE_BUFF_LENGTH, "%s/%s", 
+            fullMountPtName, _fileNameBuffer);
+  DEBUGASSERT(stringLen < HCOM_MAX_PATH_AND_FILE_BUFF_LENGTH);
+
+  off_t fileSize;       // Not used
+  uint32_t blockSizeKB; // Not used
+  uint32_t actualFileCrc = hcom_file_lists_calc_crc_for_file(completeNameBuf,
+                &fileSize, &blockSizeKB);
+  free(completeNameBuf);
+  free(fullMountPtName);
+  
   // Compare results and report to host
   if (_xferMeadowCalcCrc == _xferRecvFullFileCrc && _xferMeadowCalcCrc == actualFileCrc
               && _xferCalcFullFileSize == _xferRecvFullFileSize)
