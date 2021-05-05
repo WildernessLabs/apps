@@ -134,8 +134,8 @@ int hcom_mono_ctrl_start_mono_main()
     hcom_logging_syslog(LOG_ERR, "%s@%d-hcom_via_nx_gpio_write, ret:%d, errno:%d\n",
               thisFile, __LINE__, ret, errno);
   }
-  
-#if defined(HCOM_DIAG_DONT_ALLOW_MONO_TO_RUN)
+
+#if HCOM_DIAG_DONT_ALLOW_MONO_TO_RUN > 0
   return OK;
 #endif
 

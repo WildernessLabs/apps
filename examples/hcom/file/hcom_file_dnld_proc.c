@@ -57,7 +57,7 @@
 
 /* Configuration ************************************************************/
 
-#define HCOM_RECV_DEBUG_TIMING 1          // Enables the display of time spent
+#define HCOM_RECV_DEBUG_TIMING 0          // Enables the display of time spent
 
 /****************************************************************************
  * Private Data
@@ -84,7 +84,7 @@ static uint32_t _xferTargetMcuAddr;         // ESP32
 static char _md5FileHash[HCOM_PROTOCOL_REQUEST_MD5_HASH_LENGTH + 1];
 #endif
 
-#if HCOM_RECV_DEBUG_TIMING
+#if HCOM_RECV_DEBUG_TIMING > 0
 uint64_t _dbgReceptionBeganAt;
 uint64_t _dbgReceptionEndedAt;
 #endif
@@ -145,7 +145,7 @@ void hcom_file_dnld_proc_flash_file_sys_begin(const uint8_t *recvPacketData,
   
   _currentHcomDataPacketAction = HcomDnldActionMeadowFileXfer;
 
-#if HCOM_RECV_DEBUG_TIMING
+#if HCOM_RECV_DEBUG_TIMING > 0
   _dbgReceptionBeganAt = hcom_utils_get_current_time64();
 #endif
 
@@ -229,7 +229,7 @@ void hcom_file_dnld_proc_esp32_flash_begin(const uint8_t *recvPacketData,
     return;
   }
 
-#if HCOM_RECV_DEBUG_TIMING
+#if HCOM_RECV_DEBUG_TIMING > 0
   _dbgReceptionBeganAt = hcom_utils_get_current_time64();
 #endif
 
@@ -446,7 +446,7 @@ void hcom_file_dnld_proc_flash_file_sys_end(uint32_t userData)
   DEBUGASSERT(stringLen < HCOM_SHORT_HOST_STRING_BUFF_LENGTH);
   hcom_host_send_simple_string_msg(requestType, 0, sendMsgToHost, thisFile, __LINE__);
 
-#if HCOM_RECV_DEBUG_TIMING
+#if HCOM_RECV_DEBUG_TIMING > 0
   _dbgReceptionEndedAt = hcom_utils_get_current_time64();
   hcom_logging_syslog(LOG_DEBUG, "%s@%d-File transfer %d packets, took %llu mSec, CalcPacketCRC:0x%08x CalcFileCRC:0x%08x\n",
            thisFile, __LINE__, _dbgNumbPacketsRecvd, ((_dbgReceptionEndedAt - _dbgReceptionBeganAt) / 1000000),
@@ -543,7 +543,7 @@ void hcom_file_dnld_proc_esp32_flash_end(uint32_t userData)
   DEBUGASSERT(stringLen < HCOM_SHORT_HOST_STRING_BUFF_LENGTH);
   hcom_host_send_simple_string_msg(requestType, 0, hostMsg, thisFile, __LINE__);
 
-#if HCOM_RECV_DEBUG_TIMING
+#if HCOM_RECV_DEBUG_TIMING > 0
   _dbgReceptionEndedAt = hcom_utils_get_current_time64();
   hcom_logging_syslog(LOG_DEBUG, "%s@%d-File transfer %d packets, took %llu mSec\n",
            thisFile, __LINE__, _dbgNumbPacketsRecvd, ((_dbgReceptionEndedAt - _dbgReceptionBeganAt) / 1000000));
