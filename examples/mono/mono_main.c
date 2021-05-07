@@ -88,7 +88,11 @@ int mono_main(int hcom_argc, char *hcom_argv[])
 
   int ret;
   char app_path[] = MONO_MEADOW_EXECUTABLE_APP_EXE;
-  char *mono_argv[] = {"mono", "--interp", app_path};
+#ifdef CONFIG_BUILD_KERNEL
+   char *mono_argv[] = {"mono", "--interp", app_path};
+#else
+  char *mono_argv[] = {"mono", "--llvmonly-interp", "--debug", app_path};
+#endif
   int mono_argc = sizeof(mono_argv) / sizeof(mono_argv[0]);
 
   // Combine the above hardcoded command line arguments with those provided by hcom
