@@ -207,6 +207,8 @@ extern "C"
   void hcom_host_send_shutdown(void);
   void hcom_host_send_header_msg(uint16_t requestType, uint32_t userData,
           char *sourceFileName, int sourceLineNumber);
+  void hcom_host_send_binary_data_msg(uint16_t requestType, uint32_t userData, uint8_t *bytes,
+          size_t msgLength, char *sourceFileName, int sourceLineNumber);
   void hcom_host_send_simple_string_msg(uint16_t requestType, uint32_t userData, char *shortText,
           char *sourceFileName, int sourceLineNumber);
   int hcom_host_send_raw_string_msg(uint16_t requestType, uint32_t userData, char *shortText,
@@ -225,14 +227,20 @@ extern "C"
   int hcom_file_dnld_proc_setup(void);
   bool hcom_file_dnld_proc_is_active(void);
   void hcom_file_dnld_restore_to_inactive_state(void);
-  void hcom_file_dnld_proc_flash_file_sys_begin(const uint8_t *recvPacketData,
-      const size_t recvPacketDataSize,uint32_t partitionId, uint16_t requestType);
-  void hcom_file_dnld_proc_esp32_flash_begin(const uint8_t *recvPacketData,
-      const size_t recvPacketDataSize,uint32_t partitionId, uint16_t requestType);
+  void hcom_file_dnld_proc_flash_file_sys_begin(const uint8_t *recvPayloadData,
+      const size_t recvPayloadSize,uint32_t partitionId, uint16_t requestType);
+  void hcom_file_dnld_proc_esp32_flash_begin(const uint8_t *recvPayloadData,
+      const size_t recvPayloadSize,uint32_t partitionId, uint16_t requestType);
   void hcom_file_dnld_proc_flash_file_sys_end(uint32_t user_data);
   void hcom_file_dnld_proc_esp32_flash_end(uint32_t user_data);
   void hcom_file_dnld_proc_recvd_file_data(const uint8_t *packet, const size_t packetSize, uint16_t seqNumb);
-  void hcom_file_write_del_remove_file_start(const uint8_t *recvPacketData, const size_t recvPacketDataSize, uint32_t user_data);
+  void hcom_file_write_del_remove_file_start(const uint8_t *recvPayloadData, const size_t recvPayloadSize, uint32_t user_data);
+
+  // -----------------------------------------------
+  // Execute Request for uploading file
+  int hcom_file_upld_proc_setup(void);
+  void hcom_file_upld_proc_initial_bytes_in_file(const uint8_t *recvPayloadData,
+          const size_t recvPayloadSize, uint32_t partitionId);
 
   // -----------------------------------------------
   // File commands
