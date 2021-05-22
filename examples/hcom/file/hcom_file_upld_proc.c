@@ -112,6 +112,13 @@ void hcom_file_upld_proc_initial_bytes_in_file(const uint8_t *recvPayloadData,
   fd = open(completeFilePath, O_RDONLY);
   if (fd == -1)
   {
+    char hostMsg[HCOM_SHORT_HOST_STRING_BUFF_LENGTH];
+    int stringLen = snprintf(hostMsg, HCOM_SHORT_HOST_STRING_BUFF_LENGTH, 
+          "The file '%s' cannot be opened by Meadow", completeFilePath);
+    DEBUGASSERT(stringLen < HCOM_SHORT_HOST_STRING_BUFF_LENGTH);
+    hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_ERROR, 0, hostMsg,
+            thisFile, __LINE__);
+
     hcom_logging_syslog(LOG_ERR, "%s@%d-open '%s', errno: %d\n",
                 thisFile, __LINE__, completeFilePath, errno);
     free(completeFilePath);
@@ -122,6 +129,13 @@ void hcom_file_upld_proc_initial_bytes_in_file(const uint8_t *recvPayloadData,
   off_t offset = lseek(fd, 0, SEEK_SET);
   if (offset == (off_t)-1)
   {
+    char hostMsg[HCOM_SHORT_HOST_STRING_BUFF_LENGTH];
+    int stringLen = snprintf(hostMsg, HCOM_SHORT_HOST_STRING_BUFF_LENGTH, 
+          "The file '%s' encountered a lseek error", completeFilePath);
+    DEBUGASSERT(stringLen < HCOM_SHORT_HOST_STRING_BUFF_LENGTH);
+    hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_ERROR, 0, hostMsg,
+            thisFile, __LINE__);
+
     hcom_logging_syslog(LOG_ERR, "%s@%d-lseek failed %s, errno:%d\n",
               thisFile, __LINE__, completeFilePath, errno);
     free(completeFilePath);

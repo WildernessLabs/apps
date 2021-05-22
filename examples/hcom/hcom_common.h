@@ -105,13 +105,12 @@
 #define HCOM_THREAD_STACKSIZE_TRACE_RAMLOG 2048
 
 //---------------------------------------------------------------------
-// These define how long the receive thread waits before "waking up"
-// p-m DON'T FORGET
+// These define how long the receive thread waits before "waking up." It
+// prevents a failed download from hanging the system for a long time.
 // #define HCOM_RECV_TIMEOUT_DEFAULT_SECONDS 15
 // #define HCOM_RECV_TIMEOUT_DEFAULT_SECONDS 60
 #define HCOM_RECV_TIMEOUT_DEFAULT_SECONDS (5 * 60)    // 5 minutes
 // #define HCOM_RECV_TIMEOUT_DEFAULT_SECONDS (1 * 60 * 60) // once an hour report hcom thread running
-
 #define HCOM_RECV_TIMEOUT_ACTIVE_SECONDS 10
 
 #define HCOM_CONNECTION_TIMEOUT_STARTUP 250 * 1000    // At startup we connect quickly
@@ -158,9 +157,11 @@
 // sequence numbers 1-n would be unique for each series.
 enum hcom_download_data_packet_action
 {
-  HcomDnldActionNone,
-  HcomDnldActionMeadowFileXfer, // Could be expanded to specify file type (e.g. mscorlib.dll)
-  HcomDnldActionEsp32FileXfer,
+  HcomDnldActionNone = 0,
+  HcomDnldActionMeadowStarting = 1,
+  HcomDnldActionEsp32Starting = 2,
+  HcomDnldActionMeadowFileXfer = 3,
+  HcomDnldActionEsp32FileXfer = 4,
 };
 
 // Used for writing and deleting files
@@ -226,6 +227,7 @@ extern "C"
   // Execute Request for downloaded file
   int hcom_file_dnld_proc_setup(void);
   bool hcom_file_dnld_proc_is_active(void);
+  bool hcom_file_dnld_proc_wait_for_esp32_starting(void);
   void hcom_file_dnld_restore_to_inactive_state(void);
   void hcom_file_dnld_proc_flash_file_sys_begin(const uint8_t *recvPayloadData,
       const size_t recvPayloadSize,uint32_t partitionId, uint16_t requestType);
