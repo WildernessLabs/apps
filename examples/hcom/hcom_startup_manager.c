@@ -193,26 +193,6 @@ int hcom_main(int argc, char *argv[])
   syslog(2, "Startup Manager 5\n"); usleep(20 * 1000);
 #endif
 
- #if defined (CONFIG_RAMLOG_SYSLOG)
-  // Sets up some basic initialization for ramlog, but usually does not create
-  // the ramlog read thread etc. This is because this feature is not usually
-  // needed. It will create the ramlog read thread if the BBR indicates its
-  // needed. Otherwise, this is postponed until a request is received.
-  // Note: must follow hcom_via_nx_upd_driver_open because it access BBR.
-  ret = hcom_diag_trace_ramlog_setup();
-  if (ret < 0)
-  {
-    syslog(LOG_CRIT, "%s@%d-setup log tracing %d\n", thisFile, __LINE__, ret);
-    return ret;
-  } // Wait, hcom_diag_trace_ramlog_setup might create a thread which must start before we continue
-  ret = hcom_startup_mgr_takesem(&_startupWaitSem);
-  if (ret < 0)
-  {
-    syslog(LOG_CRIT, "%s@%d-setup log tracing %d\n", thisFile, __LINE__, ret);
-    return ret;
-  }
-#endif
-
 #if HCOM_DIAG_INCLUDE_STARTUP_SYSLOG > 0
   syslog(2, "Startup Manager 6\n"); usleep(20 * 1000);
 #endif
@@ -463,8 +443,5 @@ void hcom_manager_shutdown()
   hcom_mono_remote_dbg_shutdown();
 #if defined (CONFIG_HCOM_ESP32_COMMS)
   hcom_esp32_uart_comms_shutdown();
-#endif
-#if defined (CONFIG_RAMLOG_SYSLOG)
-  hcom_diag_trace_ramlog_shutdown();
 #endif
 }

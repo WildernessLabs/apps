@@ -531,7 +531,7 @@ int hcom_mono_ctrl_mono_appears_to_be_running()
 #if defined (CONFIG_RAMLOG_SYSLOG)
   // Sets flag so ramlog can restore UART1's proper configuration since
   // mono's internal initialization reconfigured as digital output
-  hcom_diag_trace_ramlog_mono_started();
+  hcom_via_nx_mono_has_started();
 #endif
 
   // Turn off blue LED. Must reconfigure because mono may have changed the

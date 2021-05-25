@@ -99,11 +99,6 @@
 #define HCOM_THREAD_NAME_REMOTE_DBG "RemoteDbg"
 #define HCOM_THREAD_STACKSIZE_REMOTE_DBG 2048
 
-// The ramlog is part of nuttx and contains syslog text
-#define HCOM_THREAD_PRIORITY_TRACE_RAMLOG 120
-#define HCOM_THREAD_NAME_TRACE_RAMLOG "RamlogRead"
-#define HCOM_THREAD_STACKSIZE_TRACE_RAMLOG 2048
-
 //---------------------------------------------------------------------
 // These define how long the receive thread waits before "waking up." It
 // prevents a failed download from hanging the system for a long time.
@@ -331,6 +326,7 @@ extern "C"
   int hcom_via_nx_get_mcu_ser_numb(char mcuSerNumb[16]);
   void hcom_via_nx_restore_uart_reconfig(uint32_t uartId);
   int hcom_via_nx_esp32_enter_prog_mode(void);
+  void hcom_via_nx_mono_has_started(void);
   int hcom_via_nx_esp32_restart_esp32(void);
   int hcom_via_nx_start_espcp_running(void);
   void hcom_via_nx_diag_fd_inode(int fd);
@@ -366,15 +362,6 @@ extern "C"
 
   //-------------------------------------------------------
   // Ramlog to host/uart
-#if defined (CONFIG_RAMLOG_SYSLOG)
-  int hcom_diag_trace_ramlog_setup(void);
-  void hcom_diag_trace_ramlog_shutdown(void);
-  void hcom_diag_trace_ramlog_mono_started(void);
-#endif
-  void hcom_diag_trace_forward_to_host(uint32_t userData);
-  void hcom_diag_trace_do_not_send_to_host(uint32_t userData);
-  void hcom_diag_trace_forward_to_uart1(uint32_t userData);
-  void hcom_diag_trace_do_not_send_to_uart1(uint32_t userData);
 
   int hcom_diag_misc_setup(void);
   int hcom_diag_nsh_support_setup(void);

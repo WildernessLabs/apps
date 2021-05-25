@@ -286,25 +286,25 @@ void hcom_host_route_request_by_type(const uint8_t *packet, const size_t packetS
 
     case HCOM_MDOW_REQUEST_NO_TRACE_TO_HOST:
       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-      hcom_diag_trace_do_not_send_to_host(userData);
+      hcom_via_nx_forward_cli_cmd_to_nx(HCOM_MDOW_REQUEST_NO_TRACE_TO_HOST, userData);
       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
       break;
 
     case HCOM_MDOW_REQUEST_SEND_TRACE_TO_HOST:
       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-      hcom_diag_trace_forward_to_host(userData);
+      hcom_via_nx_forward_cli_cmd_to_nx(HCOM_MDOW_REQUEST_SEND_TRACE_TO_HOST, userData);
       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
       break;
 
     case HCOM_MDOW_REQUEST_NO_TRACE_TO_UART:
       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-      hcom_diag_trace_do_not_send_to_uart1(userData);
+      hcom_via_nx_forward_cli_cmd_to_nx(HCOM_MDOW_REQUEST_NO_TRACE_TO_UART, userData);
       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
       break;
 
     case HCOM_MDOW_REQUEST_SEND_TRACE_TO_UART:
       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-      hcom_diag_trace_forward_to_uart1(userData);
+      hcom_via_nx_forward_cli_cmd_to_nx(HCOM_MDOW_REQUEST_SEND_TRACE_TO_UART, userData);
       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
       break;
 

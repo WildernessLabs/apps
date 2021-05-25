@@ -330,10 +330,24 @@ int hcom_via_nx_esp32_enter_prog_mode()
 }
 
 //=============================================================
+// Mono has started running let kernelland know
+void hcom_via_nx_mono_has_started()
+{
+  int ret;
+
+  ret = ioctl(_nx_access_fd, HCOM_NX_UPD_MONO_HAS_STARTED, (unsigned long) NULL);
+  if (ret < 0)
+  {
+    hcom_logging_syslog(LOG_ERR, "%s@%d-%s Mono has started ret:%d, errno:%d\n",
+            thisFile, __LINE__, HCOM_NX_UPD_DRIVER_NAME, ret, errno);
+  }
+}
+
+//=============================================================
 // Mono (and espcp) can reconfigure the pins used by uarts needed
 // for debugging. This function restores the tx and rx pins to be
 // reconfigured as uart pins.
-// Note: With the Meadow F7 this means uart 1, 4, 5 and 6 are valid
+// Note: With the Meadow F7v1 this means uart 1, 4, 5 and 6 are valid
 void hcom_via_nx_restore_uart_reconfig(uint32_t uartId)
 {
   int ret;
