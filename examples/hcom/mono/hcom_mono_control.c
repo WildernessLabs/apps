@@ -44,6 +44,7 @@
 #include <meadow/hcom_bbreg_defn.h>
 #include <meadow/hcom_shared_common.h>
 #include <meadow/hcom_upd_shared.h>
+#include "../misc/hcom_config_manager.h"
 
 #if defined (CONFIG_HCOM_MONO_REMOTE_DEBUGGING) 
 #include <sys/socket.h>
@@ -81,6 +82,7 @@ static int _stderr_fd;
 static bool hcom_mono_ctrl_are_needed_files_here(void);
 static bool hcom_mono_ctrl_should_mono_run(void);
 static bool hcom_mono_ctrl_did_mono_run_last_time(void);
+static bool hcom_mono_ctrl_do_versions_matched(void);
 static int redirect_stdout_stderr(void);
 #if defined (CONFIG_HCOM_MONO_REMOTE_DEBUGGING) 
 static int hcom_mono_remote_dbg_open_mono_sock(void);
@@ -135,6 +137,7 @@ int hcom_mono_ctrl_start_mono_main()
               thisFile, __LINE__, ret, errno);
   }
 
+  // For debugging when mono is not desired
 #if HCOM_DIAG_DONT_ALLOW_MONO_TO_RUN > 0
   return OK;
 #endif
@@ -149,12 +152,12 @@ int hcom_mono_ctrl_start_mono_main()
   //------------------------------------------------------------
   // Start espcp running
 #if defined(CONFIG_MEADOW_ESPCP_MANAGER)
-  ret = hcom_via_nx_start_espcp_running();
-  if (ret < 0)
-  {
-    hcom_logging_syslog(LOG_ERR, "%s@%d-hcom_via_nx_start_espcp_running, ret:%d, errno:%d\n",
-              thisFile, __LINE__, ret, errno);
-  }
+  // ret = hcom_via_nx_start_espcp_running();
+  // if (ret < 0)
+  // {
+  //   hcom_logging_syslog(LOG_ERR, "%s@%d-hcom_via_nx_start_espcp_running, ret:%d, errno:%d\n",
+  //             thisFile, __LINE__, ret, errno);
+  // }
 #endif
 
   //------------------------------------------------------------
@@ -170,20 +173,22 @@ int hcom_mono_ctrl_start_mono_main()
   // passed to Mono.
   int argc = 0;
   char *argv[] = { NULL, NULL, NULL };
-  if (hcom_via_nx_ini_cfg_get_int_default(NULL, MEADOW_INI_CFG_STARTUP_SECTION,
-                                          MEADOW_INI_CFG_MONO_DEBUG_KEY, 0) == 1)
+
+  hcom_config_lock();
+  meadow_configuration_t *config = hcom_config_get_pointer();
+  if (config->mono_debug == 1)
   {
-    argv[argc] = "--debug";
+    argv[argc] = HCOM_MONO_REMOTE_DBG_CMD_LINE_DEBUG;
     argc++;
   }
-  char traceInformation[64];
-  if (hcom_via_nx_ini_cfg_get_value(NULL, MEADOW_INI_CFG_STARTUP_SECTION,
-                MEADOW_INI_CFG_MONO_TRACE_KEY, traceInformation, 64) == OK)
+  if (config->mono_trace != NULL)
   {
-    argv[argc] = (char *) malloc(72);   // Need space to add the "--trace=" part of the command line.
-    snprintf(argv[argc], 72, "--trace=%s", traceInformation);
+    int mtl = strlen(config->mono_trace) + 9;   // Need space to add the "--trace=" plus terminating null.
+    argv[argc] = (char *) malloc(mtl);
+    snprintf(argv[argc], mtl, "--trace=%s", config->mono_trace);
     argc++;
   }
+  hcom_config_unlock();
 
   // Create a task to execute mono
   mono_pid = task_create("mono", HCOM_MONO_RUNTIME_TASK_PRIORITY,
@@ -217,10 +222,16 @@ int hcom_mono_ctrl_start_mono_main()
 // This function will test all the reasons to start and not start mono
 bool hcom_mono_ctrl_should_mono_run()
 {
+  // Meadow and mono versions must match
+  if(!hcom_mono_ctrl_do_versions_matched())
+  {
+    return false;
+  }
+
   // Is mono enabled?
   if(!hcom_mono_ctrl_is_mono_enabled())
   {
-    char *noStartReason = "Meadow will not start MONO because it is not enabled";
+    char *noStartReason = "Mono is disabled.";
     hcom_logging_syslog(LOG_WARNING, "%s@%d-%s\n", thisFile, __LINE__, noStartReason);
     hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0,
             noStartReason, thisFile, __LINE__);
@@ -237,7 +248,7 @@ bool hcom_mono_ctrl_should_mono_run()
   bool run_mono = hcom_mono_ctrl_did_mono_run_last_time();
   if(!run_mono)
   {
-    char *noStartReason = "Meadow will not start MONO because it didn't run correctly last time";
+    char *noStartReason = "Mono will not start. Mono did not run correctly the last time";
     hcom_logging_syslog(LOG_WARNING, "%s@%d-%s\n", thisFile, __LINE__, noStartReason);
     hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0,
             noStartReason, thisFile, __LINE__);
@@ -317,7 +328,7 @@ bool hcom_mono_ctrl_are_needed_files_here()
   char errReason[HCOM_LARGE_HOST_STRING_BUFF_LENGTH];
 
   int stringLen = snprintf(errReason, HCOM_LARGE_HOST_STRING_BUFF_LENGTH,
-            "Meadow will not start MONO because the following file%s %s missing:%s",
+            "Mono will not start. The following file%s %s missing:%s",
             listCount == 1 ? "" : "s", listCount == 1 ? "is" : "are",
             missingFiles);
   hcom_logging_syslog(LOG_WARNING, "%s@%d-%s\n", thisFile, __LINE__, errReason);
@@ -329,6 +340,105 @@ bool hcom_mono_ctrl_are_needed_files_here()
   return false;
 }
 
+//====================================================================
+// Do versions match?
+// The ESP32 version is used but if not available mono can be started
+bool hcom_mono_ctrl_do_versions_matched()
+{
+  bool osVersionMatch = false;
+  hcom_config_version_information_t *version_info;
+
+  version_info = (hcom_config_version_information_t *)malloc(sizeof(hcom_config_version_information_t));
+  hcom_get_software_version_info(version_info);
+
+  if(version_info->meadow_version_available && version_info->mono_version_available)
+  {
+    // Do meadow and mono versions match?
+    if(strcmp(version_info->meadow_version, version_info->mono_version) == 0)
+    {
+      // Only report errors or warnings
+      osVersionMatch = true;    // Only success criteria needed
+    }
+    else
+    {
+      // Meadow and mono versions don't match
+      char errReason[HCOM_LARGE_HOST_STRING_BUFF_LENGTH];
+      int stringLen = snprintf(errReason, HCOM_LARGE_HOST_STRING_BUFF_LENGTH,
+                "Mono will not start. Version mismatch, Meadow.OS version %s, Mono version %s.",
+                version_info->meadow_version, version_info->mono_version);
+      hcom_logging_syslog(LOG_WARNING, "%s@%d-%s\n", thisFile, __LINE__, errReason);
+      
+      DEBUGASSERT(stringLen < HCOM_LARGE_HOST_STRING_BUFF_LENGTH);
+      hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0,
+            errReason, thisFile, __LINE__);
+    }
+  }
+  else
+  {
+    // Either meadow and/or mono not available
+    if(!version_info->meadow_version_available)
+    {
+      char errReason[HCOM_LARGE_HOST_STRING_BUFF_LENGTH];
+      int stringLen = snprintf(errReason, HCOM_LARGE_HOST_STRING_BUFF_LENGTH,
+                "Mono will not start. Meadow.OS's version unavailable.");
+      hcom_logging_syslog(LOG_WARNING, "%s@%d-%s\n", thisFile, __LINE__, errReason);
+      
+      DEBUGASSERT(stringLen < HCOM_LARGE_HOST_STRING_BUFF_LENGTH);
+      hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0,
+            errReason, thisFile, __LINE__);
+    }
+
+    if(!version_info->mono_version_available)
+    {
+      char errReason[HCOM_LARGE_HOST_STRING_BUFF_LENGTH];
+      int stringLen = snprintf(errReason, HCOM_LARGE_HOST_STRING_BUFF_LENGTH,
+                "Mono will not start. Mono version is not available (Meadow.OS version %s).",
+                version_info->meadow_version);
+      hcom_logging_syslog(LOG_WARNING, "%s@%d-%s\n", thisFile, __LINE__, errReason);
+      
+      DEBUGASSERT(stringLen < HCOM_LARGE_HOST_STRING_BUFF_LENGTH);
+      hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0,
+            errReason, thisFile, __LINE__);
+    }
+  }
+
+  // ESP32 Informational only
+  if(version_info->esp32_version_available)
+  {
+    // No need for information if versions match
+    if(strcmp(version_info->meadow_version, version_info->esp32_version) != 0)
+    {
+      // Esp32 version mismatch with meadow version
+      char errReason[HCOM_LARGE_HOST_STRING_BUFF_LENGTH];
+      int stringLen = snprintf(errReason, HCOM_LARGE_HOST_STRING_BUFF_LENGTH,
+                "Warning:ESP32 version %s does not match Meadow.OS version %s (Mono version %s).",
+                version_info->esp32_version, version_info->meadow_version,
+                version_info->mono_version);
+      hcom_logging_syslog(LOG_WARNING, "%s@%d-%s\n", thisFile, __LINE__, errReason);
+      
+      DEBUGASSERT(stringLen < HCOM_LARGE_HOST_STRING_BUFF_LENGTH);
+      hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0,
+            errReason, thisFile, __LINE__);
+    }
+  }
+  else
+  {
+    // No Esp32 version information available
+    char infoReason[HCOM_LARGE_HOST_STRING_BUFF_LENGTH];
+    int stringLen = snprintf(infoReason, HCOM_LARGE_HOST_STRING_BUFF_LENGTH,
+              "ESP32 version not available. Meadow.OS version %s, Mono version %s.",
+              version_info->meadow_version, version_info->mono_version);
+    hcom_logging_syslog(LOG_INFO, "%s@%d-%s\n", thisFile, __LINE__, infoReason);
+    
+    DEBUGASSERT(stringLen < HCOM_LARGE_HOST_STRING_BUFF_LENGTH);
+    hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0,
+          infoReason, thisFile, __LINE__);
+  }
+    
+  free(version_info);
+  return osVersionMatch;
+}
+
 //===================================================================
 // Determine the state of the mono run flag.
 // The bit is set when mono is disabled
@@ -337,12 +447,15 @@ bool hcom_mono_ctrl_are_needed_files_here()
 // would be necessary if meadow.cfg changed
 bool hcom_mono_ctrl_is_mono_enabled()
 {
-  // Check ini config file to override the user request
-  if(hcom_via_nx_ini_cfg_get_match(NULL, MEADOW_INI_CFG_STARTUP_SECTION,
-            MEADOW_INI_CFG_MONO_RUN_KEY, MEADOW_INI_CFG_MONO_RUN_USE))
+  // Check if the user has specified that mono should not run.
+  hcom_config_lock();
+  meadow_configuration_t *config = hcom_config_get_pointer();
+  bool disable_mono = config->disable_mono;
+  hcom_config_unlock();
+  config = NULL;
+  if (disable_mono)
   {
-    // config file contains 'monorun=no'
-    return false;
+    return(false);
   }
 
   return !hcom_bbreg_is_bbr_bit_set(HCOM_BBREG_USER_RQST_MONO_ENABLE_BIT);
@@ -377,9 +490,9 @@ void hcom_mono_ctrl_report_mono_enabled_state(uint32_t userData)
   char *monoStartupMsg;
 
   if(hcom_mono_ctrl_is_mono_enabled())
-    monoStartupMsg = "On reset, Meadow will start MONO and run app.exe";
+    monoStartupMsg = "Mono is enabled";
   else
-    monoStartupMsg = "On reset, Meadow will not start MONO, therefore app.exe will not run";
+    monoStartupMsg = "Mono is disabled";
 
   hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0,
           monoStartupMsg, thisFile, __LINE__);
@@ -539,7 +652,7 @@ int hcom_mono_remote_dbg_open_mono_sock()
 {
   struct sockaddr_un myaddr;
   socklen_t addrlen;
-  int ret;
+  int ret = OK;
   int vsSockFd = -1;
 
   vsSockFd = socket(PF_LOCAL, SOCK_STREAM, 0);
@@ -605,10 +718,11 @@ int mono_main_proxy(int argcX, char *argvX[])
     }
 
     // Add command line argument for mono
-    argc = 1;
+    argc = 2;
     argv = (char **) malloc(sizeof(char *));
-    argv[0] = (char *) malloc(16);
-    snprintf(argv[0], 16, "%s=%d", HCOM_MONO_REMOTE_DBG_CMD_LINE_SD, dbgSD);
+    argv[0] = HCOM_MONO_REMOTE_DBG_CMD_LINE_DEBUG;
+    argv[1] = (char *) malloc(128);
+    snprintf(argv[1], 128, HCOM_MONO_REMOTE_DBG_CMD_LINE_SD, dbgSD);
   }
   else
   {

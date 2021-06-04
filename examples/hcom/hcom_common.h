@@ -105,13 +105,12 @@
 #define HCOM_THREAD_STACKSIZE_TRACE_RAMLOG 2048
 
 //---------------------------------------------------------------------
-// These define how long the receive thread waits before "waking up"
-// p-m DON'T FORGET
+// These define how long the receive thread waits before "waking up." It
+// prevents a failed download from hanging the system for a long time.
 // #define HCOM_RECV_TIMEOUT_DEFAULT_SECONDS 15
 // #define HCOM_RECV_TIMEOUT_DEFAULT_SECONDS 60
 #define HCOM_RECV_TIMEOUT_DEFAULT_SECONDS (5 * 60)    // 5 minutes
 // #define HCOM_RECV_TIMEOUT_DEFAULT_SECONDS (1 * 60 * 60) // once an hour report hcom thread running
-
 #define HCOM_RECV_TIMEOUT_ACTIVE_SECONDS 10
 
 #define HCOM_CONNECTION_TIMEOUT_STARTUP 250 * 1000    // At startup we connect quickly
@@ -135,8 +134,8 @@
 #define HCOM_MONO_STDOUT_REDIRECT_FIFO "/dev/monostdout"
 #define HCOM_MONO_STDERR_REDIRECT_FIFO "/dev/monostderr"
 #define HCOM_MONO_REMOTE_DBG_SOCKET_NAME "/dev/monodbg"
-#define HCOM_MONO_REMOTE_DBG_CMD_LINE_SD "--dbgSD"
-
+#define HCOM_MONO_REMOTE_DBG_CMD_LINE_DEBUG "--debug"
+#define HCOM_MONO_REMOTE_DBG_CMD_LINE_SD "--debugger-agent=transport=socket-fd,address=%d"
 //---------------------------------------------------------------------
 #define HCOM_CIR_BUFFER_MAX_PACKETS 4
 // Based on the encoding scheme (COTS), after encoding there will usually be 2-3 bytes added. One that
@@ -158,9 +157,11 @@
 // sequence numbers 1-n would be unique for each series.
 enum hcom_download_data_packet_action
 {
-  HcomDnldActionNone,
-  HcomDnldActionMeadowFileXfer, // Could be expanded to specify file type (e.g. mscorlib.dll)
-  HcomDnldActionEsp32FileXfer,
+  HcomDnldActionNone = 0,
+  HcomDnldActionMeadowStarting = 1,
+  HcomDnldActionEsp32Starting = 2,
+  HcomDnldActionMeadowFileXfer = 3,
+  HcomDnldActionEsp32FileXfer = 4,
 };
 
 // Used for writing and deleting files
@@ -207,6 +208,8 @@ extern "C"
   void hcom_host_send_shutdown(void);
   void hcom_host_send_header_msg(uint16_t requestType, uint32_t userData,
           char *sourceFileName, int sourceLineNumber);
+  void hcom_host_send_binary_data_msg(uint16_t requestType, uint32_t userData, uint8_t *bytes,
+          size_t msgLength, char *sourceFileName, int sourceLineNumber);
   void hcom_host_send_simple_string_msg(uint16_t requestType, uint32_t userData, char *shortText,
           char *sourceFileName, int sourceLineNumber);
   int hcom_host_send_raw_string_msg(uint16_t requestType, uint32_t userData, char *shortText,
@@ -216,7 +219,7 @@ extern "C"
   void hcom_host_parse_shutdown(void);
   int hcom_host_parse_save_raw_data(uint8_t recvBuff[], const ssize_t recvByteCnt);
 
-  void hcom_host_route_request_by_type(const uint8_t *recvOrigData, const size_t recvOrigDataSize);
+  void hcom_host_route_request_by_type(const uint8_t *packet, const size_t packetSize);
   int hcom_host_route_setup(void);
   void hcom_host_route_shutdown(void);
 
@@ -224,15 +227,22 @@ extern "C"
   // Execute Request for downloaded file
   int hcom_file_dnld_proc_setup(void);
   bool hcom_file_dnld_proc_is_active(void);
+  bool hcom_file_dnld_proc_wait_for_esp32_starting(void);
   void hcom_file_dnld_restore_to_inactive_state(void);
-  void hcom_file_dnld_proc_flash_file_sys_begin(const uint8_t *recvPacketData,
-      const size_t recvPacketDataSize,uint32_t partitionId, uint16_t requestType);
-  void hcom_file_dnld_proc_esp32_flash_begin(const uint8_t *recvPacketData,
-      const size_t recvPacketDataSize,uint32_t partitionId, uint16_t requestType);
+  void hcom_file_dnld_proc_flash_file_sys_begin(const uint8_t *recvPayloadData,
+      const size_t recvPayloadSize,uint32_t partitionId, uint16_t requestType);
+  void hcom_file_dnld_proc_esp32_flash_begin(const uint8_t *recvPayloadData,
+      const size_t recvPayloadSize,uint32_t partitionId, uint16_t requestType);
   void hcom_file_dnld_proc_flash_file_sys_end(uint32_t user_data);
   void hcom_file_dnld_proc_esp32_flash_end(uint32_t user_data);
   void hcom_file_dnld_proc_recvd_file_data(const uint8_t *packet, const size_t packetSize, uint16_t seqNumb);
-  void hcom_file_write_del_remove_file_start(const uint8_t *recvPacketData, const size_t recvPacketDataSize, uint32_t user_data);
+  void hcom_file_write_del_remove_file_start(const uint8_t *recvPayloadData, const size_t recvPayloadSize, uint32_t user_data);
+
+  // -----------------------------------------------
+  // Execute Request for uploading file
+  int hcom_file_upld_proc_setup(void);
+  void hcom_file_upld_proc_initial_bytes_in_file(const uint8_t *recvPayloadData,
+          const size_t recvPayloadSize, uint32_t partitionId);
 
   // -----------------------------------------------
   // File commands
@@ -335,15 +345,10 @@ extern "C"
   int hcom_via_nx_diag_gpio_write(int gpioHcomId, uint8_t cmdValue);
   int hcom_via_nx_diag_gpio_write_byte(uint8_t byteValue, uint8_t rangeId);
   int hcom_via_nx_diag_gpio_make_defns(void);
+  int hcom_via_nx_copy_config(uint8_t *);
 
   void hcom_via_nx_forward_cli_cmd_to_nx(uint16_t hcomCmd, uint32_t userData);
   bool hcom_via_nx_is_mounted(uint32_t partitionId);
-  int hcom_via_nx_ini_cfg_get_value(char *fileName, char *sectionName,
-        char *keyName, char returnValueBuf[], int returnBufLen);
-bool hcom_via_nx_ini_cfg_get_match(char *fileName, char *sectionName,
-                  char *keyName, char *match);
-  int hcom_via_nx_ini_cfg_get_int_default(char *fileName, char *sectionName,
-                  char *keyName, int defval);
 
   // These exist and work, however, direct registry access is currently
   // not supported.
@@ -380,6 +385,7 @@ bool hcom_via_nx_ini_cfg_get_match(char *fileName, char *sectionName,
   void hcom_diag_misc_print_buffer(const uint8_t packetBuffer[], const int bufLen, uint8_t logPriority);
   void hcom_diag_misc_build_info_from_recvd_msg(uint8_t buffer[], const int bufLen, bool isEncoded);
   void hcom_diag_misc_build_info_from_send_msg(uint8_t buffer[], const int bufLen, bool isEncoded);
+  void hcom_diag_decode_recvd_message_type(const uint8_t *packet, const size_t packetSize);
 
 #if HCOM_INCLUDE_IN_BUILD_DIAGNOSTIC_GPIO_CODE > 0
   int hcom_diag_gpio_setup(void);

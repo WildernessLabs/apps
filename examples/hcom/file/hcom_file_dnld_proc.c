@@ -59,15 +59,16 @@
 
 #define HCOM_RECV_DEBUG_TIMING 0          // Enables the display of time spent
 
+// This needs to allow 30 seconds. The receiving code while downloading
+// normally waits HCOM_RECV_TIMEOUT_ACTIVE_SECONDS seconds.
+#define HCOM_DNLD_PROC_ESP_START_CNT    (30/HCOM_RECV_TIMEOUT_ACTIVE_SECONDS)
+
 /****************************************************************************
  * Private Data
  ****************************************************************************/
 static char *thisFile = __FILE__;
 
 static int _currentHcomDataPacketAction;
-static bool _initFileSysError;
-static bool _fileDownloadFailedNoted;
-
 static char *_fileNameBuffer;               // F7 Flash file system
 static uint32_t _xferRecvFullFileCrc;       // F7 Flash file system
 static uint32_t _xferRecvFullFileSize;      // Both
@@ -76,8 +77,9 @@ static uint32_t _xferCalcFullFileSize = 0;  // This is the size of the original
 static uint32_t _xferCalcPacketCrc = 0;     // This is over all packets
 static uint32_t _partitionId = 0;
 static int _dbgNumbPacketsRecvd = 0;
-static int _lastPercentSent;
 
+static int _lastPercentSent;
+static int _esp32WaitCount;
 
 #if defined (CONFIG_HCOM_ESP32_COMMS)
 static uint32_t _xferTargetMcuAddr;         // ESP32
@@ -98,7 +100,6 @@ uint64_t _dbgReceptionEndedAt;
  ****************************************************************************/
 int hcom_file_dnld_proc_setup()
 {
-    _fileDownloadFailedNoted = false;
     _currentHcomDataPacketAction = HcomDnldActionNone;
   return OK;
 }
@@ -108,6 +109,21 @@ int hcom_file_dnld_proc_setup()
 bool hcom_file_dnld_proc_is_active()
 {
   return (_currentHcomDataPacketAction != HcomDnldActionNone);
+}
+
+//==========================================================================
+// Are we starting an ESP32 download? If the receive thread will ignore
+// it's timeout for a bit longer.
+bool hcom_file_dnld_proc_wait_for_esp32_starting()
+{
+  if(_currentHcomDataPacketAction != HcomDnldActionEsp32Starting)
+    return false;
+
+  _esp32WaitCount++;
+  if(_esp32WaitCount > HCOM_DNLD_PROC_ESP_START_CNT)
+    return false;
+    
+  return true;
 }
 
 //==========================================================================
@@ -121,14 +137,16 @@ void hcom_file_dnld_restore_to_inactive_state()
 // Beginning of a file download into the flash file system
 // Note: This function is shared by all download types that store in the
 // flash file system.
-void hcom_file_dnld_proc_flash_file_sys_begin(const uint8_t *recvPacketData,
-          const size_t recvPacketDataSize, uint32_t partitionId, uint16_t requestType)
+void hcom_file_dnld_proc_flash_file_sys_begin(const uint8_t *recvPayloadData,
+          const size_t recvPayloadSize, uint32_t partitionId, uint16_t requestType)
 {
   int ret;
   off_t msgOffset = 0;
   size_t fileNameLength;
   char hostMsg[HCOM_SHORT_HOST_STRING_BUFF_LENGTH];
   int stringLen = 0;
+  _dbgNumbPacketsRecvd = 0;
+  _currentHcomDataPacketAction = HcomDnldActionMeadowStarting;
 
 #ifdef CONFIG_MTD_PARTITION
   _partitionId = partitionId;
@@ -139,34 +157,32 @@ void hcom_file_dnld_proc_flash_file_sys_begin(const uint8_t *recvPacketData,
   _lastPercentSent = 0;
   _xferCalcFullFileSize = 0;
   _xferMeadowCalcCrc = 0; // Setup for checksum calculation of orig file
-  _initFileSysError = false;
-  _fileDownloadFailedNoted = false;
   _fileNameBuffer = NULL;
   
-  _currentHcomDataPacketAction = HcomDnldActionMeadowFileXfer;
 
 #if HCOM_RECV_DEBUG_TIMING > 0
   _dbgReceptionBeganAt = hcom_utils_get_current_time64();
 #endif
 
+  // TODO:This should be based on a struct
   // File size
-  _xferRecvFullFileSize = recvPacketData[msgOffset] + (recvPacketData[msgOffset + 1] << 8) +
-                          (recvPacketData[msgOffset + 2] << 16) + (recvPacketData[msgOffset + 3] << 24);
+  _xferRecvFullFileSize = recvPayloadData[msgOffset] + (recvPayloadData[msgOffset + 1] << 8) +
+                          (recvPayloadData[msgOffset + 2] << 16) + (recvPayloadData[msgOffset + 3] << 24);
   msgOffset += sizeof(uint32_t);
 
   // Checksum
-  _xferRecvFullFileCrc = recvPacketData[msgOffset] + (recvPacketData[msgOffset + 1] << 8) +
-                         (recvPacketData[msgOffset + 2] << 16) + (recvPacketData[msgOffset + 3] << 24);
+  _xferRecvFullFileCrc = recvPayloadData[msgOffset] + (recvPayloadData[msgOffset + 1] << 8) +
+                         (recvPayloadData[msgOffset + 2] << 16) + (recvPayloadData[msgOffset + 3] << 24);
   msgOffset += sizeof(uint32_t);
 
   // Account for MCU address field
   msgOffset += sizeof(uint32_t);
 
   // Skip past the MD5 field (32 bytes)
-  fileNameLength = recvPacketDataSize - (msgOffset + HCOM_PROTOCOL_REQUEST_MD5_HASH_LENGTH);
+  fileNameLength = recvPayloadSize - (msgOffset + HCOM_PROTOCOL_REQUEST_MD5_HASH_LENGTH);
   _fileNameBuffer = malloc(fileNameLength + 1);
 
-  memcpy(_fileNameBuffer, recvPacketData + msgOffset + HCOM_PROTOCOL_REQUEST_MD5_HASH_LENGTH,
+  memcpy(_fileNameBuffer, recvPayloadData + msgOffset + HCOM_PROTOCOL_REQUEST_MD5_HASH_LENGTH,
           fileNameLength);
   _fileNameBuffer[fileNameLength] = '\0';
 
@@ -176,42 +192,68 @@ void hcom_file_dnld_proc_flash_file_sys_begin(const uint8_t *recvPacketData,
 
   // Adding file to F7 file system
   ret = hcom_file_write_del_open_active_file(_partitionId, HCOM_FILE_MOUNT_POINT_TARGET, _fileNameBuffer);
+
   if (ret < 0)
   {
-    _initFileSysError = true;
-    _currentHcomDataPacketAction = HcomDnldActionNone;
-    hcom_logging_syslog(LOG_ERR, "%s@%d-from call to open file in flash:%d\n", thisFile, __LINE__, ret);
+    char *errorCause;
+    switch(ret)
+    {
+      case -EEXIST: // File already open
+      errorCause = "Another file is being processed";
+      break;
+      
+      case -ENAMETOOLONG: // File name too long
+      errorCause = "File name too long";
+      break;
+      
+      case -ENOENT: // No such directory
+      errorCause = "No such directory";
+      break;
+      
+      case -EMFILE: // Too many files open
+      errorCause = "Too many files open";
+      break;
+
+      default:  // different error
+      snprintf(hostMsg, HCOM_SHORT_HOST_STRING_BUFF_LENGTH, "Unexpected error:%d");
+      errorCause = hostMsg;
+      break;
+    }
+
+    stringLen = snprintf(hostMsg, HCOM_SHORT_HOST_STRING_BUFF_LENGTH,
+          "File '%s' download to Meadow failed because %s", _fileNameBuffer, errorCause);
+    hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0, hostMsg,
+          thisFile, __LINE__);
+
+    hcom_file_dnld_restore_to_inactive_state();
+    free(_fileNameBuffer);
+
+    // Notify CLI that something when wrong with opening the file
+    hcom_host_send_header_msg(HCOM_HOST_REQUEST_FILE_START_FAIL, 0, thisFile, __LINE__);
+    return;
   }
 
-  if (_initFileSysError)
-    stringLen = snprintf(hostMsg, HCOM_SHORT_HOST_STRING_BUFF_LENGTH,
-          "File download to Meadow failed to start for '%s'", _fileNameBuffer);
-  else
-    stringLen = snprintf(hostMsg, HCOM_SHORT_HOST_STRING_BUFF_LENGTH,
-          "Meadow file download of '%s' has begun", _fileNameBuffer);
+  // Best to change the current action before telling CLI ok to send
+  _currentHcomDataPacketAction = HcomDnldActionMeadowFileXfer;
 
-  DEBUGASSERT(stringLen < HCOM_SHORT_HOST_STRING_BUFF_LENGTH);
-  hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0, hostMsg,
-          thisFile, __LINE__);
+  // Notify CLI that it's okay to send the file data
+  hcom_host_send_header_msg(HCOM_HOST_REQUEST_FILE_START_OKAY, 0, thisFile, __LINE__);
 }
 
 //============================================================================
-// There is no partitioning in ESP32 file system
-void hcom_file_dnld_proc_esp32_flash_begin(const uint8_t *recvPacketData,
-          const size_t recvPacketDataSize, uint32_t partitionId, uint16_t requestType)
+void hcom_file_dnld_proc_esp32_flash_begin(const uint8_t *recvPayloadData,
+          const size_t recvPayloadSize, uint32_t partitionId, uint16_t requestType)
 {
 #if defined (CONFIG_HCOM_ESP32_COMMS)
   int ret;
   off_t msgOffset = 0;
   char hostMsg[HCOM_SHORT_HOST_STRING_BUFF_LENGTH];
-  int stringLen = 0;
+  int stringLen;
 
   _lastPercentSent = 0;
   _xferCalcFullFileSize = 0;
-  _initFileSysError = false;
-  _fileDownloadFailedNoted = false;
-  _fileNameBuffer = NULL;
 
+  DEBUGASSERT(_fileNameBuffer == NULL);
   DEBUGASSERT(requestType == HCOM_MDOW_REQUEST_START_ESP_FILE_TRANSFER);
 
   // Verify that mono has been disabled
@@ -220,36 +262,39 @@ void hcom_file_dnld_proc_esp32_flash_begin(const uint8_t *recvPacketData,
     stringLen = snprintf(hostMsg, HCOM_SHORT_HOST_STRING_BUFF_LENGTH,
             "Mono must be disabled for ESP32 file download");
     hcom_logging_syslog(LOG_ERR, "%s@%d-%s\n", thisFile, __LINE__, hostMsg);
-    
     DEBUGASSERT(stringLen < HCOM_SHORT_HOST_STRING_BUFF_LENGTH);
     hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_ERROR, 0,
             hostMsg, thisFile, __LINE__);
-            
-    _initFileSysError = true;
+
+    // Notify CLI that download can't start because mono is enabled
+    hcom_host_send_header_msg(HCOM_HOST_REQUEST_FILE_START_FAIL, 0, thisFile, __LINE__);
+
+    hcom_file_dnld_restore_to_inactive_state();
     return;
   }
 
-#if HCOM_RECV_DEBUG_TIMING > 0
+  // Best to change the current action before telling CLI ok to send
+  _esp32WaitCount = 0;
+  _currentHcomDataPacketAction = HcomDnldActionEsp32Starting;
   _dbgReceptionBeganAt = hcom_utils_get_current_time64();
 #endif
 
+  // TODO:This should be based on a struct not inline addition
   // File size
-  _xferRecvFullFileSize = recvPacketData[msgOffset] + (recvPacketData[msgOffset + 1] << 8) +
-                          (recvPacketData[msgOffset + 2] << 16) + (recvPacketData[msgOffset + 3] << 24);
+  _xferRecvFullFileSize = recvPayloadData[msgOffset] + (recvPayloadData[msgOffset + 1] << 8) +
+                          (recvPayloadData[msgOffset + 2] << 16) + (recvPayloadData[msgOffset + 3] << 24);
   msgOffset += sizeof(uint32_t);
 
   // Account for checksum which is not used by ESP32. ESP32 uses MD5 calculation instead
   msgOffset += sizeof(uint32_t);
 
   // Destination address within the target MCU (only used by ESP32)
-  _xferTargetMcuAddr = recvPacketData[msgOffset] + (recvPacketData[msgOffset + 1] << 8) +
-                         (recvPacketData[msgOffset + 2] << 16) + (recvPacketData[msgOffset + 3] << 24);
+  _xferTargetMcuAddr = recvPayloadData[msgOffset] + (recvPayloadData[msgOffset + 1] << 8) +
+                         (recvPayloadData[msgOffset + 2] << 16) + (recvPayloadData[msgOffset + 3] << 24);
   msgOffset += sizeof(uint32_t);
 
-  memcpy(_md5FileHash, recvPacketData + msgOffset, HCOM_PROTOCOL_REQUEST_MD5_HASH_LENGTH);
+  memcpy(_md5FileHash, recvPayloadData + msgOffset, HCOM_PROTOCOL_REQUEST_MD5_HASH_LENGTH);
   _md5FileHash[HCOM_PROTOCOL_REQUEST_MD5_HASH_LENGTH] = '\0';
-
-  _currentHcomDataPacketAction = HcomDnldActionEsp32FileXfer;
 
   // Log some diagnostic information 
   hcom_logging_syslog(LOG_INFO, "%s@%d-Start ESP32 download (Size:%d, MCUAddr:0x%08x, MD5Hash:%s)\n",
@@ -259,21 +304,24 @@ void hcom_file_dnld_proc_esp32_flash_begin(const uint8_t *recvPacketData,
   ret = hcom_esp32_exec_download_flash_start(_xferRecvFullFileSize, _xferTargetMcuAddr);
   if (ret < 0)
   {
-    _initFileSysError = true;
-    _currentHcomDataPacketAction = HcomDnldActionNone;
+    stringLen = snprintf(hostMsg, HCOM_SHORT_HOST_STRING_BUFF_LENGTH,
+          "File download to ESP32 flash at '0x%08x' was unable to begin", _xferTargetMcuAddr);
+    DEBUGASSERT(stringLen < HCOM_SHORT_HOST_STRING_BUFF_LENGTH);
+    hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0, hostMsg,
+            thisFile, __LINE__);
+            
+    hcom_file_dnld_restore_to_inactive_state();
+
+    // Notify CLI that something when wrong with start
+    hcom_host_send_header_msg(HCOM_HOST_REQUEST_FILE_START_FAIL, 0, thisFile, __LINE__);
     hcom_logging_syslog(LOG_ERR, "%s@%d-download ESP32 start transfer:%d\n", thisFile, __LINE__, ret);
+    return;
   }
 
-  if (_initFileSysError)
-    stringLen = snprintf(hostMsg, HCOM_SHORT_HOST_STRING_BUFF_LENGTH,
-          "File download to ESP32 flash at '0x%08x' did not begin", _xferTargetMcuAddr);
-  else
-    stringLen = snprintf(hostMsg, HCOM_SHORT_HOST_STRING_BUFF_LENGTH,
-          "File download to ESP32 flash at '0x%08x' has begun", _xferTargetMcuAddr);
+  _currentHcomDataPacketAction = HcomDnldActionEsp32FileXfer;
 
-  DEBUGASSERT(stringLen < HCOM_SHORT_HOST_STRING_BUFF_LENGTH);
-  hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0, hostMsg,
-          thisFile, __LINE__);
+  // Notify CLI that it's okay to send data
+  hcom_host_send_header_msg(HCOM_HOST_REQUEST_FILE_START_OKAY, 0, thisFile, __LINE__);
 #endif
 }
 
@@ -284,18 +332,6 @@ void hcom_file_dnld_proc_recvd_file_data(const uint8_t *packet, const size_t pac
 {
   int ret;
   int msgOffset = sizeof(uint16_t); // size of sequence number
-
-  if (_initFileSysError)
-  {
-    if(!_fileDownloadFailedNoted)
-    {
-      // Someday, when nothing else to do, modify the protocol so that the
-      // host knows to not send data that's going to be trashed sending.
-      hcom_logging_syslog(LOG_ERR, "%s@%d-Data packets will be ignored.\n", thisFile, __LINE__);
-      _fileDownloadFailedNoted = true;
-    }
-    return;
-  }
 
   _dbgNumbPacketsRecvd++;
 
@@ -341,8 +377,8 @@ void hcom_file_dnld_proc_recvd_file_data(const uint8_t *packet, const size_t pac
       
     default:
       ret = -1;
-      hcom_logging_syslog(LOG_ERR, "%s@%d-Data Packet (SeqNumb=%d), unknown data packet action\n",
-              thisFile, __LINE__, seqNumb);
+      hcom_logging_syslog(LOG_ERR, "%s@%d-Data Packet (SeqNumb=%d), unexpected action:%d\n",
+              thisFile, __LINE__, seqNumb, _currentHcomDataPacketAction);
       break;
   }
   
@@ -366,18 +402,6 @@ void hcom_file_dnld_proc_flash_file_sys_end(uint32_t userData)
   char *sendMsgToHost;
   int stringLen = 0;
   uint16_t requestType;
-
-  // At present the CLI isn't smart enough to know that continuing to send data
-  // when the file could not be opened is a waste of time.
-  if (_initFileSysError)
-  {
-    if(_fileNameBuffer != NULL)
-    {
-      free(_fileNameBuffer);
-      _fileNameBuffer = NULL;
-    }
-    return;
-  }
 
   hcom_logging_syslog(LOG_NOTICE, "End of file transfer\n");
 
@@ -465,7 +489,7 @@ void hcom_file_dnld_proc_flash_file_sys_end(uint32_t userData)
   _xferCalcFullFileSize = 0;
   _xferMeadowCalcCrc = 0; // Set to 0 for next message
 
-  _currentHcomDataPacketAction = HcomDnldActionNone;
+  hcom_file_dnld_restore_to_inactive_state();
 }
 
 //=======================================================================================
@@ -483,13 +507,6 @@ void hcom_file_dnld_proc_esp32_flash_end(uint32_t userData)
   bool lastFile = userData == 1 ? true : false;
   int stringLen = 0;
   uint16_t requestType;
-
-  // At present the CLI isn't smart enough to know that continuing to send data
-  // when the file could not be opened is a waste of time.
-  if(_initFileSysError)
-  {
-    return;
-  }
 
   hcom_logging_syslog(LOG_NOTICE, "End of ESP32 transfer\n");
 
@@ -552,7 +569,7 @@ void hcom_file_dnld_proc_esp32_flash_end(uint32_t userData)
 #endif
 
   _xferCalcFullFileSize = 0;
-  _currentHcomDataPacketAction = HcomDnldActionNone;
+  hcom_file_dnld_restore_to_inactive_state();
 
   // Give time for CLI to receive all the messages
   usleep(500 * 1000);

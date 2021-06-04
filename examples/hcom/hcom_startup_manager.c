@@ -42,6 +42,7 @@
 
 #include "hcom_common.h"
 #include <meadow/hcom_shared_common.h>
+#include "misc/hcom_config_manager.h"
 
 #if defined (CONFIG_HCOM_ESP32_COMMS)
 #include "esp32/hcom_esp32_comms.h"
@@ -171,6 +172,13 @@ int hcom_main(int argc, char *argv[])
   syslog(2, "Startup Manager 4\n"); usleep(20 * 1000);
 #endif
 
+  // Try to create a user space copy of the configuration held in NuttX kernel memory.
+  if (hcom_config_init() != OK)
+  {
+    syslog(LOG_CRIT, "%s@%d-setup cannot allocate memory for configuration.\n", thisFile, __LINE__);
+    return -1;
+  }
+
   // Restores previous syslog mask from the battery backed register (BBR).
   // Note: This needs to be third because all hcom_logging_syslog
   // calls are filtered by the results of this call. Nothing to wait for.
@@ -250,7 +258,7 @@ int hcom_main(int argc, char *argv[])
   }
 
 #if HCOM_DIAG_INCLUDE_STARTUP_SYSLOG > 0
-  syslog(2, "Startup Manager 9\n"); usleep(20 * 1000);
+  syslog(2, "Startup Manager 9a\n"); usleep(20 * 1000);
 #endif
 
   // Sets internal variable state
@@ -258,6 +266,18 @@ int hcom_main(int argc, char *argv[])
   if (ret < 0)
   {
     hcom_logging_syslog(LOG_CRIT, "%s@%d-setup file download %d\n", thisFile, __LINE__, ret);
+    return ret;
+  }
+
+#if HCOM_DIAG_INCLUDE_STARTUP_SYSLOG > 0
+  syslog(2, "Startup Manager 9b\n"); usleep(20 * 1000);
+#endif
+
+  // Sets internal variable state
+  ret = hcom_file_upld_proc_setup();
+  if (ret < 0)
+  {
+    hcom_logging_syslog(LOG_CRIT, "%s@%d-setup file upload %d\n", thisFile, __LINE__, ret);
     return ret;
   }
 
