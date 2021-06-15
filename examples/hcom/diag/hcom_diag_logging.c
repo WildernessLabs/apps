@@ -77,10 +77,11 @@ int hcom_diag_logging_setup()
   _f7syslogTextBuf = malloc(HCOM_PROTOCOL_REQUEST_MAX_PAYLOAD_LEN);
   if(_f7syslogTextBuf == NULL)
     return -1;
-    
+
   sem_init(&_f7syslogSem, 0, 1);
   return OK;
 }
+
 //============================================================
 void hcom_diag_logging_shutdown()
 {

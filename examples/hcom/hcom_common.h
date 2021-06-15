@@ -66,6 +66,7 @@
 #include <nuttx/userspace.h>
 
 #include<meadow/hcom_shared_common.h>
+#include<meadow/hcom_upd_shared.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -98,6 +99,11 @@
 #define HCOM_THREAD_PRIORITY_REMOTE_DBG 120
 #define HCOM_THREAD_NAME_REMOTE_DBG "RemoteDbg"
 #define HCOM_THREAD_STACKSIZE_REMOTE_DBG 2048
+
+// This thread is used for transporting syslog messages to userland for CLI
+#define HCOM_THREAD_PRIORITY_CLI_TRANSPORT 120
+#define HCOM_THREAD_NAME_CLI_TRANSPORT "CliXport"
+#define HCOM_THREAD_STACKSIZE_CLI_TRANSPORT 2048
 
 //---------------------------------------------------------------------
 // These define how long the receive thread waits before "waking up." It
@@ -199,6 +205,7 @@ extern "C"
   int hcom_host_recv_receiving_loop(void);
   const char *hcom_host_recv_get_device_name(void);
 
+  // Functions related to sending to the HOST (CLI)
   int hcom_host_send_setup(void);
   void hcom_host_send_shutdown(void);
   void hcom_host_send_header_msg(uint16_t requestType, uint32_t userData,
@@ -288,7 +295,6 @@ extern "C"
   void hcom_common_utils_shutdown(void);
   uint64_t hcom_utils_get_current_time64(void);
 
-  // bool hcom_utils_boot_time_qemu_check(void);
   void hcom_utils_dbg_gpio_1led_update(bool ledOn);
   void hcom_utils_dbg_gpio_8bit_update(uint8_t newValue, bool ledOn);
 
@@ -327,6 +333,7 @@ extern "C"
   void hcom_via_nx_restore_uart_reconfig(uint32_t uartId);
   int hcom_via_nx_esp32_enter_prog_mode(void);
   void hcom_via_nx_mono_has_started(void);
+  size_t hcom_via_nx_provide_cli_transport(char *buff, size_t bufLen);
   int hcom_via_nx_esp32_restart_esp32(void);
   int hcom_via_nx_start_espcp_running(void);
   void hcom_via_nx_diag_fd_inode(int fd);
@@ -351,17 +358,32 @@ extern "C"
   // int hcom_via_nx_update_register(uint32_t address, uint32_t clearBits, uint32_t setBits);
 
   // -----------------------------------------------
+  // These all deal with syslog message, related to syslog tracing
+  // priority and building the final syslog message
   int hcom_diag_logging_setup(void);
   void hcom_diag_logging_shutdown(void);
   int hcom_diag_logging_get_syslog_mask(void);
   void hcom_diag_logging_change_trace_level(uint32_t userData);
+  int hcom_trace_to_cli_setup(void);
+  void hcom_trace_to_cli_enable_command(uint32_t userData);
+  void hcom_trace_to_cli_disable_command(uint32_t userData);
+  void hcom_trace_to_cli_disable_cleanup(uint32_t userData);
+
+  // These are syslog message helpers used throughout HCOM
   void hcom_logging_syslog(int priority, FAR const IPTR char *fmt, ...);
   void hcom_logging_syslog_x(int priority, FAR const IPTR char *fmt, ...);
   void hcom_logging_safe_ramlog(int priority, FAR const IPTR char *fmt, va_list args);
   int hcom_logging_syslog_mask_init(void);
 
   //-------------------------------------------------------
-  // Ramlog to host/uart
+  // Ramlog to host
+#if defined (CONFIG_RAMLOG_SYSLOG)
+  int hcom_diag_trace_to_cli_setup(void);
+  void hcom_diag_trace_to_cli_shutdown(void);
+#endif
+
+  void hcom_diag_trace_forward_to_host(uint32_t userData);
+  void hcom_diag_trace_do_not_send_to_host(uint32_t userData);
 
   int hcom_diag_misc_setup(void);
   int hcom_diag_nsh_support_setup(void);

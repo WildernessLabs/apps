@@ -80,14 +80,14 @@ void hcom_diag_misc_print_buffer(const uint8_t buffer[], const int bufLen, uint8
 
   if(bufLen <= 0)
   {
-    hcom_logging_syslog(msgPriority, "%s@%d-%s() but 'bufLen:%d'\n",
+    syslog(msgPriority, "%s@%d-%s() but 'bufLen:%d'\n",
               thisFile, __LINE__, __func__, bufLen);
     return;
   }
 
   if(buffer == NULL)
   {
-    hcom_logging_syslog(msgPriority, "%s@%d-%s() but 'buffer == NULL'\n",
+    syslog(msgPriority, "%s@%d-%s() but 'buffer == NULL'\n",
               thisFile, __LINE__, __func__);
     return;
   }
@@ -144,7 +144,7 @@ void hcom_diag_misc_print_buffer(const uint8_t buffer[], const int bufLen, uint8
     lineBuff[asciiOffset] = 0x00; // null terminator
 
   // Output one row at a time
-  hcom_logging_syslog(msgPriority, lineBuff);
+  syslog(msgPriority, lineBuff);
   }
 }
 #else

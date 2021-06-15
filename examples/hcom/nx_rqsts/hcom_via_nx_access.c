@@ -212,6 +212,29 @@ int hcom_via_nx_get_mcu_ser_numb(char mcuSerNumb[16])
 }
 
 //=============================================================
+// Provides the nuttx side with a way to pass syslog messages back
+// to userland so it can be sent to the CLI
+size_t hcom_via_nx_provide_cli_transport(char *buff, size_t bufLen)
+{
+  int ret;
+  size_t stringLen;
+  hcom_nx_upd_cli_msg_transport_t cli_transport;
+
+  cli_transport.transport_buf = buff;
+  cli_transport.buf_length = bufLen;
+
+  ret = ioctl(_nx_access_fd, HCOM_NX_UPD_CLI_MESSAGE_TRANSPORT, (unsigned long) &cli_transport);
+  if (ret < 0)
+  {
+    hcom_logging_syslog(LOG_ERR, "%s@%d-%s Failed cli transport, ret:%d, errno:%d\n",
+            thisFile, __LINE__, HCOM_NX_UPD_DRIVER_NAME, ret, errno);
+    return -errno;      // ioctl puts returned int into errno
+  }
+
+  return cli_transport.msg_length;
+}
+
+//=============================================================
 // Is this partition mounted in the file system?
 bool hcom_via_nx_is_mounted(uint32_t partitionId)
 {
@@ -269,7 +292,7 @@ int hcom_via_nx_put_meadow_into_dfu_mode()
 {
   int ret;
 
-  ret = ioctl(_nx_access_fd, HCOM_NX_UPD_ENTER_INTO_DEF_MODE, (unsigned long) NULL);
+  ret = ioctl(_nx_access_fd, HCOM_NX_UPD_ENTER_INTO_DFU_MODE, (unsigned long) NULL);
   if (ret < 0)
   {
     hcom_logging_syslog(LOG_ERR, "%s@%d-%s Failed to enter dfu mode, errno:%d\n",
@@ -629,11 +652,11 @@ int hcom_via_nx_copy_config(uint8_t *buffer)
   return ret;
 }
 
-// No direct register access seems to be possible. The following functions
-// provide access. However, the caller needs to know the correct register
-// address. Since this is difficult on the apps side of nuttx other means
-// have been implemented.
-// BUT, KEEPING THE CODE IN THE CASE SOME FUTURE NEED ARISES
+// No direct F7 register access seems to be possible from the user side. The following
+// functions provide access, but the caller needs to know the correct register
+// address. Since this is difficult on the apps side of nuttx other means have been
+// implemented.
+// KEEPING THE CODE IN THE CASE SOME FUTURE NEED ARISES
 // //=============================================================
 // int hcom_via_nx_set_register(uint32_t address, uint32_t value)
 // {
