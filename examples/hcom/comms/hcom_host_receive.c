@@ -305,9 +305,6 @@ bool hcom_host_recv_received_data()
         hcom_logging_syslog(LOG_INFO, "%s@%d-%s thread running\n",
                   thisFile, __LINE__, HCOM_THREAD_NAME_HCOM_RECEIVE);
         
-        // // PeterM - TESTING generate a list of files for CLI and syslog every
-        // // time we timeout.
-        // hcom_file_lists_files_in_partition(0);
         continue;
       }
 

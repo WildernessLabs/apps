@@ -71,7 +71,6 @@ int hcom_trace_to_cli_setup()
   // user wants syslog messages routed to CLI
   if(hcom_bbreg_is_bbr_bit_set(HCOM_BBREG_ROUTE_TRACE_MSG_TO_HOST_BIT))
   {
-    _trace_log_to_host = true;
     hcom_trace_to_cli_create_thread();
   }
   else
@@ -92,6 +91,8 @@ void hcom_trace_to_cli_create_thread()
   int ret;
   pthread_attr_t attr;
   struct sched_param param;
+
+  _trace_log_to_host = true;
 
   param.sched_priority = HCOM_THREAD_PRIORITY_CLI_TRANSPORT;
   (void)pthread_attr_init(&attr);
@@ -140,6 +141,8 @@ FAR void *hcom_trace_to_cli_transport_pthread(FAR void *arg)
   } //   while(true)
 
   free(cliMsgBuf);
+
+  // pthread dies here
   return NULL;
 }
 
