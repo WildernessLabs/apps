@@ -553,7 +553,7 @@ int hcom_mono_ctrl_mono_appears_to_be_running()
     return ret;
   }
 
-  // Clear the flag so mono will start next time.
+  // Clear the flag so mono will attempt to start next time.
   hcom_bbreg_clear_bbr_bits_alt(nx_access_fd, HCOM_BBREG_MONO_LAST_RUN_LOCKUP_BIT);
 
   // Finished interacting with nuttx side

@@ -62,8 +62,6 @@ static void hcom_trace_to_cli_create_thread(void);
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
-
-//================================================================
 // Called during startup
 int hcom_trace_to_cli_setup()
 {
@@ -71,6 +69,7 @@ int hcom_trace_to_cli_setup()
   // user wants syslog messages routed to CLI
   if(hcom_bbreg_is_bbr_bit_set(HCOM_BBREG_ROUTE_TRACE_MSG_TO_HOST_BIT))
   {
+    _trace_log_to_host = true;
     hcom_trace_to_cli_create_thread();
   }
   else
@@ -83,16 +82,17 @@ int hcom_trace_to_cli_setup()
 
 //================================================================
 // Create a thread that can be used to transport the syslog message
-// from k-land to cli.
+// from k-land to here in userland.
 // This thread calls via hcom_via_nx_access into kernelland and lives
-// there until the a message is ready to be sent to the CLI
+// there until the a message is ready to be sent to the CLI.
+// Note: This can be called during startup or from a CLI command
 void hcom_trace_to_cli_create_thread()
 {
   int ret;
   pthread_attr_t attr;
   struct sched_param param;
 
-  _trace_log_to_host = true;
+  // PeterM - Looks like  we can create multiple threads!!!
 
   param.sched_priority = HCOM_THREAD_PRIORITY_CLI_TRANSPORT;
   (void)pthread_attr_init(&attr);
@@ -121,6 +121,7 @@ FAR void *hcom_trace_to_cli_transport_pthread(FAR void *arg)
   size_t stringLen;
   char *cliMsgBuf = (char *)malloc(HCOM_PROTOCOL_REQUEST_MAX_PAYLOAD_LEN);
 
+  // Stay in this loop until told to stop
   while(_trace_log_to_host)
   {
     // Call into k-land to get the next CLI syslog message. This thread will wait
@@ -131,6 +132,7 @@ FAR void *hcom_trace_to_cli_transport_pthread(FAR void *arg)
       if(!_trace_log_to_host)
         break;
 
+      // PeterM - IS  THIS SLEEP NEEDED?
       usleep(50 * 1000);
       continue;
     }
@@ -147,23 +149,26 @@ FAR void *hcom_trace_to_cli_transport_pthread(FAR void *arg)
 }
 
 //================================================================
-// Call by a command from CLI. It will start the thread that transports
-// the syslog message from k-land to userland.
+// Call by a CLI command that first calls into kernelland then makes
+// this call. It starts the thread that transports the syslog message
+// from k-land to userland.
 // Note: The battery backed register setting is updated in k-land
 void hcom_trace_to_cli_enable_command(uint32_t userData)
 {
+  _trace_log_to_host = true;
   hcom_trace_to_cli_create_thread();
 }
 
 //================================================================
 // The following 2 functions are called by the same command from CLI.
-// 1. This function is called to prepare for the thread to return.
-// 2. The k-land code is called and will force our pthread to return.
-// 3. The following function is called to wait for the pthread to terminate
+// Here is the order:
+// 1. This function is called via CLI command to prepare for the thread to return.
+// 2. The k-land code is called via CLI and will cause our pthread to return.
+// 3. hcom_trace_to_cli_disable_cleanup() is called last to wait for the pthread
+//  to terminate
 // Note: The battery backed register setting is updated in k-land
 void hcom_trace_to_cli_disable_command(uint32_t userData)
 {
-  syslog(1, "==> u-land 1st CLI xport stop command called\n");
   // Prepare our pthread to exit when k-land sends it back
   _trace_log_to_host = false;
 }
@@ -172,9 +177,7 @@ void hcom_trace_to_cli_disable_command(uint32_t userData)
 // Call by a command from CLI. It will stop the thread that transports
 void hcom_trace_to_cli_disable_cleanup(uint32_t userData)
 {
-  syslog(1, "==> u-land 3rd CLI xport stop command called\n");
   // Wait for our pthread to exit
   pthread_addr_t exitVal;
   pthread_join(_cli_pthread, &exitVal);
-  syslog(1, "==> u-land 3rd CLI xport exiting thread Stopped\n");
 }

@@ -169,7 +169,7 @@ int hcom_logging_syslog_mask_init()
 #endif
 
   // Provide some information that may be useful
-  hcom_logging_syslog(LOG_NOTICE, "Meadow %s (%s@%s) %s, Mono:%s, Trace level:0x%02x, to:%s, type:%s\n",
+  hcom_logging_syslog(LOG_NOTICE, "Meadow %s (%s@%s) %s, Mono:%s, Trace level:0x%02x, to:%s (%s)\n",
         HCOM_DEVICE_INFO_MEADOW_OS_VERSION, __DATE__, __TIME__, 
         isPowerOnRestart ? "power-on restart" :"rebooted",
         hcom_mono_ctrl_is_mono_enabled() ? "Enabled" : "Disabled",

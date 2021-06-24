@@ -73,14 +73,15 @@
  ****************************************************************************/
 
 // Thread priorities and names
-// Note: pthreads cannot be named. The name below are only for
-// error messages ect.
+// Note: pthreads, unlike kthreads and tasks, cannot be named.
+// The name below are only for error messages ect.
 #define HCOM_THREAD_PRIORITY_HCOM_RECEIVE 240
 #define HCOM_THREAD_NAME_HCOM_RECEIVE "HcomRecv"
 #define HCOM_THREAD_STACKSIZE_HCOM_RECEIVE 65536
 
-// Insure hcom recv thread runs before esp32 recv
-// But this thread needs to be ahead of the following
+// Insure hcom recv thread runs before esp32 recv, which is
+// only used to program the ESP32 from HCOM. Here this thread's
+// priority is boosted ahead of most of the hcom threads.
 #define HCOM_THREAD_PRIORITY_ESP32_RECEIVE 130
 #define HCOM_THREAD_NAME_ESP32_RECEIVE "EspRecv"
 #define HCOM_THREAD_STACKSIZE_ESP32_RECEIVE 2048
@@ -100,8 +101,10 @@
 #define HCOM_THREAD_NAME_REMOTE_DBG "RemoteDbg"
 #define HCOM_THREAD_STACKSIZE_REMOTE_DBG 2048
 
-// This thread is used for transporting syslog messages to userland for CLI
-#define HCOM_THREAD_PRIORITY_CLI_TRANSPORT 120
+// This thread is used for transporting syslog messages to userland
+// for CLI display. There is also a kthread that reads the ramlog
+// device, it's priority is also boosted above 120 also.
+#define HCOM_THREAD_PRIORITY_CLI_TRANSPORT 125
 #define HCOM_THREAD_NAME_CLI_TRANSPORT "CliXport"
 #define HCOM_THREAD_STACKSIZE_CLI_TRANSPORT 2048
 
