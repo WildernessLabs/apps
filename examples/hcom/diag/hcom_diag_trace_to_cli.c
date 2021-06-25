@@ -50,6 +50,7 @@
  * Private Data
  ****************************************************************************/
 static bool _trace_log_to_host;
+static bool _thread_running;
 static pthread_t _cli_pthread;
 
 /****************************************************************************
@@ -65,6 +66,8 @@ static void hcom_trace_to_cli_create_thread(void);
 // Called during startup
 int hcom_trace_to_cli_setup()
 {
+  _thread_running = false;
+
   // Check if the battery backed register indicates that the current
   // user wants syslog messages routed to CLI
   if(hcom_bbreg_is_bbr_bit_set(HCOM_BBREG_ROUTE_TRACE_MSG_TO_HOST_BIT))
@@ -92,7 +95,8 @@ void hcom_trace_to_cli_create_thread()
   pthread_attr_t attr;
   struct sched_param param;
 
-  // PeterM - Looks like  we can create multiple threads!!!
+  if(_thread_running)
+    return;
 
   param.sched_priority = HCOM_THREAD_PRIORITY_CLI_TRANSPORT;
   (void)pthread_attr_init(&attr);
@@ -105,7 +109,6 @@ void hcom_trace_to_cli_create_thread()
     hcom_logging_syslog(LOG_CRIT, "%s@%d-create thread %s, ret:%d, errno:%d\n",
               __FILE__, __LINE__, HCOM_THREAD_NAME_CLI_TRANSPORT, ret, errno);
   }
-
   return;
 }
 
@@ -117,34 +120,35 @@ FAR void *hcom_trace_to_cli_transport_pthread(FAR void *arg)
   syslog(2, "New kthread [PID:%d],'%s'\n", getpid(), HCOM_THREAD_NAME_CLI_TRANSPORT);
 #endif
 
-  // int ret;
   size_t stringLen;
   char *cliMsgBuf = (char *)malloc(HCOM_PROTOCOL_REQUEST_MAX_PAYLOAD_LEN);
+  _thread_running = true;
 
   // Stay in this loop until told to stop
   while(_trace_log_to_host)
   {
-    // Call into k-land to get the next CLI syslog message. This thread will wait
-    // in k-land until needed or terminated, at which point it will return
+    // Call into kernelland to get the next CLI syslog message. This thread will
+    // wait in kernelland until needed or terminated, at which point it will return
     stringLen = hcom_via_nx_provide_cli_transport(cliMsgBuf, HCOM_PROTOCOL_REQUEST_MAX_PAYLOAD_LEN);
     if(stringLen <= 0 || cliMsgBuf == NULL)
     {
       if(!_trace_log_to_host)
         break;
 
-      // PeterM - IS  THIS SLEEP NEEDED?
-      usleep(50 * 1000);
+      // In case something goes wrong we don't want to be in a tight loop
+      usleep(20 * 1000);
       continue;
     }
 
     // Forward to CLI and wait again for next message
     hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_TRACE_MSG, 0,
            cliMsgBuf, __FILE__, __LINE__);
-  } //   while(true)
+  }
 
   free(cliMsgBuf);
 
   // pthread dies here
+  _thread_running = false;
   return NULL;
 }
 
@@ -166,7 +170,7 @@ void hcom_trace_to_cli_enable_command(uint32_t userData)
 // 2. The k-land code is called via CLI and will cause our pthread to return.
 // 3. hcom_trace_to_cli_disable_cleanup() is called last to wait for the pthread
 //  to terminate
-// Note: The battery backed register setting is updated in k-land
+// Note: The battery backed register setting is updated in kernelland
 void hcom_trace_to_cli_disable_command(uint32_t userData)
 {
   // Prepare our pthread to exit when k-land sends it back
@@ -175,6 +179,7 @@ void hcom_trace_to_cli_disable_command(uint32_t userData)
 
 //================================================================
 // Call by a command from CLI. It will stop the thread that transports
+// messages to/from kernelland.
 void hcom_trace_to_cli_disable_cleanup(uint32_t userData)
 {
   // Wait for our pthread to exit
