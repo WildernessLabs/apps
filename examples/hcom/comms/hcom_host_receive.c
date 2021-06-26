@@ -304,7 +304,6 @@ bool hcom_host_recv_received_data()
         // anything else.
         hcom_logging_syslog(LOG_INFO, "%s@%d-%s thread running\n",
                   thisFile, __LINE__, HCOM_THREAD_NAME_HCOM_RECEIVE);
-        
         continue;
       }
 
