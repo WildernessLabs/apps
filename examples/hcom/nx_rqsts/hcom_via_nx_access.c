@@ -287,7 +287,7 @@ int hcom_via_nx_only_restart_meadow()
 }
 
 //=============================================================
-// This is a stub for restarting meadow
+// This is a stub for entering DFU mode after restart
 int hcom_via_nx_put_meadow_into_dfu_mode()
 {
   int ret;
@@ -601,8 +601,6 @@ void hcom_via_nx_forward_cli_cmd_to_nx(uint16_t hcomCmd, uint32_t userData)
   cmdData.logLen = 0;
 
   // Provides nx upd with the ability to send messages to CLI
-  // void hcom_host_send_simple_string_msg(uint16_t requestType, uint32_t userData, char *shortText,
-  //       char *sourceFileName, int sourceLineNumber);
   cmdData.send_host_msg = hcom_host_send_simple_string_msg;
 
   // Forward to hcom_nx to complete command
@@ -618,7 +616,7 @@ void hcom_via_nx_forward_cli_cmd_to_nx(uint16_t hcomCmd, uint32_t userData)
     }
     else
     {
-      hcom_logging_syslog(LOG_ERR, "%s:%s()@%d-%s Failed to update reg, errno:%hcomCmd cmd:0x%04x\n",
+      hcom_logging_syslog(LOG_ERR, "%s:%s()@%d-%s Error detected, errno:%hcomCmd cmd:0x%04x\n",
               thisFile, __func__, __LINE__, HCOM_NX_UPD_DRIVER_NAME, errno, hcomCmd);
       return;
     }
@@ -635,7 +633,7 @@ void hcom_via_nx_forward_cli_cmd_to_nx(uint16_t hcomCmd, uint32_t userData)
  *  config - Pointer to a memory block to hold the copy of the configuration.
  *
  * Returned Value:
- *  None.
+ *  Result of the ioctl call.
  *
  * Assumptions/Limitations:
  *  None.
@@ -652,11 +650,38 @@ int hcom_via_nx_copy_config(uint8_t *buffer)
   return ret;
 }
 
-// No direct F7 register access seems to be possible from the user side. The following
-// functions provide access, but the caller needs to know the correct register
-// address. Since this is difficult on the apps side of nuttx other means have been
-// implemented.
-// KEEPING THE CODE IN THE CASE SOME FUTURE NEED ARISES
+/****************************************************************************
+ * Name: hcom_via_nx_execute_espcp_tests
+ *
+ * Description:
+ *  Ask NuttX to execute the ESP Coprocessor (espcp) tests in kernel space.
+ *
+ * Input Parameters:
+ *  None.
+ *
+ * Returned Value:
+ *  Result of the ioctl call.
+ *
+ * Assumptions/Limitations:
+ *  None.
+ *
+ ****************************************************************************/
+int hcom_via_nx_execute_espcp_tests()
+{
+  int ret = ioctl(_nx_access_fd, HCOM_NX_UPD_EXECUTE_ESPCP_TESTS, (unsigned long) 0);
+  if (ret < 0)
+  {
+    hcom_logging_syslog(LOG_ERR, "%s:%s()@%d Failed to execute network tests.\n",
+            thisFile, __func__, __LINE__);
+  }
+  return ret;
+}
+
+// No direct register access seems to be possible. The following functions
+// provide access. However, the caller needs to know the correct register
+// address. Since this is difficult on the apps side of nuttx other means
+// have been implemented.
+// BUT, KEEPING THE CODE IN THE CASE SOME FUTURE NEED ARISES
 // //=============================================================
 // int hcom_via_nx_set_register(uint32_t address, uint32_t value)
 // {
