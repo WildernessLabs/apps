@@ -211,17 +211,17 @@ void hcom_diag_logging_change_trace_level(uint32_t userData)
       newSyslogMask |= LOG_MASK(LOG_NOTICE) | LOG_MASK(LOG_INFO) | LOG_MASK(LOG_DEBUG);
       traceNew = "Notice, Information and Debug";
       break;
-    
+
     case HCOM_TRACE_LEVEL_DEFAULT:
       traceNew = "Normal";
       break;
-    
-    default:    // minumum newSyslogMask
+
+    default:    // minimum newSyslogMask
       traceNew = "Default";
       break;
   }
 
-#if HCOM_FORCE_SYSLOG_OUTPUT_TO_UART1 > 0
+#if HCOM_FORCE_SYSLOG_MASK_AND_OUTPUT_TO_UART1 > 0
   newSyslogMask |= LOG_MASK(LOG_NOTICE) | LOG_MASK(LOG_INFO);
 #endif
 
