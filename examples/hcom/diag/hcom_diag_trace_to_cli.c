@@ -1,7 +1,7 @@
 /****************************************************************************
- * \apps\examples\hcom\diag\hcom_diag_misc.c
+ * \apps\examples\hcom\diag\hcom_diag_trace_to_cli.c
  * 
- *   Copyright (C) 2019 - 2020 Wilderness Labs. All rights reserved.
+ *   Copyright (C) 2021 Wilderness Labs. All rights reserved.
  *   Author:  Wilderness Labs
  *
  * Redistribution and use in source and binary forms, with or without
@@ -113,7 +113,7 @@ void hcom_trace_to_cli_create_thread()
 }
 
 //================================================================
-// This thread is only needed when we are sending messages to CLI.
+// This thread is only needed when we are requested to send messages to CLI.
 FAR void *hcom_trace_to_cli_transport_pthread(FAR void *arg)
 {
 #if HCOM_DIAG_OUTPUT_SYSLOG_PID_OF_NEW_THREADS > 0
@@ -128,7 +128,8 @@ FAR void *hcom_trace_to_cli_transport_pthread(FAR void *arg)
   while(_trace_log_to_host)
   {
     // Call into kernelland to get the next CLI syslog message. This thread will
-    // wait in kernelland until needed or terminated, at which point it will return
+    // wait in kernelland until the next message or terminated, at either point
+    // it will return.
     stringLen = hcom_via_nx_provide_cli_transport(cliMsgBuf, HCOM_PROTOCOL_REQUEST_MAX_PAYLOAD_LEN);
     if(stringLen <= 0 || cliMsgBuf == NULL)
     {
@@ -164,7 +165,8 @@ void hcom_trace_to_cli_enable_command(uint32_t userData)
 }
 
 //================================================================
-// The following 2 functions are called by the same command from CLI.
+// The following 2 functions are called by the same command from CLI that
+// stops syslog messages going to the CLI.
 // Here is the order:
 // 1. This function is called via CLI command to prepare for the thread to return.
 // 2. The k-land code is called via CLI and will cause our pthread to return.
