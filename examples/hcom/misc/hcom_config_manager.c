@@ -254,7 +254,7 @@ int hcom_config_init(void)
 // Get the version information for esp32, meadow OS and mono 
 int hcom_get_software_version_info(hcom_config_version_information_t *version_info)
 {
-  int stringLen;
+  int stringLen = 0;
 
   memset((void *)version_info, 0, sizeof(hcom_config_version_information_t));
 
