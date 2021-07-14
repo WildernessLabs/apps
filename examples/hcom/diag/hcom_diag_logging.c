@@ -334,8 +334,10 @@ static int hcom_diag_logging_build_syslog_string(int priority, FAR const IPTR ch
 
   // The Nuttx version of snprintf will truncate the string based on the buffer
   // size but will always place a terminating NULL at the end.
-  // This DEBUGASSERT is almost meaning less because DEBUGASSERT is almost never
+  // This DEBUGASSERT is almost meaningless because DEBUGASSERT is almost never
   // enabled in the configuration.
+  // However, cannot output a syslog warning here because this could cause an
+  // unending stream of syslog messages.
   DEBUGASSERT(stringLen < HCOM_PROTOCOL_REQUEST_MAX_PAYLOAD_LEN);
 
   free(finalFmt);

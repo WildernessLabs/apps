@@ -434,21 +434,11 @@ void diag_misc_tests_snprintf_on_nuttx(uint32_t userData);
 void hcom_meadow_sqlite_tests(uint32_t userData);
 #endif
 
-// Created 2 macros to simplify checking snprintf buffer overflow
-// The first macro calls a function adding file and line info. I kept the
-// entire macro on a single line to reduce line number confusion.
-// ## is needed if the caller doesn't supply any additional arguments.
+// This macro calls a function adding file and line info. I kept the entire
+// macro on a single line to reduce line number confusion. The ## is needed
+// for those cases when the caller doesn't supply any additional arguments.
 #define snprintf_chk(Buf, Len, Fmt, ...) hcom_common_utils_snprintf_chk(Buf, Len, __FILE__, __LINE__, Fmt, ##__VA_ARGS__ )
 
-// The second macro is self contained but being multilined etc. decided
-// to not use it
-/*#define snprintf_check(Buf, Len, Fmt, ...)  \
-do {  \
-  int chkBuf; \
-  if((chkBuf = snprintf(Buf, Len, Fmt, __VA_ARGS__)) >= Len) \
-    syslog(LOG_WARNING, "%s@%d Host msg truncated, need:%d\n", __FILE__, __LINE__, chkBuf + 1); \
-} while(0)
-*/
 //------------------------------------------------
 #endif // __ASSEMBLY__
 

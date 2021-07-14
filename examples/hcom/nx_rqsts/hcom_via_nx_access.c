@@ -615,8 +615,8 @@ void hcom_via_nx_forward_cli_cmd_to_nx(uint16_t hcomCmd, uint32_t userData)
                   thisFile, __LINE__, cmdData.logLevel);
       }
       
-      // We can check the returned log length against the known buffer size
-      // and determine if snprintf truncated the message
+      // We check the returned log length against the known buffer size to
+      // determine if snprintf in the called function truncated the message
       if(cmdData.logLen >= HCOM_NX_CMD_LOG_MSG_SIZE)
       {
         hcom_logging_syslog(LOG_WARNING, "snprintf buf too small need:%d. Line? next log.\n",

@@ -129,11 +129,11 @@ int hcom_file_write_del_open_active_file(const uint32_t partitionId,
                                 mountPoint, fileName);
 #endif
 
-  // Error or overflow?
+  // Error? Overflow already handled by snprintf_chk
   if(filePathAndNameLen < 0)
   {
     _hcomActiveFileName[0] = '\0';
-    return filePathAndNameLen;
+    return filePathAndNameLen;    // Return error
   }
 
   if (!hcom_via_nx_is_mounted(partitionId))
@@ -301,11 +301,12 @@ int hcom_file_write_del_remove_file_by_name(const uint32_t partitionId, const ch
   filePathAndNameLen = snprintf_chk(fullPathAndFileName, HCOM_MAX_HOST_STRING_BUFF_LENGTH, "%s/%s",
                                 mountPoint, fileName);
 #endif
-  // Error or overflow?
+
+  // Error? Overflow already handled by snprintf_chk
   if (filePathAndNameLen < 0)
   {
     free(fullPathAndFileName);
-    return filePathAndNameLen;
+    return filePathAndNameLen;    // Return error
   }
 
   int ret = unlink(fullPathAndFileName);
