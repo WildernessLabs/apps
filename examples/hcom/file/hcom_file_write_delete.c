@@ -239,20 +239,17 @@ int hcom_file_write_del_close_active_file()
 //=====================================================================
 // When a request to delete a file by name arrives it first is processed
 // in this function
-void hcom_file_write_del_remove_file_start(const uint8_t *recvPayloadData, const size_t recvPayloadSize,
-    uint32_t partitionId)
+void hcom_file_write_del_remove_file_start(const HcomProtocolFileInfo_t *fileInfo,
+          const size_t fileNameLength, uint32_t partitionId)
 {
   int ret;
   char *hostMsg = malloc(HCOM_LARGE_HOST_STRING_BUFF_LENGTH);
-  
-  // TODO:This should be based on a struct.
-  // TODO:Using struct would remove HCOM_PROTOCOL_REQUEST_HEADER_FILE_NAME_OFFSET
-  // TODO:I think this uses the same structure as file download does, just one field populated.
-  size_t fileNameLength = recvPayloadSize - HCOM_PROTOCOL_REQUEST_HEADER_FILE_NAME_OFFSET;
+
+  // For delete only the file name field is needed
   char *fileNameBuffer = malloc(fileNameLength + 1);
   fileNameBuffer[fileNameLength] = '\0';
 
-  memcpy(fileNameBuffer, recvPayloadData + HCOM_PROTOCOL_REQUEST_HEADER_FILE_NAME_OFFSET, fileNameLength);
+  memcpy(fileNameBuffer, fileInfo->fileName, fileNameLength);
 
   ret = hcom_file_write_del_remove_file_by_name(partitionId, HCOM_FILE_MOUNT_POINT_TARGET, fileNameBuffer);
   if (ret != OK)

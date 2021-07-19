@@ -204,7 +204,7 @@ FAR void *hcom_mono_remote_dbg_pthread(FAR void *arg)
     return NULL;
   }
 
-  uint8_t *recvBuffer = malloc(HCOM_PROTOCOL_REQUEST_MAX_PAYLOAD_LEN);
+  uint8_t *recvBuffer = malloc(HCOM_PROTOCOL_COMMAND_MAX_PAYLOAD_LEN);
   if(recvBuffer == NULL)
   {
     hcom_logging_syslog(LOG_ERR, "%s@%d-recvBuf alloc, errno:%d\n", thisFile, __LINE__, errno);
@@ -365,7 +365,7 @@ int hcom_mono_remote_dbg_read_mono_send_to_host_loop(struct remote_dbg_session *
     // Read from mono
     hcom_logging_syslog(LOG_INFO, "%s@%d-Waiting data from mono debug\n", thisFile, __LINE__);
     nBytesRead = recv(dbgSock->connected_sd, recvBuffer,
-                       HCOM_PROTOCOL_REQUEST_MAX_PAYLOAD_LEN, 0);
+                       HCOM_PROTOCOL_COMMAND_MAX_PAYLOAD_LEN, 0);
     if (nBytesRead < 0)
     {
       if(errno == ECONNRESET)
@@ -385,9 +385,6 @@ int hcom_mono_remote_dbg_read_mono_send_to_host_loop(struct remote_dbg_session *
     // Received some bytes from mono.
     hcom_logging_syslog(LOG_DEBUG, "%s@%d-Forwarding %d bytes to host PC for VS\n",
               thisFile, __LINE__, nBytesRead);
-#if HCOM_OUTPUT_DATA_BUFFER_INFO_VIA_SYSLOG > 0
-    hcom_utils_diag_print_buffer(recvBuffer, nBytesRead, LOG_DEBUG);
-#endif
 
     // Forward data as-is to CLI to forward to VS
     ret = hcom_host_send_raw_string_msg(HCOM_HOST_REQUEST_DEBUGGING_MONO_DATA, 0,
@@ -419,9 +416,6 @@ void hcom_mono_remote_dbg_recv_host_sending_to_mono(const uint8_t *recvPayload,
 
   hcom_logging_syslog(LOG_DEBUG, "%s@%d-Received %d bytes from VS. forwarded to Mono.\n",
           thisFile, __LINE__, recvPayloadSize);
-#if HCOM_OUTPUT_DATA_BUFFER_INFO_VIA_SYSLOG > 0
-  hcom_utils_diag_print_buffer(recvPayload, recvPayloadSize, LOG_DEBUG);
-#endif
 }
 
 //======================================================================================

@@ -71,24 +71,24 @@ int hcom_file_upld_proc_setup()
 
 //==========================================================================
 // This function receives a command from CLI and builds a single message to
-// send back to the CLI. This message contains the first of a file. However, the
-// maximum number of bytes is fixed at HCOM_PROTOCOL_REQUEST_MAX_PAYLOAD_LEN.
-void hcom_file_upld_proc_initial_bytes_in_file(const uint8_t *recvPayloadData,
-          const size_t recvPayloadSize, uint32_t partitionId)
+// send back to the CLI. This message contains the first part of a file's
+// data. However, the maximum number of bytes is fixed at
+// HCOM_PROTOCOL_COMMAND_MAX_PAYLOAD_LEN.
+void hcom_file_upld_proc_initial_bytes_in_file(const HcomProtocolFileInfo_t *fileInfo,
+          const size_t fileNameLen, uint32_t partitionId)
 {
   int ret;
   int fd;
   char *fileNameBuffer;
-  size_t fileNameLength = recvPayloadSize;
 
 #ifndef CONFIG_MTD_PARTITION
   partitionId = 0;    // Ignore any other partition value if no partitioning
 #endif
 
   // Only thing in payload is the file name
-  fileNameBuffer = malloc(fileNameLength + 1);
-  memset(fileNameBuffer, 0, fileNameLength + 1);
-  memcpy(fileNameBuffer, recvPayloadData, fileNameLength);
+  fileNameBuffer = malloc(fileNameLen + 1);
+  memset(fileNameBuffer, 0, fileNameLen + 1);
+  memcpy(fileNameBuffer, fileInfo->fileName, fileNameLen);
 
   // Create the name of the mount point part of the file name
   char *fullMountPtName = malloc(HCOM_MAX_PATH_AND_FILE_BUFF_LENGTH);
@@ -139,12 +139,12 @@ void hcom_file_upld_proc_initial_bytes_in_file(const uint8_t *recvPayloadData,
   }
 
   // Read all the data
-  uint8_t *returnBinData = malloc(HCOM_PROTOCOL_REQUEST_MAX_PAYLOAD_LEN);
+  uint8_t *returnBinData = malloc(HCOM_PROTOCOL_COMMAND_MAX_PAYLOAD_LEN);
   ssize_t nbytes;
   int bufOff = 0;
   do
   {
-    nbytes = read(fd, returnBinData + bufOff, HCOM_PROTOCOL_REQUEST_MAX_PAYLOAD_LEN - bufOff);
+    nbytes = read(fd, returnBinData + bufOff, HCOM_PROTOCOL_COMMAND_MAX_PAYLOAD_LEN - bufOff);
     if (nbytes < 0)
     {
       hcom_logging_syslog(LOG_ERR, "%s@%d-read %s, errno:%d\n",

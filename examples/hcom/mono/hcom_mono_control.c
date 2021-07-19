@@ -46,6 +46,8 @@
 #include <meadow/hcom_upd_shared.h>
 #include "../misc/hcom_config_manager.h"
 
+#include <termios.h>
+
 #if defined (CONFIG_HCOM_MONO_REMOTE_DEBUGGING) 
 #include <sys/socket.h>
 #include <sys/un.h>
@@ -137,11 +139,6 @@ int hcom_mono_ctrl_start_mono_main()
               thisFile, __LINE__, ret, errno);
   }
 
-  // For debugging when mono is not desired
-#if HCOM_DIAG_DONT_ALLOW_MONO_TO_RUN > 0
-  return OK;
-#endif
-
   // Don't start if there's a reason
   if(!hcom_mono_ctrl_should_mono_run())
   {
@@ -227,6 +224,14 @@ bool hcom_mono_ctrl_should_mono_run()
   {
     return false;
   }
+
+  // For debugging when mono is not desired
+#if HCOM_DIAG_PREVENT_MONO_FROM_RUNNING > 0
+  hcom_logging_syslog(LOG_WARNING, "%s@%d-%s\n", thisFile, __LINE__, "Mono forced off by #define.");
+  hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0,
+          "Mono forced off by #define.", thisFile, __LINE__);
+  return false;
+#endif
 
   // Is mono enabled?
   if(!hcom_mono_ctrl_is_mono_enabled())
