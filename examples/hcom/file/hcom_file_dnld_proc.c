@@ -71,7 +71,7 @@ static char *thisFile = __FILE__;
 static int _currentHcomDataPacketAction;
 static char *_fileNameBuffer;               // F7 Flash file system
 static uint32_t _xferRecvFullFileCrc;       // F7 Flash file system
-static uint32_t _xferRecvFullFileSize;      // Both
+static uint32_t _xferRecvFullFileSize;
 static uint32_t _xferCalcFullFileSize = 0;  // This is the size of the original
 static uint32_t _xferMeadowCalcCrc = 0;     // This is over all the payload (original data)
 static uint32_t _partitionId = 0;
@@ -394,8 +394,8 @@ void hcom_file_dnld_proc_flash_file_sys_end(uint32_t userData)
   snprintf_chk(completeNameBuf, HCOM_MAX_PATH_AND_FILE_BUFF_LENGTH, "%s/%s", 
             fullMountPtName, _fileNameBuffer);
 
-  off_t fileSize;       // Not used
-  uint32_t blockSizeKB; // Not used
+  off_t fileSize;       // Required by call but not used
+  uint32_t blockSizeKB; // Required by call but not used
   uint32_t actualFileCrc = hcom_file_lists_calc_crc_for_file(completeNameBuf,
                 &fileSize, &blockSizeKB);
   free(completeNameBuf);

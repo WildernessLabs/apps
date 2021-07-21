@@ -33,8 +33,8 @@
  *
  ****************************************************************************/
 
-// The functions in the file setup to write a file, write the file and
-// end the download process while verifying file integrity.
+// The functions in the file setup to upload a file or part of a file to the
+// host PC.
 
 /****************************************************************************
  * Included Files
