@@ -69,7 +69,8 @@ static char * hcom_diag_decode_recvd_find_minor_str(uint8_t minorRqstType);
 
 //=======================================================================================
 // Takes a hcom message and outputs a string contining the header information
-void hcom_diag_decode_recvd_message_type(const HcomProtocolCmdMessage_t *hcomCmdMsg, const size_t packetSize)
+void hcom_diag_decode_recvd_message_type(const HcomProtocolCmdMessage_t *hcomCmdMsg,
+          const size_t packetSize)
 {  
 #if HCOM_INCLUDE_DIAG_PRINT_BUFFER_CODE > 0
   hcom_diag_misc_print_buffer(packet, packetSize, 2);
@@ -238,7 +239,8 @@ char * hcom_diag_decode_recvd_find_minor_str(uint8_t minorRqstType)
 
 #else
 
-void hcom_diag_decode_recvd_message_type(const HcomProtocolCmdMessage_t *hcomCmdMsg, const size_t packetSize)
+void hcom_diag_decode_recvd_message_type(const HcomProtocolCmdMessage_t *hcomCmdMsg,
+          const size_t packetSize)
 {
 
 }

@@ -217,7 +217,7 @@ int hcom_host_send_buffered_msg(uint16_t requestType, uint16_t extraData,
     fullMsgLen = HCOM_PROTOCOL_PACKET_MAX_SIZE;
   }
 
-  // Is this a header only message or a message with a payload
+  // Is this a header only message or a message with a body
   if(msgLen > 0)
   {
     // Buffer for the header + data message
@@ -256,8 +256,6 @@ int hcom_host_send_buffered_msg(uint16_t requestType, uint16_t extraData,
 void hcom_host_send_build_msg_header(uint16_t requestType,
         uint16_t extraData, uint32_t userData, uint8_t *xmitBuffer)
 {
-  // Messages starts with sequence number and header and room for the header
-  // has already been considered in the allocation
   HcomProtocolCmdMessage_t *hcomCmdMsg = (HcomProtocolCmdMessage_t *)xmitBuffer;
   hcomCmdMsg->cmdHeader.seqNumber = HCOM_PROTOCOL_NON_DATA_SEQUENCE_NUMBER;
   hcomCmdMsg->cmdHeader.version = HCOM_PROTOCOL_HCOM_VERSION_NUMBER;

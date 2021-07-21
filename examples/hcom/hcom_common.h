@@ -211,18 +211,21 @@ extern "C"
   void hcom_host_send_shutdown(void);
   void hcom_host_send_header_msg(uint16_t requestType, uint32_t userData,
           char *sourceFileName, int sourceLineNumber);
-  void hcom_host_send_binary_data_msg(uint16_t requestType, uint32_t userData, uint8_t *bytes,
-          size_t msgLength, char *sourceFileName, int sourceLineNumber);
-  void hcom_host_send_simple_string_msg(uint16_t requestType, uint32_t userData, char *shortText,
-          char *sourceFileName, int sourceLineNumber);
-  int hcom_host_send_raw_string_msg(uint16_t requestType, uint32_t userData, char *shortText,
-          size_t msgLength, char *sourceFileName, int sourceLineNumber);
+  void hcom_host_send_binary_data_msg(uint16_t requestType, uint32_t userData,
+           uint8_t *bytes,size_t msgLength, char *sourceFileName,
+           int sourceLineNumber);
+  void hcom_host_send_simple_string_msg(uint16_t requestType, uint32_t userData,
+           char *shortText,char *sourceFileName, int sourceLineNumber);
+  int hcom_host_send_raw_string_msg(uint16_t requestType, uint32_t userData,
+           char *shortText,size_t msgLength, char *sourceFileName,
+           int sourceLineNumber);
 
   int hcom_host_parse_setup(void);
   void hcom_host_parse_shutdown(void);
   int hcom_host_parse_save_raw_data(uint8_t recvBuff[], const ssize_t recvByteCnt);
 
-  void hcom_host_route_request_by_cmd_type(const HcomProtocolCmdMessage_t *hcomMsg, const size_t packetSize);
+  void hcom_host_route_request_by_cmd_type(const HcomProtocolCmdMessage_t *hcomMsg,
+            const size_t packetSize);
   int hcom_host_route_setup(void);
   void hcom_host_route_shutdown(void);
 
@@ -286,7 +289,7 @@ extern "C"
   bool hcom_mono_remote_dbg_is_active(void);
 
 #if defined (CONFIG_HCOM_MONO_REMOTE_DEBUGGING) 
-  void hcom_mono_remote_dbg_recv_host_sending_to_mono(const uint8_t *recvPayload,
+  void hcom_mono_remote_dbg_recv_host_sending_to_mono(const uint8_t recvPayload[0],
             size_t recvPayloadSize, uint32_t userData);
   void hcom_mono_remote_dbg_enable(uint32_t userData);
 #endif

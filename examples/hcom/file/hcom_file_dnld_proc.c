@@ -72,11 +72,10 @@ static int _currentHcomDataPacketAction;
 static char *_fileNameBuffer;               // F7 Flash file system
 static uint32_t _xferRecvFullFileCrc;       // F7 Flash file system
 static uint32_t _xferRecvFullFileSize;      // Both
-static uint32_t _xferMeadowCalcCrc = 0;     // This is over all the payload (original data)
 static uint32_t _xferCalcFullFileSize = 0;  // This is the size of the original
-static uint32_t _xferCalcPacketCrc = 0;     // This is over all packets
+static uint32_t _xferMeadowCalcCrc = 0;     // This is over all the payload (original data)
 static uint32_t _partitionId = 0;
-static int _dbgNumbPacketsRecvd = 0;
+static int _dbgNumbPacketsRecvd = 0;        // Only used in LOG_DEBUG messages
 
 static int _lastPercentSent;
 static int _esp32WaitCount;
@@ -268,21 +267,6 @@ void hcom_file_dnld_proc_esp32_flash_begin(const HcomProtocolFileInfo_t *fileInf
   memcpy(_md5FileHash, fileInfo->fileMD5Hash, HCOM_PROTOCOL_COMMAND_MD5_HASH_LENGTH);
   _md5FileHash[HCOM_PROTOCOL_COMMAND_MD5_HASH_LENGTH] = '\0';
 
-  // _xferRecvFullFileSize = recvPayloadData[msgOffset] + (recvPayloadData[msgOffset + 1] << 8) +
-  //                         (recvPayloadData[msgOffset + 2] << 16) + (recvPayloadData[msgOffset + 3] << 24);
-  // msgOffset += sizeof(uint32_t);
-
-  // // Account for checksum which is not used by ESP32. ESP32 uses MD5 calculation instead
-  // msgOffset += sizeof(uint32_t);
-
-  // Destination address within the target MCU (only used by ESP32)
-  // _xferTargetMcuAddr = recvPayloadData[msgOffset] + (recvPayloadData[msgOffset + 1] << 8) +
-  //                        (recvPayloadData[msgOffset + 2] << 16) + (recvPayloadData[msgOffset + 3] << 24);
-  // msgOffset += sizeof(uint32_t);
-
-  // memcpy(_md5FileHash, recvPayloadData + msgOffset, HCOM_PROTOCOL_COMMAND_MD5_HASH_LENGTH);
-  // _md5FileHash[HCOM_PROTOCOL_COMMAND_MD5_HASH_LENGTH] = '\0';
-
   // Log some diagnostic information 
   hcom_logging_syslog(LOG_INFO, "%s@%d-Start ESP32 download (Size:%d, MCUAddr:0x%08x, MD5Hash:%s)\n",
           thisFile, __LINE__, _xferRecvFullFileSize, _xferTargetMcuAddr, _md5FileHash);
@@ -313,23 +297,15 @@ void hcom_file_dnld_proc_esp32_flash_begin(const HcomProtocolFileInfo_t *fileInf
 
 //============================================================================
 // Process a data packet based on currently active state
-// Note:This function is currently shared by all download types
+// Note:This function is used by both download types STM32F7 and ESP32
 void hcom_file_dnld_proc_recvd_file_data(const HcomProtocolDataMessage_t *hcomDataMsg,
           const size_t packetSize)
 {
   int ret;
-  const uint16_t seqNumb = hcomDataMsg->dataHeader.seqNumber;
-  
+
   _dbgNumbPacketsRecvd++;
 
-  // Calculate the running checksum which includes the sequence number
-  _xferCalcPacketCrc = crc32part((uint8_t *)hcomDataMsg, packetSize, _xferCalcPacketCrc);
-    
-    // A message with binary data only contains the sequence number before
-    // the actual data
-  const uint8_t *recvOrigData = (const uint8_t *) &(hcomDataMsg->dataHeader.binData);
-  const size_t recvOrigDataSize = packetSize - HCOM_PROTOCOL_COMMAND_BINDATA_OFFSET;
-
+  uint32_t seqNumb = hcomDataMsg->dataHeader.seqNumber;
   if(seqNumb % 250 == 0)
     hcom_logging_syslog(LOG_DEBUG, "Sequence %d\n", seqNumb);
 
@@ -348,19 +324,22 @@ void hcom_file_dnld_proc_recvd_file_data(const HcomProtocolDataMessage_t *hcomDa
             thisFile, __LINE__);
   }
 
+    size_t binDataLen = packetSize - HCOM_PROTOCOL_DATA_MSG_BIN_DATA_OFF;
+
   // Depending on what we're doing, process this data packet
   switch (_currentHcomDataPacketAction)
   {
     case HcomDnldActionMeadowFileXfer:
       // Calculate CRC checksum of the payload without sequence number
-      _xferMeadowCalcCrc = crc32part(recvOrigData, recvOrigDataSize, _xferMeadowCalcCrc);
+      _xferMeadowCalcCrc = crc32part(hcomDataMsg->binData, binDataLen,
+                _xferMeadowCalcCrc);
 
-      ret = hcom_file_write_del_add_to_active_file(recvOrigData, recvOrigDataSize);
+      ret = hcom_file_write_del_add_to_active_file(hcomDataMsg->binData, binDataLen);
       break;
 
     case HcomDnldActionEsp32FileXfer:
 #if defined (CONFIG_HCOM_ESP32_COMMS)
-      ret = hcom_esp32_exec_add_flash_data(recvOrigData, recvOrigDataSize, seqNumb);
+      ret = hcom_esp32_exec_add_flash_data(hcomDataMsg->binData, binDataLen, seqNumb);
 #endif
       break;
       
@@ -371,7 +350,7 @@ void hcom_file_dnld_proc_recvd_file_data(const HcomProtocolDataMessage_t *hcomDa
       break;
   }
   
-  _xferCalcFullFileSize += recvOrigDataSize;
+  _xferCalcFullFileSize += binDataLen;
 
   if (ret < 0)
   {
@@ -427,7 +406,7 @@ void hcom_file_dnld_proc_flash_file_sys_end(uint32_t userData)
               && _xferCalcFullFileSize == _xferRecvFullFileSize)
   {
     snprintf_chk(hostMsg, HCOM_SHORT_HOST_STRING_BUFF_LENGTH,
-        "Download of '%s' success (checksums calc:0x%08X, expected:0x%08X)",
+        "Download of '%s' success (checksums calculated:0x%08X, expected:0x%08X)",
         _fileNameBuffer, _xferMeadowCalcCrc, _xferRecvFullFileCrc);
     sendMsgToHost = hostMsg;
     requestType = HCOM_HOST_REQUEST_TEXT_INFORMATION;
@@ -437,7 +416,7 @@ void hcom_file_dnld_proc_flash_file_sys_end(uint32_t userData)
     if (_xferMeadowCalcCrc != _xferRecvFullFileCrc || _xferMeadowCalcCrc != actualFileCrc)
     {
       snprintf_chk(hostMsg, HCOM_SHORT_HOST_STRING_BUFF_LENGTH,
-              "Download of '%s' failed due to checksum mismatch, file:0x%08X, download:0x%08X, received from CLI:0x%08X",
+              "Download of '%s' failed due to checksum mismatch, f/s read:0x%08X, dnld calc:0x%08X, sender:0x%08X",
               _fileNameBuffer, actualFileCrc, _xferMeadowCalcCrc, _xferRecvFullFileCrc);
       sendMsgToHost = hostMsg;
       requestType = HCOM_HOST_REQUEST_TEXT_ERROR;
@@ -445,21 +424,24 @@ void hcom_file_dnld_proc_flash_file_sys_end(uint32_t userData)
     else
     {
       snprintf_chk(hostMsg, HCOM_SHORT_HOST_STRING_BUFF_LENGTH,
-              "Download of '%s' failed due to file size mismatch Meadow calculated:%d, received from CLI:%d",
+              "Download of '%s' failed due to file size mismatch calculated:%d, sender:%d",
               _fileNameBuffer, _xferCalcFullFileSize, _xferRecvFullFileSize);
       sendMsgToHost = hostMsg;
       requestType = HCOM_HOST_REQUEST_TEXT_ERROR;
     }
   }
 
+  if(requestType == HCOM_HOST_REQUEST_TEXT_ERROR)
+    hcom_logging_syslog(LOG_ERR, "%s@%d-%s\n", thisFile, __LINE__, sendMsgToHost);
+
   // Send text message to host
   hcom_host_send_simple_string_msg(requestType, 0, sendMsgToHost, thisFile, __LINE__);
 
 #if HCOM_RECV_DEBUG_TIMING > 0
   _dbgReceptionEndedAt = hcom_utils_get_current_time64();
-  hcom_logging_syslog(LOG_DEBUG, "%s@%d-File transfer %d packets, took %llu mSec, CalcPacketCRC:0x%08x CalcFileCRC:0x%08x\n",
+  hcom_logging_syslog(LOG_DEBUG, "%s@%d-File transfer %d packets, took %llu mSec, CalcFileCRC:0x%08x\n",
            thisFile, __LINE__, _dbgNumbPacketsRecvd, ((_dbgReceptionEndedAt - _dbgReceptionBeganAt) / 1000000),
-           _xferCalcPacketCrc, _xferMeadowCalcCrc);
+           _xferMeadowCalcCrc);
 #else
   hcom_logging_syslog(LOG_DEBUG, "%s@%d-Host has sent %d packets\n", thisFile, __LINE__, _dbgNumbPacketsRecvd);
 #endif
@@ -470,7 +452,6 @@ void hcom_file_dnld_proc_flash_file_sys_end(uint32_t userData)
     _fileNameBuffer = NULL;
   }
 
-  _xferCalcPacketCrc = 0;
   _xferCalcFullFileSize = 0;
   _xferMeadowCalcCrc = 0; // Set to 0 for next message
 

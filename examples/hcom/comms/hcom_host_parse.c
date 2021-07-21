@@ -215,30 +215,22 @@ int hcom_host_parse_pull_all_packets_from_buffer()
 // 2) Remove sequence number and process as needed
 int hcom_host_parse_process_packet(const uint8_t *packet, const size_t packetSize)
 {
-  // This message only contains the sequence number
-  HcomProtocolSeqMessage_t *hcomSeqMsg = (HcomProtocolSeqMessage_t *) packet;
-
-  // DIAGNOSTIC
-  syslog(1, "==> Packet as Received <==\n");
-  hcom_diag_misc_print_buffer(packet, packetSize, 1);
+  // All messages contains the sequence number
+  HcomProtocolDataMessage_t *hcomDataMsg = (HcomProtocolDataMessage_t *) packet;
 
   hcom_logging_syslog(LOG_DEBUG, "%s@%d-Data seq:%d, len:%d\n",
-            thisFile, __LINE__, hcomSeqMsg->seqNumber, packetSize);
-  // DIAGNOSTIC
-
-  // Since in both message types the sequence number is first it doesn't
-  // matter which one we use.
+            thisFile, __LINE__, hcomDataMsg->dataHeader.seqNumber, packetSize);
 
   // The sequence number determines if this message is a command or data
-  if (hcomSeqMsg->seqNumber == HCOM_PROTOCOL_NON_DATA_SEQUENCE_NUMBER)
+  if (hcomDataMsg->dataHeader.seqNumber == HCOM_PROTOCOL_NON_DATA_SEQUENCE_NUMBER)
   {
-    // A non-data i.e. command  packet
+    // A non-data i.e. command  message
     hcom_host_route_request_by_cmd_type((HcomProtocolCmdMessage_t *) packet, packetSize);
   }
   else
   {
-    // Must be a Data Packet (sequence number > 0) 
-    hcom_file_dnld_proc_recvd_file_data((HcomProtocolDataMessage_t *) packet, packetSize);
+    // Must be a Data Packet (sequence number != 0) 
+    hcom_file_dnld_proc_recvd_file_data(hcomDataMsg, packetSize);
   }
 
   return OK;

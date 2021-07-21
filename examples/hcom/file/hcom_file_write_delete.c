@@ -245,7 +245,7 @@ void hcom_file_write_del_remove_file_start(const HcomProtocolFileInfo_t *fileInf
   int ret;
   char *hostMsg = malloc(HCOM_LARGE_HOST_STRING_BUFF_LENGTH);
 
-  // For delete only the file name field is needed
+  // For delete only the file name field is populated
   char *fileNameBuffer = malloc(fileNameLength + 1);
   fileNameBuffer[fileNameLength] = '\0';
 
