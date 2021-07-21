@@ -256,10 +256,10 @@ void hcom_host_route_request_by_cmd_type(const HcomProtocolCmdMessage_t *hcomCmd
       break;
 
     // -------------------------------------------------------
-    // To the CLI user the next 2 appear as a single command, much like file
-    // download. But, the CLI actually sends these 2 commands one before the
-    // file data is downloaded and the other after the data is downloaded. This
-    // is like the file downloading for the files system.
+    // To the CLI user there are 3 steps that appear as a single command, much
+    // like file download. But, the CLI actually sends these 2 commands one
+    // before the file data is downloaded and the other after the data is
+    // downloaded. This is like the file downloading for system files
     // 1. CLI sends this first
     case HCOM_MDOW_REQUEST_MONO_UPDATE_RUNTIME:
       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
@@ -275,6 +275,7 @@ void hcom_host_route_request_by_cmd_type(const HcomProtocolCmdMessage_t *hcomCmd
       // Next copy the file to flash area, this must be done on the nuttx
       // side. This will take several seconds because it first erases the
       // 2 MB flash area and then copies the 2 MB file.
+      // Note: a different requestType is used than sent
       hcom_via_nx_forward_cli_cmd_to_nx(HCOM_MDOW_REQUEST_MONO_FLASH, userData);
       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
       break;
@@ -290,7 +291,7 @@ void hcom_host_route_request_by_cmd_type(const HcomProtocolCmdMessage_t *hcomCmd
       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
       // Both k-land and userland need this command.
       // The nuttx side must start first
-      hcom_via_nx_forward_cli_cmd_to_nx(HCOM_MDOW_REQUEST_SEND_TRACE_TO_HOST, userData);
+      hcom_via_nx_forward_cli_cmd_to_nx(requestType, userData);
       hcom_trace_to_cli_enable_command(userData);
       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
       break;
@@ -300,20 +301,20 @@ void hcom_host_route_request_by_cmd_type(const HcomProtocolCmdMessage_t *hcomCmd
       // Both k-land and userland need this command.
       // The nuttx side must stop first so the pthread it holds so it can terminate
       hcom_trace_to_cli_disable_command(userData);
-      hcom_via_nx_forward_cli_cmd_to_nx(HCOM_MDOW_REQUEST_NO_TRACE_TO_HOST, userData);
+      hcom_via_nx_forward_cli_cmd_to_nx(requestType, userData);
       hcom_trace_to_cli_disable_cleanup(userData);
       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
       break;
 
     case HCOM_MDOW_REQUEST_NO_TRACE_TO_UART:
       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-      hcom_via_nx_forward_cli_cmd_to_nx(HCOM_MDOW_REQUEST_NO_TRACE_TO_UART, userData);
+      hcom_via_nx_forward_cli_cmd_to_nx(requestType, userData);
       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
       break;
 
     case HCOM_MDOW_REQUEST_SEND_TRACE_TO_UART:
       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-      hcom_via_nx_forward_cli_cmd_to_nx(HCOM_MDOW_REQUEST_SEND_TRACE_TO_UART, userData);
+      hcom_via_nx_forward_cli_cmd_to_nx(requestType, userData);
       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
       break;
 
