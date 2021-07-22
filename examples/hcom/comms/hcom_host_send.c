@@ -227,8 +227,7 @@ int hcom_host_send_buffered_msg(uint16_t requestType, uint16_t extraData,
     hcom_host_send_build_msg_header(requestType, extraData, userData, xmitBuffer);
 
     // Copy the body of the message
-    memcpy(xmitBuffer + HCOM_PROTOCOL_CMD_HEADER_SIZE,
-            origMsg, fullMsgLen - HCOM_PROTOCOL_CMD_HEADER_SIZE);
+    memcpy(xmitBuffer + HCOM_PROTOCOL_CMD_HEADER_SIZE, origMsg, msgLen);
     
     // Send the header and the body
     ret = hcom_host_send_transmit_to_host(xmitBuffer, fullMsgLen);
@@ -236,7 +235,7 @@ int hcom_host_send_buffered_msg(uint16_t requestType, uint16_t extraData,
   }
   else
   {
-    DEBUGASSERT(msgLen == 0);
+    // Probably a header only message
     // Small so use the stack for space
     uint8_t headerOnlyMsg[HCOM_PROTOCOL_CMD_HEADER_SIZE];
 

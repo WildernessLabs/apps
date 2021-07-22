@@ -235,22 +235,21 @@ extern "C"
   bool hcom_file_dnld_proc_is_active(void);
   bool hcom_file_dnld_proc_wait_for_esp32_starting(void);
   void hcom_file_dnld_restore_to_inactive_state(void);
-  void hcom_file_dnld_proc_flash_file_sys_begin(const HcomProtocolFileInfo_t *fileInfo,
-      const size_t fileNameLen,uint32_t partitionId, uint16_t requestType);
-  void hcom_file_dnld_proc_esp32_flash_begin(const HcomProtocolFileInfo_t *fileInfo,
-      const size_t fileNameLen, uint32_t partitionId, uint16_t requestType);
+  void hcom_file_dnld_proc_flash_file_sys_begin(const HcomProtocolCmdMessage_t *hcomCmdMsg,
+      const size_t packetSize, uint32_t partitionId, uint16_t requestType);
+  void hcom_file_dnld_proc_esp32_flash_begin(const HcomProtocolCmdMessage_t *hcomCmdMsg);
   void hcom_file_dnld_proc_flash_file_sys_end(uint32_t user_data);
   void hcom_file_dnld_proc_esp32_flash_end(uint32_t user_data);
   void hcom_file_dnld_proc_recvd_file_data(const HcomProtocolDataMessage_t *hcomMsg,
           const size_t packetSize);
-  void hcom_file_write_del_remove_file_start(const HcomProtocolFileInfo_t *fileInfo,
-          const size_t fileNameLength, uint32_t user_data);
+  void hcom_file_write_del_remove_file_start(const HcomProtocolCmdMessage_t *hcomCmdMsg,
+          const size_t packetSize, uint32_t partitionId);
 
   // -----------------------------------------------
   // Execute Request for uploading file
   int hcom_file_upld_proc_setup(void);
-  void hcom_file_upld_proc_initial_bytes_in_file(const HcomProtocolFileInfo_t *fileInfo,
-          const size_t fileNameLen, uint32_t partitionId);
+  void hcom_file_upld_proc_initial_bytes_in_file(const HcomProtocolCmdMessage_t *hcomCmdMsg,
+          const size_t packetSize, uint32_t partitionId);
 
   // -----------------------------------------------
   // File commands

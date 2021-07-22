@@ -227,9 +227,10 @@ bool hcom_mono_ctrl_should_mono_run()
 
   // For debugging when mono is not desired
 #if HCOM_DIAG_PREVENT_MONO_FROM_RUNNING > 0
-  hcom_logging_syslog(LOG_WARNING, "%s@%d-%s\n", thisFile, __LINE__, "Mono forced off by #define.");
+  hcom_logging_syslog(LOG_WARNING, "%s@%d-%s\n", thisFile, __LINE__,
+            "Mono prevented from running by #define");
   hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_INFORMATION, 0,
-          "Mono forced off by #define.", thisFile, __LINE__);
+          "Mono prevented from running by #define", thisFile, __LINE__);
   return false;
 #endif
 

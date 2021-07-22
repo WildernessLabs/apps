@@ -74,8 +74,8 @@ int hcom_file_upld_proc_setup()
 // send back to the CLI. This message contains the first part of a file's
 // data. However, the maximum number of bytes is fixed at
 // HCOM_PROTOCOL_COMMAND_MAX_PAYLOAD_LEN.
-void hcom_file_upld_proc_initial_bytes_in_file(const HcomProtocolFileInfo_t *fileInfo,
-          const size_t fileNameLen, uint32_t partitionId)
+void hcom_file_upld_proc_initial_bytes_in_file(const HcomProtocolCmdMessage_t *hcomCmdMsg,
+          const size_t packetSize, uint32_t partitionId)
 {
   int ret;
   int fd;
@@ -85,10 +85,13 @@ void hcom_file_upld_proc_initial_bytes_in_file(const HcomProtocolFileInfo_t *fil
   partitionId = 0;    // Ignore any other partition value if no partitioning
 #endif
 
-  // Only thing in payload is the file name
+  size_t fileNameLen = packetSize - (HCOM_PROTOCOL_CMD_MSG_FILE_INFO_OFF + \
+          HCOM_PROTOCOL_TEXT_INFO_TEXT_DATA_OFF);
+
+  // Last field in file info is the file name
   fileNameBuffer = malloc(fileNameLen + 1);
   memset(fileNameBuffer, 0, fileNameLen + 1);
-  memcpy(fileNameBuffer, fileInfo->fileName, fileNameLen);
+  memcpy(fileNameBuffer, hcomCmdMsg->textInfo.textData, fileNameLen);
 
   // Create the name of the mount point part of the file name
   char *fullMountPtName = malloc(HCOM_MAX_PATH_AND_FILE_BUFF_LENGTH);

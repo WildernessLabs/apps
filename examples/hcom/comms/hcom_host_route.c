@@ -111,9 +111,8 @@ void hcom_host_route_request_by_cmd_type(const HcomProtocolCmdMessage_t *hcomCmd
     // Start file transfer handles both Meadow and ESP32 file starts
     case HCOM_MDOW_REQUEST_START_FILE_TRANSFER:
       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-      hcom_file_dnld_proc_flash_file_sys_begin(&(hcomCmdMsg->fileInfo),
-              packetSize - (HCOM_PROTOCOL_CMD_MSG_FILE_INFO_OFF + \
-              HCOM_PROTOCOL_FILE_INFO_NAME_OFF), userData, requestType);
+      hcom_file_dnld_proc_flash_file_sys_begin(hcomCmdMsg, packetSize,
+                userData, requestType);
       break;
       
     // End file transfer handles both Meadow and ESP32 file starts
@@ -126,9 +125,7 @@ void hcom_host_route_request_by_cmd_type(const HcomProtocolCmdMessage_t *hcomCmd
 
     case HCOM_MDOW_REQUEST_DELETE_FILE_BY_NAME:
       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-      hcom_file_write_del_remove_file_start(&(hcomCmdMsg->fileInfo),
-              packetSize - (HCOM_PROTOCOL_CMD_MSG_FILE_INFO_OFF + \
-              HCOM_PROTOCOL_FILE_INFO_NAME_OFF), userData);
+      hcom_file_write_del_remove_file_start(hcomCmdMsg, packetSize, userData);
       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
       break;
 
@@ -139,9 +136,7 @@ void hcom_host_route_request_by_cmd_type(const HcomProtocolCmdMessage_t *hcomCmd
     // end file transfer the 'Concluded' message
     case HCOM_MDOW_REQUEST_START_ESP_FILE_TRANSFER:
       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-      hcom_file_dnld_proc_esp32_flash_begin(&(hcomCmdMsg->fileInfo),
-              packetSize - (HCOM_PROTOCOL_CMD_MSG_FILE_INFO_OFF + \
-              HCOM_PROTOCOL_FILE_INFO_NAME_OFF), userData, requestType);
+      hcom_file_dnld_proc_esp32_flash_begin(hcomCmdMsg, packetSize, requestType);
       break;
 
     // Note: Start file transfer provides the 'Accepted' message and
@@ -263,9 +258,8 @@ void hcom_host_route_request_by_cmd_type(const HcomProtocolCmdMessage_t *hcomCmd
     // 1. CLI sends this first
     case HCOM_MDOW_REQUEST_MONO_UPDATE_RUNTIME:
       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-      hcom_file_dnld_proc_flash_file_sys_begin(&(hcomCmdMsg->fileInfo),
-              packetSize - (HCOM_PROTOCOL_CMD_MSG_FILE_INFO_OFF + \
-              HCOM_PROTOCOL_FILE_INFO_NAME_OFF), userData, requestType);
+      hcom_file_dnld_proc_flash_file_sys_begin(hcomCmdMsg, packetSize,
+                userData, requestType);
       break;
       
       // 2. CLI sends data.....
@@ -320,9 +314,7 @@ void hcom_host_route_request_by_cmd_type(const HcomProtocolCmdMessage_t *hcomCmd
 
     case HCOM_MDOW_REQUEST_GET_INITIAL_FILE_BYTES:
       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-      hcom_file_upld_proc_initial_bytes_in_file(&(hcomCmdMsg->fileInfo),
-              packetSize - (HCOM_PROTOCOL_CMD_MSG_FILE_INFO_OFF + \
-              HCOM_PROTOCOL_FILE_INFO_NAME_OFF), userData);
+      hcom_file_upld_proc_initial_bytes_in_file(hcomCmdMsg, packetSize, userData);
       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_CONCLUDED, 0, thisFile, __LINE__);
       break;
 

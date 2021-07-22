@@ -136,13 +136,13 @@ void hcom_file_dnld_restore_to_inactive_state()
 // Beginning of a file download into the flash file system
 // Note: This function is shared by all download types that store in the
 // flash file system.
-void hcom_file_dnld_proc_flash_file_sys_begin(const HcomProtocolFileInfo_t *fileInfo,
-          const size_t fileNameLength, uint32_t partitionId, uint16_t requestType)
+void hcom_file_dnld_proc_flash_file_sys_begin(const HcomProtocolCmdMessage_t *hcomCmdMsg,
+      const size_t packetSize, uint32_t partitionId, uint16_t requestType)
 {
   int ret;
-  char hostMsg[HCOM_SHORT_HOST_STRING_BUFF_LENGTH];
   _dbgNumbPacketsRecvd = 0;
   _currentHcomDataPacketAction = HcomDnldActionMeadowStarting;
+  char hostMsg[HCOM_SHORT_HOST_STRING_BUFF_LENGTH];
 
 #ifdef CONFIG_MTD_PARTITION
   _partitionId = partitionId;
@@ -161,11 +161,13 @@ void hcom_file_dnld_proc_flash_file_sys_begin(const HcomProtocolFileInfo_t *file
 #endif
 
   // File size, checksum & name length
-  _xferRecvFullFileSize = fileInfo->fileSize;
-  _xferRecvFullFileCrc = fileInfo->fileCheckSum;
+  size_t fileNameLength = packetSize - (HCOM_PROTOCOL_CMD_MSG_FILE_INFO_OFF + \
+              HCOM_PROTOCOL_FILE_INFO_NAME_OFF);
+  _xferRecvFullFileSize = hcomCmdMsg->fileInfo.fileSize;
+  _xferRecvFullFileCrc = hcomCmdMsg->fileInfo.fileCheckSum;
   _fileNameBuffer = malloc(fileNameLength + 1);
 
-  memcpy(_fileNameBuffer, fileInfo->fileName, fileNameLength);
+  memcpy(_fileNameBuffer, hcomCmdMsg->fileInfo.fileName, fileNameLength);
   _fileNameBuffer[fileNameLength] = '\0';
 
   // Log some diagnostic information 
@@ -225,8 +227,7 @@ void hcom_file_dnld_proc_flash_file_sys_begin(const HcomProtocolFileInfo_t *file
 }
 
 //============================================================================
-void hcom_file_dnld_proc_esp32_flash_begin(const HcomProtocolFileInfo_t *fileInfo,
-          const size_t fileNameLength, uint32_t partitionId, uint16_t requestType)
+void hcom_file_dnld_proc_esp32_flash_begin(const HcomProtocolCmdMessage_t *hcomCmdMsg)
 {
 #if defined (CONFIG_HCOM_ESP32_COMMS)
   int ret;
@@ -236,7 +237,6 @@ void hcom_file_dnld_proc_esp32_flash_begin(const HcomProtocolFileInfo_t *fileInf
   _xferCalcFullFileSize = 0;
 
   DEBUGASSERT(_fileNameBuffer == NULL);
-  DEBUGASSERT(requestType == HCOM_MDOW_REQUEST_START_ESP_FILE_TRANSFER);
 
   // Verify that mono has been disabled
   if(hcom_mono_ctrl_is_mono_enabled())
@@ -262,9 +262,9 @@ void hcom_file_dnld_proc_esp32_flash_begin(const HcomProtocolFileInfo_t *fileInf
   _dbgReceptionBeganAt = hcom_utils_get_current_time64();
 #endif
 
-  _xferRecvFullFileSize = fileInfo->fileSize;
-  _xferTargetMcuAddr = fileInfo->fileFlashAddr;
-  memcpy(_md5FileHash, fileInfo->fileMD5Hash, HCOM_PROTOCOL_COMMAND_MD5_HASH_LENGTH);
+  _xferRecvFullFileSize = hcomCmdMsg->fileInfo.fileSize;
+  _xferTargetMcuAddr = hcomCmdMsg->fileInfo.fileFlashAddr;
+  memcpy(_md5FileHash, hcomCmdMsg->fileInfo.fileMD5Hash, HCOM_PROTOCOL_COMMAND_MD5_HASH_LENGTH);
   _md5FileHash[HCOM_PROTOCOL_COMMAND_MD5_HASH_LENGTH] = '\0';
 
   // Log some diagnostic information 
@@ -324,22 +324,25 @@ void hcom_file_dnld_proc_recvd_file_data(const HcomProtocolDataMessage_t *hcomDa
             thisFile, __LINE__);
   }
 
-    size_t binDataLen = packetSize - HCOM_PROTOCOL_DATA_MSG_BIN_DATA_OFF;
+  size_t binDataLen = packetSize - (HCOM_PROTOCOL_DATA_MSG_DATA_INFO_OFF + \
+            HCOM_PROTOCOL_DATA_INFO_BIN_DATA_OFF);
 
   // Depending on what we're doing, process this data packet
   switch (_currentHcomDataPacketAction)
   {
     case HcomDnldActionMeadowFileXfer:
       // Calculate CRC checksum of the payload without sequence number
-      _xferMeadowCalcCrc = crc32part(hcomDataMsg->binData, binDataLen,
+      _xferMeadowCalcCrc = crc32part(hcomDataMsg->dataInfo.binData, binDataLen,
                 _xferMeadowCalcCrc);
 
-      ret = hcom_file_write_del_add_to_active_file(hcomDataMsg->binData, binDataLen);
+      ret = hcom_file_write_del_add_to_active_file(hcomDataMsg->dataInfo.binData,
+                binDataLen);
       break;
 
     case HcomDnldActionEsp32FileXfer:
 #if defined (CONFIG_HCOM_ESP32_COMMS)
-      ret = hcom_esp32_exec_add_flash_data(hcomDataMsg->binData, binDataLen, seqNumb);
+      ret = hcom_esp32_exec_add_flash_data(hcomDataMsg->dataInfo.binData,
+                binDataLen, seqNumb);
 #endif
       break;
       
