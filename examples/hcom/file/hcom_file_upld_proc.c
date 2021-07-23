@@ -115,12 +115,12 @@ void hcom_file_upld_proc_initial_bytes_in_file(const HcomProtocolCmdMessage_t *h
   {
     char hostMsg[HCOM_SHORT_HOST_STRING_BUFF_LENGTH];
     snprintf_chk(hostMsg, HCOM_SHORT_HOST_STRING_BUFF_LENGTH, 
-          "The file '%s' cannot be opened by Meadow", completeFilePath);
+          "File '%s' cannot be opened", completeFilePath);
     hcom_host_send_simple_string_msg(HCOM_HOST_REQUEST_TEXT_ERROR, 0, hostMsg,
             thisFile, __LINE__);
 
-    hcom_logging_syslog(LOG_ERR, "%s@%d-open '%s', errno: %d\n",
-                thisFile, __LINE__, completeFilePath, errno);
+    hcom_logging_syslog(LOG_ERR, "%s@%d-open '%s', errno:%d\n",
+                thisFile, __LINE__, completeFilePath, errno);                
     free(completeFilePath);
     return;
   }

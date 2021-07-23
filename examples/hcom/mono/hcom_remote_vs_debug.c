@@ -411,8 +411,8 @@ int hcom_mono_remote_dbg_read_mono_send_to_host_loop(struct remote_dbg_session *
 
 //==========================================================================
 // Called with data from CLI. Our job forward to mono.
-void hcom_mono_remote_dbg_recv_host_sending_to_mono(const uint8_t recvPayload[0],
-        size_t recvPayloadSize, uint32_t userData)
+void hcom_mono_remote_dbg_recv_host_sending_to_mono(const HcomProtocolCmdMessage_t *hcomCmdMsg,
+        size_t packetSize, uint32_t userData)
 {
   if(_transmit_sd < 1)
   {
@@ -420,8 +420,11 @@ void hcom_mono_remote_dbg_recv_host_sending_to_mono(const uint8_t recvPayload[0]
             thisFile, __LINE__);
   }
 
+  size_t dbgDataLen = packetSize - (HCOM_PROTOCOL_CMD_MSG_DBG_INFO_OFF + \
+            HCOM_PROTOCOL_DBG_INFO_OFF);
+
   // Forward to mono
-  int nbytessent = send(_transmit_sd, recvPayload, recvPayloadSize, 0);
+  int nbytessent = send(_transmit_sd, (const uint8_t *)hcomCmdMsg, dbgDataLen, 0);
   if(nbytessent < 0)
   {
     hcom_logging_syslog(LOG_ERR, "%s@%d-message from host, errno:%d\n",
@@ -429,7 +432,7 @@ void hcom_mono_remote_dbg_recv_host_sending_to_mono(const uint8_t recvPayload[0]
   }
 
   hcom_logging_syslog(LOG_DEBUG, "%s@%d-Received %d bytes from VS. forwarded to Mono.\n",
-          thisFile, __LINE__, recvPayloadSize);
+          thisFile, __LINE__, packetSize);
 }
 
 //======================================================================================

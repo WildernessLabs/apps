@@ -136,7 +136,7 @@ void hcom_host_route_request_by_cmd_type(const HcomProtocolCmdMessage_t *hcomCmd
     // end file transfer the 'Concluded' message
     case HCOM_MDOW_REQUEST_START_ESP_FILE_TRANSFER:
       hcom_host_send_header_msg(HCOM_HOST_REQUEST_TEXT_ACCEPTED, 0, thisFile, __LINE__);
-      hcom_file_dnld_proc_esp32_flash_begin(hcomCmdMsg, packetSize, requestType);
+      hcom_file_dnld_proc_esp32_flash_begin(hcomCmdMsg);
       break;
 
     // Note: Start file transfer provides the 'Accepted' message and
@@ -330,9 +330,7 @@ void hcom_host_route_request_by_cmd_type(const HcomProtocolCmdMessage_t *hcomCmd
       // Debugging data received from VS via CLI
     case HCOM_MDOW_REQUEST_DEBUGGING_DEBUGGER_DATA:
       // Accepted and concluded not needed here! This is debugging data
-      hcom_mono_remote_dbg_recv_host_sending_to_mono(hcomCmdMsg->dbgInfo.dbgData,
-                packetSize - (HCOM_PROTOCOL_CMD_MSG_DBG_INFO_OFF + \
-                HCOM_PROTOCOL_DBG_INFO_OFF), userData);
+      hcom_mono_remote_dbg_recv_host_sending_to_mono(hcomCmdMsg, packetSize, userData);
       break;
 #endif
 

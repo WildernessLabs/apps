@@ -288,8 +288,8 @@ extern "C"
   bool hcom_mono_remote_dbg_is_active(void);
 
 #if defined (CONFIG_HCOM_MONO_REMOTE_DEBUGGING) 
-  void hcom_mono_remote_dbg_recv_host_sending_to_mono(const uint8_t recvPayload[0],
-            size_t recvPayloadSize, uint32_t userData);
+  void hcom_mono_remote_dbg_recv_host_sending_to_mono(const HcomProtocolCmdMessage_t *hcomCmdMsg,
+            size_t packetSize, uint32_t userData);
   void hcom_mono_remote_dbg_enable(uint32_t userData);
 #endif
 

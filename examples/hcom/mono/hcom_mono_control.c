@@ -688,7 +688,7 @@ int hcom_mono_remote_dbg_open_mono_sock()
 
 //==================================================================
 // In order to provide VS debugging with that proper socket port number
-// the newly created mono task comes here so that the main thread of
+// the newly created mono task calls here so that the main thread of
 // the mono task can open the port. 
 int mono_main_proxy(int argcX, char *argvX[])
 {
