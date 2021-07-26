@@ -638,6 +638,17 @@ int hcom_via_nx_execute_espcp_tests()
   return ret;
 }
 
+int hcom_via_nx_flash_os_update()
+{
+  int ret = ioctl(_nx_access_fd, HCOM_NX_UHCOM_NX_UPD_FLASH_OS_UPDATE, (unsigned long) 0);
+  if (ret < 0)
+  {
+    hcom_logging_syslog(LOG_ERR, "%s:%s()@%d Failed to .\n",
+            thisFile, __func__, __LINE__);
+  }
+  return ret;
+}
+
 // No direct register access seems to be possible. The following functions
 // provide access. However, the caller needs to know the correct register
 // address. Since this is difficult on the apps side of nuttx other means
