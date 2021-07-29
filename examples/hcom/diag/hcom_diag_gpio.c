@@ -179,7 +179,7 @@ int hcom_diag_gpio_config_one_output(int gpioHcomId)
   int ret;
   
   if(gpioHcomId < HCOM_NX_DIAG_GPIO_A0 ||
-     gpioHcomId > HCOM_NX_DIAG_GPIO_D15))
+     gpioHcomId > HCOM_NX_DIAG_GPIO_D15)
   {
     hcom_logging_syslog(LOG_ERR, "%s@%d-Illegal GPIO:%d\n",
               thisFile, __LINE__, gpioHcomId);

@@ -109,9 +109,9 @@
 //---------------------------------------------------------------------
 // These define how long the receive thread waits before "waking up." It
 // prevents a failed download from hanging the system for a long time.
-// #define HCOM_RECV_TIMEOUT_DEFAULT_SECONDS 15
+#define HCOM_RECV_TIMEOUT_DEFAULT_SECONDS 10
 // #define HCOM_RECV_TIMEOUT_DEFAULT_SECONDS 60
-#define HCOM_RECV_TIMEOUT_DEFAULT_SECONDS (5 * 60)    // 5 minutes
+// #define HCOM_RECV_TIMEOUT_DEFAULT_SECONDS (5 * 60)    // 5 minutes
 // #define HCOM_RECV_TIMEOUT_DEFAULT_SECONDS (1 * 60 * 60) // once an hour report hcom thread running
 #define HCOM_RECV_TIMEOUT_ACTIVE_SECONDS 10
 

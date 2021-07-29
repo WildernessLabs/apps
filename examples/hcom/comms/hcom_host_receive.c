@@ -158,6 +158,8 @@ FAR void *hcom_host_recv_pthread(FAR void *arg)
 #if HCOM_DIAG_OUTPUT_SYSLOG_PID_OF_NEW_THREADS > 0
   syslog(2, "New pthread [PID:%d],'%s'\n", getpid(), HCOM_THREAD_NAME_HCOM_RECEIVE);
 #endif
+  hcom_via_nx_diag_gpio_config(HCOM_NX_DIAG_GPIO_D14,
+            HCOM_NX_GPIO_DIGITAL_CONFIG_OUTPUT);
 
   // Allow startup thread to continue working
   hcom_startup_mgr_release_sem();
@@ -308,6 +310,19 @@ bool hcom_host_recv_received_data()
         // Downloading is not active so a timeout is normal as communications with CLI is
         // very rare. This message is infrequent and really more for diagnostics that
         // anything else.
+        int countit = 0;
+        syslog(1, "%d Wasting MCU time\n", countit);
+        // 100000000 takes about 5 seconds
+        // 
+        // for(int xyz = 0; xyz < 20000000; xyz++)
+        for(int xyz = 0; xyz < 2000; xyz++)
+        {
+          hcom_via_nx_diag_gpio_write(HCOM_NX_DIAG_GPIO_D14, 1);
+          countit++;
+          hcom_via_nx_diag_gpio_write(HCOM_NX_DIAG_GPIO_D14, 0);
+        }
+
+        syslog(1, "%d Wasting MCU time\n", countit);
         hcom_logging_syslog(LOG_INFO, "%s@%d-%s thread running\n",
                   thisFile, __LINE__, HCOM_THREAD_NAME_HCOM_RECEIVE);
         continue;

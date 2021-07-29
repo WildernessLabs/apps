@@ -428,7 +428,8 @@ int hcom_via_nx_gpio_config_alt(int alt_access_fd, int gpioHcomId, uint8_t confi
 }
 
 //=============================================================
-// Writes to non-diag digital output gpio via nx
+// Writes to non-DIAG digital output gpio via nx
+// Use hcom_via_nx_diag_gpio_write to write to A0-D15
 int hcom_via_nx_gpio_write(int gpioHcomId, uint8_t cmdValue)
 {
   int ret;
