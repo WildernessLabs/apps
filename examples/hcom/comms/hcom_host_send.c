@@ -375,8 +375,6 @@ int hcom_host_send_transmit_to_host(FAR uint8_t xmitBuffer[], size_t xmitLength)
   // Encoded message needs a terminating delimiter for COBS
   _encodedXmitBuff[encodedLength] = HCOM_PROTOCOL_COBS_ENCODING_DELIMITER_VALUE;
   encodedLength++;
-
-
   remainingBytes = encodedLength;
 
   // Since there's no guarantee all bytes written at one time, loop until message 100% written
