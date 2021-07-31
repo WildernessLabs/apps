@@ -1,5 +1,5 @@
 /****************************************************************************
- * \apps\examples\hcom\misc\hcom_misc_gpio.h
+ * \apps\examples\hcom\diag\hcom_diag_gpio.h
  * 
  *   Copyright (C) 2021 Wilderness Labs. All rights reserved.
  *   Author:  Wilderness Labs
