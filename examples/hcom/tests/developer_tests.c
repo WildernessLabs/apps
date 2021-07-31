@@ -39,7 +39,6 @@
 
 #include "../hcom_common.h"
 #include <meadow/hcom_upd_shared.h>
-#include <meadow/hcom_gpio_defn_diag.h>
 
 #include <meadow/hcom_shared_common.h>
 

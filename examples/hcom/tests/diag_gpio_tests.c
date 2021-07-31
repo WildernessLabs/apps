@@ -39,7 +39,6 @@
 
 #include "../hcom_common.h"
 #include <meadow/hcom_upd_shared.h>
-#include <meadow/hcom_gpio_defn_diag.h>
 
 
 /****************************************************************************
@@ -62,25 +61,26 @@ void diag_gpio_tests_basic_gpio_tests(uint32_t userData);
  ****************************************************************************/
 void diag_gpio_tests_basic_gpio_tests(uint32_t userData)
 {
-  int ret;
-  if(userData == 500)
-  {
-    // This will create something like '#define THE_GPIO_THAT_IS_DEFINED_HERE (0X01234345)'
-    ret = hcom_via_nx_diag_gpio_make_defns();
-    if(ret < 0)
-    {
-      syslog(2, "hcom_via_nx_diag_gpio_make_defns() value of:%d\n", ret);
-    }
-  }
-  else
-  {
-    ret = hcom_via_nx_diag_gpio_write_byte((uint8_t) userData, 1);
-    if(ret < 0)
-    {
-      syslog(2, "hcom_via_nx_diag_gpio_write_byte() value of:%d\n", ret);
-    }
-  }
-}
+//   int ret;
+//   if(userData == 500)
+//   {
+//     // This will create something like '#define THE_GPIO_THAT_IS_DEFINED_HERE (0X01234345)'
+//     ret = hcom_via_nx_diag_gpio_make_defns();
+//     if(ret < 0)
+//     {
+//       syslog(2, "hcom_via_nx_diag_gpio_make_defns() value of:%d\n", ret);
+//     }
+//   }
+//   else
+//   {
+//     ret = hcom_via_nx_diag_gpio_write_byte((uint8_t) userData, 1);
+//     if(ret < 0)
+//     {
+//       syslog(2, "hcom_via_nx_diag_gpio_write_byte() value of:%d\n", ret);
+//     }
+//   }
+// }
+
 // These tests were spread over different locations. No effort has been made to
 // put this into service at this time.
 // More GPIO Test Code
@@ -218,3 +218,4 @@ void diag_gpio_tests_basic_gpio_tests(uint32_t userData)
 //   {
 //     syslog(2, "hcom_via_nx_gpio_write error:%d gpio:%d, value:%d\n", ret, gpioHcomId,cmdValue);
 //   }
+}
