@@ -40,16 +40,21 @@
 #include "hcom_common.h"
 #include <meadow/hcom_shared_common.h>
 
-#if HCOM_INCLUDE_OVERLOAD_MCU_TESTS_IN_BUILD > 0
-#include "diag/hcom_diag_gpio.h"
-#endif
-
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
 #if HCOM_INCLUDE_OVERLOAD_MCU_TESTS_IN_BUILD > 0
 #define HCOM_OVERLOAD_CYCLE_TIME_MS (100)
 #define HCOM_OVERLOAD_CYCLE_TIME_NS (HCOM_OVERLOAD_CYCLE_TIME_MS * 1000000)
+
+// The timing can be seen on an oscilloscope if desired
+#define HCOM_OVERLOAD_INCLUDE_GPIO_OUTPUT 0
+#endif
+
+#if (HCOM_INCLUDE_OVERLOAD_MCU_TESTS_IN_BUILD > 0)
+#if (HCOM_OVERLOAD_INCLUDE_GPIO_OUTPUT > 0)
+ #include "diag/hcom_diag_gpio.h"
+ #endif
 #endif
 
 /* Configuration ************************************************************/
@@ -97,7 +102,8 @@ void diag_misc_tests_overload_mcu(uint32_t userData)
 
   if(userData > 100)
   {
-    syslog(1, "The entered value %u is out of range, 1000 to exit\n", userData);
+    syslog(1, "The entered value %u is out of the 0-100 range, 1000 to exit\n",
+              userData);
     return;
   }
 
@@ -110,9 +116,11 @@ void diag_misc_tests_overload_mcu(uint32_t userData)
   {
     _firstTime = false;
     
+#if (HCOM_OVERLOAD_INCLUDE_GPIO_OUTPUT > 0)
     // Configure GPIOs
     hcom_via_nx_gpio_config(DEBUG_PIN_V2_A1);
     hcom_via_nx_gpio_config(DEBUG_PIN_V2_A2);
+#endif
 
     // Create a unique task for Overload
     _overload_pid = task_create("overload",
@@ -140,7 +148,9 @@ void diag_misc_tests_overload_mcu(uint32_t userData)
 
 int overload_main(int argc, char *argv[])
 {
-  // Must uniquely open upd driver because new thread
+#if (HCOM_OVERLOAD_INCLUDE_GPIO_OUTPUT > 0)
+  // For GPIO output, must uniquely open upd driver because we created new
+  // thread and the normal upd driver handle is opened by the HCOM task.
   _nx_access_fd = hcom_via_nx_upd_driver_open();
   if (_nx_access_fd < 0)
   {
@@ -148,22 +158,31 @@ int overload_main(int argc, char *argv[])
               __FILE__, __LINE__, _nx_access_fd);
     return 0;
   }
+#endif
 
   while(_keepRunning)
   {
     uint64_t startTime = hcom_utils_get_current_time64_ns();
     uint64_t stopTime = startTime + HCOM_OVERLOAD_CYCLE_TIME_NS;
     
+#if (HCOM_OVERLOAD_INCLUDE_GPIO_OUTPUT > 0)
     hcom_diag_gpio_set_high_alt(_nx_access_fd, DEBUG_PIN_V2_A1);
+#endif
     usleep(_overload_percent * 1000);
+#if (HCOM_OVERLOAD_INCLUDE_GPIO_OUTPUT > 0)
     hcom_diag_gpio_set_low_alt(_nx_access_fd, DEBUG_PIN_V2_A1);
+#endif
     
+#if (HCOM_OVERLOAD_INCLUDE_GPIO_OUTPUT > 0)
     hcom_diag_gpio_set_high_alt(_nx_access_fd, DEBUG_PIN_V2_A2);
+#endif
     while(hcom_utils_get_current_time64_ns() < stopTime)
     {
       // Optimizing compiler may remove this loop
     }
+#if (HCOM_OVERLOAD_INCLUDE_GPIO_OUTPUT > 0)
     hcom_diag_gpio_set_low_alt(_nx_access_fd, DEBUG_PIN_V2_A2);
+#endif
   }
 
   // May want to restart

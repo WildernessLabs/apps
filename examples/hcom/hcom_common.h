@@ -338,6 +338,7 @@ extern "C"
   int hcom_via_nx_get_mcu_ser_numb(char mcuSerNumb[16]);
   void hcom_via_nx_restore_uart_reconfig(uint32_t uartId);
   uint32_t hcom_via_nx_get_hw_version(void);
+  uint32_t hcom_via_nx_get_hw_version_alt(int alt_access_fd);
   int hcom_via_nx_esp32_enter_prog_mode(void);
   void hcom_via_nx_mono_has_started(void);
   size_t hcom_via_nx_provide_cli_transport(char *buff, size_t bufLen);
